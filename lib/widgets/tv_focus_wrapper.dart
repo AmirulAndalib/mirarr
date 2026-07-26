@@ -4,6 +4,8 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:Mirarr/utils/expressive_motion.dart';
+import 'package:Mirarr/widgets/expressive_interactive_container.dart';
 
 class TvFocusModeManager {
   // Start with no rings, assuming the app is on mobile (false)
@@ -133,6 +135,40 @@ class _TvFocusWrapperState extends State<TvFocusWrapper> {
     // Only show focus rings and animations when D-pad/keyboard navigation mode is active
     final bool showHighlight = _isFocused && _tvFocusMode;
 
+    Widget childWidget = widget.child;
+
+    if (showHighlight) {
+      childWidget = AnimatedScale(
+        scale: 1.05,
+        duration: ExpressiveSpeed.fast.duration,
+        curve: ExpressiveMotion.spatialFast,
+        child: AnimatedContainer(
+          duration: ExpressiveSpeed.fast.duration,
+          curve: ExpressiveMotion.spatialFast,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            border: Border.all(
+              color: Theme.of(context).primaryColor,
+              width: 3,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.5),
+                blurRadius: 10,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(
+              widget.borderRadius - 3.0 > 0 ? widget.borderRadius - 3.0 : 0,
+            ),
+            child: widget.child,
+          ),
+        ),
+      );
+    }
+
     return Focus(
       focusNode: _focusNode,
       autofocus: widget.autoFocus,
@@ -148,41 +184,10 @@ class _TvFocusWrapperState extends State<TvFocusWrapper> {
         }
         return KeyEventResult.ignored;
       },
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: AnimatedScale(
-            scale: showHighlight ? 1.05 : 1.0,
-            duration: const Duration(milliseconds: 150),
-            curve: Curves.easeOut,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(widget.borderRadius),
-                border: Border.all(
-                  color: showHighlight
-                      ? Theme.of(context).primaryColor
-                      : Colors.transparent,
-                  width: 3,
-                ),
-                boxShadow: showHighlight
-                    ? [
-                        BoxShadow(
-                          color: Theme.of(context).primaryColor.withValues(alpha: 0.5),
-                          blurRadius: 10,
-                          spreadRadius: 2,
-                        )
-                      ]
-                    : [],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(widget.borderRadius - 3.0 > 0 ? widget.borderRadius - 3.0 : 0),
-                child: widget.child,
-              ),
-            ),
-          ),
-        ),
+      child: ExpressiveInteractiveContainer(
+        onTap: widget.onTap,
+        borderRadius: widget.borderRadius,
+        child: childWidget,
       ),
     );
   }

@@ -1,5 +1,4 @@
 import 'package:Mirarr/functions/themeprovider_class.dart';
-import 'package:Mirarr/widgets/custom_divider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,137 +7,129 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
+    final themesList = [
+      {'name': 'Orange Theme', 'color': const Color(0xFFFF9800), 'theme': AppThemes.orangeTheme},
+      {'name': 'Blue Theme', 'color': const Color(0xFF2196F3), 'theme': AppThemes.blueTheme},
+      {'name': 'Red Theme', 'color': const Color(0xFFF44336), 'theme': AppThemes.redTheme},
+      {'name': 'Green Theme', 'color': const Color(0xFF4CAF50), 'theme': AppThemes.greenTheme},
+      {'name': 'Yellow Theme', 'color': const Color(0xFFFFEB3B), 'theme': AppThemes.yellowTheme},
+      {'name': 'Grey Theme', 'color': const Color(0xFF9E9E9E), 'theme': AppThemes.greyTheme},
+      {'name': 'Brown Theme', 'color': const Color(0xFF795548), 'theme': AppThemes.brownTheme},
+      {'name': 'Mono Theme', 'color': const Color(0xFF607D8B), 'theme': AppThemes.monoFontTheme},
+      {'name': 'Nothing Theme', 'color': const Color(0xFFD32F2F), 'theme': AppThemes.nothingFontTheme},
+    ];
+
     return Scaffold(
-extendBody: true,
+      extendBody: true,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text(
-          'Settings',
-          style: TextStyle(color: Colors.black),
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          'Appearance',
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
         ),
-        backgroundColor: Theme.of(context).primaryColor,
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        physics: const BouncingScrollPhysics(),
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+            padding: const EdgeInsets.only(left: 4, bottom: 12),
             child: Text(
-              'Select Theme',
-              style: TextStyle(
-                  color: Theme.of(context).primaryColor, fontSize: 20),
+              'Color Themes',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.primary,
+              ),
             ),
           ),
-          const CustomDivider(),
-          Expanded(
-            child: ListView(
-              children: [
-                ListTile(
-                  title: const Text('Orange Theme',
-                      style: TextStyle(color: Colors.white, fontSize: 16)),
-                  trailing: const Icon(Icons.circle, color: Colors.orange),
-                  onTap: () {
-                    Provider.of<ThemeProvider>(context, listen: false)
-                        .setTheme(AppThemes.orangeTheme);
-                  },
+          ...themesList.map((item) {
+            final targetTheme = item['theme'] as ThemeData;
+            final isSelected = themeProvider.currentTheme == targetTheme;
+            final itemColor = item['color'] as Color;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? colorScheme.primaryContainer.withValues(alpha: 0.5)
+                    : colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected
+                      ? colorScheme.primary
+                      : colorScheme.outlineVariant.withValues(alpha: 0.2),
+                  width: isSelected ? 2 : 1,
                 ),
-                ListTile(
-                  title: const Text(
-                    'Blue Theme',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                  trailing: const Icon(Icons.circle, color: Colors.blue),
-                  onTap: () {
-                    Provider.of<ThemeProvider>(context, listen: false)
-                        .setTheme(AppThemes.blueTheme);
-                  },
-                ),
-                ListTile(
-                  title: const Text(
-                    'Red Theme',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                  trailing: const Icon(Icons.circle, color: Colors.red),
-                  onTap: () {
-                    Provider.of<ThemeProvider>(context, listen: false)
-                        .setTheme(AppThemes.redTheme);
-                  },
-                ),
-                ListTile(
-                  title: const Text('Yellow Theme',
-                      style: TextStyle(color: Colors.white, fontSize: 16)),
-                  trailing: const Icon(Icons.circle, color: Colors.yellow),
-                  onTap: () {
-                    Provider.of<ThemeProvider>(context, listen: false)
-                        .setTheme(AppThemes.yellowTheme);
-                  },
-                ),
-                ListTile(
-                  title: const Text('Grey Theme',
-                      style: TextStyle(color: Colors.white, fontSize: 16)),
-                  trailing: const Icon(Icons.circle, color: Colors.grey),
-                  onTap: () {
-                    Provider.of<ThemeProvider>(context, listen: false)
-                        .setTheme(AppThemes.greyTheme);
-                  },
-                ),
-                ListTile(
-                  title: const Text('Brown Theme',
-                      style: TextStyle(color: Colors.white, fontSize: 16)),
-                  trailing: const Icon(Icons.circle, color: Colors.brown),
-                  onTap: () {
-                    Provider.of<ThemeProvider>(context, listen: false)
-                        .setTheme(AppThemes.brownTheme);
-                  },
-                ),
-                ListTile(
-                  title: const Text('Green Theme',
-                      style: TextStyle(color: Colors.white, fontSize: 16)),
-                  trailing: const Icon(Icons.circle, color: Colors.green),
-                  onTap: () {
-                    Provider.of<ThemeProvider>(context, listen: false)
-                        .setTheme(AppThemes.greenTheme);
-                  },
-                ),
-                ListTile(
-                  title: const Text('Mono Theme',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                      )),
-                  trailing: const Text(
-                    'Mono',
-                    style:
-                        TextStyle(color: Colors.grey, fontFamily: 'RobotoMono'),
-                  ),
-                  onTap: () {
-                    Provider.of<ThemeProvider>(context, listen: false)
-                        .setTheme(AppThemes.monoFontTheme);
-                  },
-                ),
-                if (Provider.of<ThemeProvider>(context).isOmarchyLinux)
-                  ListTile(
-                    title: const Text('Omarchy Theme',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                        )),
-                    trailing: const Text(
-                      'Omarchy',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontFamily: 'RobotoMono',
+              ),
+              child: ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                leading: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: itemColor,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: itemColor.withValues(alpha: 0.4),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
-                    ),
-                    onTap: () {
-                      Provider.of<ThemeProvider>(context, listen: false)
-                          .setOmarchyTheme();
-                    },
+                    ],
                   ),
-              ],
+                ),
+                title: Text(
+                  item['name'] as String,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected ? colorScheme.primary : colorScheme.onSurface,
+                  ),
+                ),
+                trailing: isSelected
+                    ? Icon(Icons.check_circle_rounded, color: colorScheme.primary)
+                    : null,
+                onTap: () {
+                  themeProvider.setTheme(targetTheme);
+                },
+              ),
+            );
+          }).toList(),
+          if (themeProvider.isOmarchyLinux) ...[
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                leading: Icon(Icons.terminal_rounded, color: colorScheme.primary),
+                title: Text(
+                  'Omarchy Linux System Theme',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                onTap: () {
+                  themeProvider.setOmarchyTheme();
+                },
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
 }
+

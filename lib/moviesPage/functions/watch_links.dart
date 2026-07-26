@@ -1,7 +1,9 @@
 import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:Mirarr/functions/show_error_dialog.dart';
 import 'package:Mirarr/moviesPage/checkers/custom_tmdb_ids_effects.dart';
+import 'package:Mirarr/moviesPage/UI/iran_movie_watch_page.dart';
 import 'package:Mirarr/widgets/custom_divider.dart';
+import 'package:Mirarr/widgets/expressive_page_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -199,7 +201,7 @@ Future<List<DownloadItem>> fetchGiftMondDownloadLinks(
   }
 }
 
-// Function to fetch all Iran download links from all servers
+// Function to fetch all Iran download links from direct servers (Berlin, Tokyo, Nairobi)
 Future<List<DownloadItem>> fetchAllIranDownloadLinks(
     String movieTitle, String year, String imdbIdWithoutTT) async {
   final servers = {
@@ -211,15 +213,12 @@ Future<List<DownloadItem>> fetchAllIranDownloadLinks(
 
   final List<DownloadItem> allItems = [];
 
-  // Fetch from all servers in parallel (including GiftMond API)
+  // Fetch from direct servers in parallel (without GiftMond)
   final futures = <Future<List<DownloadItem>>>[
-    // HTML-based servers
     ...servers.entries.map((entry) async {
       final items = await fetchIranDownloadLinks(entry.value, entry.key);
       return items;
     }),
-    // GiftMond API
-    fetchGiftMondDownloadLinks(movieTitle, year),
   ];
 
   final results = await Future.wait(futures);
@@ -230,10 +229,28 @@ Future<List<DownloadItem>> fetchAllIranDownloadLinks(
   return allItems;
 }
 
-// Function to show watch options in a modal bottom sheet
+// Function to show watch options (or push Iran Watch Page for Iran region)
 void showWatchOptions(BuildContext context, int movieId, String movieTitle,
     String releaseDate, String imdbId) async {
-  // Fetch sources dynamically
+  final region =
+      Provider.of<RegionProvider>(context, listen: false).currentRegion;
+
+  if (region == 'iran') {
+    Navigator.push(
+      context,
+      ExpressivePageRoute(
+        page: IranMovieWatchPage(
+          movieId: movieId,
+          movieTitle: movieTitle,
+          releaseDate: releaseDate,
+          imdbId: imdbId,
+        ),
+      ),
+    );
+    return;
+  }
+
+  // Fetch sources dynamically for worldwide region
   Map<String, Map<String, dynamic>> optionUrls = await fetchSources();
 
   // Replace hardcoded URLs with dynamic ones
@@ -245,12 +262,18 @@ void showWatchOptions(BuildContext context, int movieId, String movieTitle,
 
   List<String> options = optionUrls.keys.toList();
 
+  if (!context.mounted) return;
+
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
+    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    clipBehavior: Clip.antiAlias,
     builder: (BuildContext bottomSheetContext) {
       Color mainColor = getColor(context, movieId);
-      final region = Provider.of<RegionProvider>(context).currentRegion;
       final year = releaseDate.split('-')[0];
       final imdbIdWithoutTT =
           imdbId.startsWith('tt') ? imdbId.substring(2) : imdbId;

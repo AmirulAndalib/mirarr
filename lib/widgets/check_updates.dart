@@ -58,28 +58,57 @@ class UpdateChecker {
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
         return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+            side: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            ),
+          ),
+          icon: Icon(Icons.system_update_rounded, color: colorScheme.primary, size: 32),
           title: Text(
             'Update Available',
-            style: TextStyle(color: Theme.of(context).primaryColor),
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
           ),
           content: Text(
-              'A new version ($newVersion) is available. Would you like to update?',
-              style: const TextStyle(color: Colors.white)),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Later',
-                  style: TextStyle(color: Theme.of(context).primaryColor)),
-              onPressed: () => Navigator.of(context).pop(),
+            'A new version ($newVersion) is available. Would you like to update now?',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              height: 1.5,
             ),
-            TextButton(
-              child: Text('Update',
-                  style: TextStyle(color: Theme.of(context).primaryColor)),
+          ),
+          actions: <Widget>[
+            OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: colorScheme.onSurface,
+                side: BorderSide(color: colorScheme.outlineVariant),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+              child: const Text('Later'),
+            ),
+            FilledButton(
               onPressed: () {
                 _launchURL(
                     'https://github.com/mirarr-app/mirarr/releases/latest');
                 Navigator.of(context).pop();
               },
+              style: FilledButton.styleFrom(
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+              child: const Text('Update'),
             ),
           ],
         );

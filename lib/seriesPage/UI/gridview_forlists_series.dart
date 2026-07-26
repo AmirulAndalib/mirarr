@@ -16,7 +16,7 @@ class ListGridViewSeries extends StatefulWidget {
 class _ListGridViewSeriesState extends State<ListGridViewSeries> {
   @override
   Widget build(BuildContext context) {
-    final double width = MediaQuery.of(context).size.width;
+    final double width = MediaQuery.sizeOf(context).width;
     int crossAxisCount = (width / 200).round();
     if (crossAxisCount < 2) crossAxisCount = 2;
     return Scaffold(

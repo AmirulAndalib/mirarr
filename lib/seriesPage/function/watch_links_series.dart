@@ -205,6 +205,11 @@ void showWatchOptions(BuildContext context, int serieId, int seasonNumber,
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
+    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    clipBehavior: Clip.antiAlias,
     builder: (BuildContext bottomSheetContext) {
       Color mainColor = getColor(context, serieId);
       final region = Provider.of<RegionProvider>(context).currentRegion;

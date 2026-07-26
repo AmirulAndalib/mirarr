@@ -11,8 +11,18 @@ class ShareContent {
     Share.share(url);
   }
 
+  static void shareMirarrWebMovie(int movieId) {
+    final url = 'https://mirarr-app.github.io/mirarr/#/movie/$movieId';
+    Share.share(url);
+  }
+
   static void shareTVShow(int serieId) {
     final url = 'https://www.themoviedb.org/tv/$serieId';
+    Share.share(url);
+  }
+
+  static void shareMirarrWebTVShow(int serieId) {
+    final url = 'https://mirarr-app.github.io/mirarr/#/tv/$serieId';
     Share.share(url);
   }
 

@@ -2,7 +2,9 @@ import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:Mirarr/functions/themeprovider_class.dart';
 import 'package:Mirarr/functions/supabase_provider.dart';
 import 'package:Mirarr/services/supabase_sync_service.dart';
+import 'package:Mirarr/functions/platform_helper.dart';
 import 'package:Mirarr/widgets/custom_divider.dart';
+import 'package:Mirarr/widgets/m3_expressive_spinner.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -201,31 +203,49 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-extendBody: true,
+      extendBody: true,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text(
-          'Settings',
-          style: TextStyle(color: Colors.black),
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: colorScheme.onSurface),
+          onPressed: () => Navigator.pop(context),
         ),
-        backgroundColor: Theme.of(context).primaryColor,
+        title: Text(
+          'Settings',
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+            color: colorScheme.onSurface,
+          ),
+        ),
       ),
       body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Supabase Configuration Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
                 'Supabase Configuration',
-                style: TextStyle(
-                    color: Theme.of(context).primaryColor, fontSize: 20),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const CustomDivider(),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Consumer<SupabaseProvider>(
                 builder: (context, supabaseProvider, child) {
                   return Form(
@@ -235,9 +255,9 @@ extendBody: true,
                       children: [
                         Text(
                           'Configure your Supabase project to sync your watch history across devices. Configuration is saved locally.',
-                          style: TextStyle(
-                            color: Colors.grey[400],
-                            fontSize: 14,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            height: 1.4,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -246,17 +266,20 @@ extendBody: true,
                           decoration: InputDecoration(
                             labelText: 'Supabase URL',
                             hintText: 'https://your-project.supabase.co',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(20),
+                            filled: true,
+                            fillColor: colorScheme.surfaceContainerHigh,
+                            labelStyle: TextStyle(color: colorScheme.primary),
+                            hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
                             ),
-                            labelStyle: TextStyle(color: Theme.of(context).primaryColor),
-                            hintStyle: TextStyle(color: Colors.grey[500]),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(20),
-                              borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide(color: colorScheme.primary, width: 2),
                             ),
                           ),
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: colorScheme.onSurface),
                           validator: (value) {
                             if (value != null && value.isNotEmpty) {
                               final uri = Uri.tryParse(value);
@@ -276,17 +299,20 @@ extendBody: true,
                           decoration: InputDecoration(
                             labelText: 'Supabase Anon Key',
                             hintText: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(20),
+                            filled: true,
+                            fillColor: colorScheme.surfaceContainerHigh,
+                            labelStyle: TextStyle(color: colorScheme.primary),
+                            hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
                             ),
-                            labelStyle: TextStyle(color: Theme.of(context).primaryColor),
-                            hintStyle: TextStyle(color: Colors.grey[500]),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(20),
-                              borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide(color: colorScheme.primary, width: 2),
                             ),
                           ),
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(color: colorScheme.onSurface),
                           obscureText: true,
                           validator: (value) {
                             if (value != null && value.isNotEmpty) {
@@ -298,29 +324,28 @@ extendBody: true,
                           },
                         ),
                         const SizedBox(height: 16),
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
-                            Flexible(
-                              child: ElevatedButton(
-                                onPressed: _saveSupabaseConfig,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(context).primaryColor,
-                                  foregroundColor: Colors.black,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                ),
-                                child: const Text('Save Configuration'),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: _clearSupabaseConfig,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.grey[700],
-                                foregroundColor: Colors.white,
+                            FilledButton(
+                              onPressed: _saveSupabaseConfig,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: colorScheme.primary,
+                                foregroundColor: colorScheme.onPrimary,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                              ),
+                              child: const Text('Save Configuration'),
+                            ),
+                            OutlinedButton(
+                              onPressed: _clearSupabaseConfig,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: colorScheme.onSurface,
+                                side: BorderSide(color: colorScheme.outlineVariant),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
                                 ),
                               ),
                               child: const Text('Clear'),
@@ -333,11 +358,11 @@ extendBody: true,
                             padding: EdgeInsets.all(8.0),
                             child: Row(
                               children: [
-                                Icon(Icons.check_circle, color: Colors.green, size: 20),
+                                Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 20),
                                 SizedBox(width: 8),
                                 Text(
                                   'Supabase configured successfully',
-                                  style: TextStyle(color: Colors.green, fontSize: 14),
+                                  style: TextStyle(color: Colors.greenAccent, fontSize: 14),
                                 ),
                               ],
                             ),
@@ -348,19 +373,19 @@ extendBody: true,
                           const SizedBox(height: 24),
                           Text(
                             'Sync Watch History',
-                            style: TextStyle(
-                              color: Theme.of(context).primaryColor,
-                              fontSize: 18,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: colorScheme.primary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 12),
                           if (_syncStatus != null) ...[
                             Container(
-                              padding: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Colors.grey[800],
-                                borderRadius: BorderRadius.circular(8),
+                                color: colorScheme.surfaceContainerHigh,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.2)),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,77 +393,72 @@ extendBody: true,
                                   Text(
                                     'Sync Status',
                                     style: TextStyle(
-                                      color: Theme.of(context).primaryColor,
+                                      color: colorScheme.primary,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     'Local items: ${_syncStatus!['local_count']}',
-                                    style: const TextStyle(color: Colors.white),
+                                    style: TextStyle(color: colorScheme.onSurface),
                                   ),
                                   Text(
                                     'Remote items: ${_syncStatus!['remote_count']}',
-                                    style: const TextStyle(color: Colors.white),
+                                    style: TextStyle(color: colorScheme.onSurface),
                                   ),
                                 ],
                               ),
                             ),
                             const SizedBox(height: 12),
                           ],
-                          // link to documentation
 
                           const SizedBox(height: 8),
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
                             children: [
-                               Flexible(
-                                child: ElevatedButton.icon(
-                                  onPressed: _isSyncing ? null : _syncWatchHistory,
-                                  icon: _isSyncing
-                                    ? const SizedBox(
+                              FilledButton.icon(
+                                onPressed: _isSyncing ? null : _syncWatchHistory,
+                                icon: _isSyncing
+                                    ? SizedBox(
                                         width: 16,
                                         height: 16,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: colorScheme.onPrimary,
+                                        ),
                                       )
-                                    : const Icon(Icons.sync),
-                                  label: Text(_isSyncing ? 'Syncing...' : 'Sync All'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Theme.of(context).primaryColor,
-                                    foregroundColor: Colors.black,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
+                                    : const Icon(Icons.sync_rounded, size: 18),
+                                label: Text(_isSyncing ? 'Syncing...' : 'Sync All'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: colorScheme.primary,
+                                  foregroundColor: colorScheme.onPrimary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(24),
                                   ),
                                 ),
                               ),
-                                                            const SizedBox(width: 8),
-
-                              Flexible(
-                                child: ElevatedButton.icon(
-                                  onPressed: _isSyncing ? null : _uploadWatchHistory,
-                                  icon: const Icon(Icons.cloud_upload),
-                                  label: const Text('Upload'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
+                              FilledButton.icon(
+                                onPressed: _isSyncing ? null : _uploadWatchHistory,
+                                icon: const Icon(Icons.cloud_upload_rounded, size: 18),
+                                label: const Text('Upload'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.blueAccent,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(24),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: ElevatedButton.icon(
-                                  onPressed: _isSyncing ? null : _downloadWatchHistory,
-                                  icon: const Icon(Icons.cloud_download),
-                                  label: const Text('Download'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
+                              FilledButton.icon(
+                                onPressed: _isSyncing ? null : _downloadWatchHistory,
+                                icon: const Icon(Icons.cloud_download_rounded, size: 18),
+                                label: const Text('Download'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.greenAccent[700],
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(24),
                                   ),
                                 ),
                               ),
@@ -451,354 +471,372 @@ extendBody: true,
                 },
               ),
             ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
-                      child: ListTile(
-                        title:  Text('Documentation', style: TextStyle(color: Theme.of(context).primaryColor),),
-                        onTap: () {
-                          launchUrl(Uri.parse('https://github.com/mirarr-app/mirarr/blob/main/SUPABASE_SETUP.md'));
-                        },
-                        trailing:  Icon(Icons.arrow_forward_ios, color: Theme.of(context).primaryColor,),
-                      ),
-                    ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                tileColor: colorScheme.surfaceContainerHigh,
+                title: Text('Documentation', style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold)),
+                onTap: () {
+                  launchUrl(Uri.parse('https://github.com/mirarr-app/mirarr/blob/main/SUPABASE_SETUP.md'));
+                },
+                trailing: Icon(Icons.arrow_forward_ios_rounded, color: colorScheme.primary, size: 18),
+              ),
+            ),
 
             // Import Data Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
                 'Import Data',
-                style: TextStyle(
-                    color: Theme.of(context).primaryColor, fontSize: 20),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const CustomDivider(),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Card(
-                color: Colors.grey[900],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.2)),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.import_contacts, color: Theme.of(context).primaryColor, size: 28),
-                          const SizedBox(width: 12),
-                          const Text(
-                            'Import from Letterboxd',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        '1. Go to letterboxd.com/settings/data/\n2. Export your data and unzip the downloaded file.\n3. Tap below and select the "watched.csv" file.',
-                        style: TextStyle(color: Colors.grey[400], height: 1.5, fontSize: 14),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: _openLetterboxdSettings,
-                            icon: const Icon(Icons.open_in_new, size: 18),
-                            label: const Text('Open Letterboxd'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey[800],
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: ElevatedButton.icon(
-                              onPressed: _importLetterboxdCsv,
-                              icon: const Icon(Icons.file_upload),
-                              label: const Text('Select watched.csv'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).primaryColor,
-                                foregroundColor: Colors.black,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Card(
-                color: Colors.grey[900],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.tv, color: Theme.of(context).primaryColor, size: 28),
-                          const SizedBox(width: 12),
-                          const Text(
-                            'Import from TV Time',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        '1. Use the "TV Time Out by Refract" extension to export either of your movies or series JSON files.\n2. Tap below to select and import the JSON file.',
-                        style: TextStyle(color: Colors.grey[400], height: 1.5, fontSize: 14),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: _importTvTimeJson,
-                        icon: const Icon(Icons.file_upload),
-                        label: const Text('Select JSON File'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor,
-                          foregroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.import_contacts_rounded, color: colorScheme.primary, size: 28),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Import from Letterboxd',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '1. Go to letterboxd.com/settings/data/\n2. Export your data and unzip the downloaded file.\n3. Tap below and select the "watched.csv" file.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.5,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _openLetterboxdSettings,
+                          icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                          label: const Text('Open Letterboxd'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: colorScheme.onSurface,
+                            side: BorderSide(color: colorScheme.outlineVariant),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                          ),
+                        ),
+                        FilledButton.icon(
+                          onPressed: _importLetterboxdCsv,
+                          icon: const Icon(Icons.file_upload_rounded, size: 18),
+                          label: const Text('Select watched.csv'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: colorScheme.primary,
+                            foregroundColor: colorScheme.onPrimary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Card(
-                color: Colors.grey[900],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.2)),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.restore, color: Theme.of(context).primaryColor, size: 28),
-                          const SizedBox(width: 12),
-                          const Text(
-                            'Restore Backup',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.tv_rounded, color: colorScheme.primary, size: 28),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Import from TV Time',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.bold,
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '1. Use the "TV Time Out by Refract" extension to export either of your movies or series JSON files.\n2. Tap below to select and import the JSON file.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.5,
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Import your exported watched history JSON files (will be merged into existing history) or replace the entire database with a .db backup file.',
-                        style: TextStyle(color: Colors.grey[400], height: 1.5, fontSize: 14),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: _importTvTimeJson,
+                      icon: const Icon(Icons.file_upload_rounded),
+                      label: const Text('Select JSON File'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: _importMoviesJson,
-                            icon: const Icon(Icons.movie, size: 18),
-                            label: const Text('Movies (JSON)'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey[800],
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.2)),
+                ),
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.restore_rounded, color: colorScheme.primary, size: 28),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Restore Backup',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Import your exported watched history JSON files (will be merged into existing history) or replace the entire database with a .db backup file.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _importMoviesJson,
+                          icon: const Icon(Icons.movie_outlined, size: 18),
+                          label: const Text('Movies (JSON)'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: colorScheme.onSurface,
+                            side: BorderSide(color: colorScheme.outlineVariant),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
                             ),
                           ),
-                          ElevatedButton.icon(
-                            onPressed: _importShowsJson,
-                            icon: const Icon(Icons.tv, size: 18),
-                            label: const Text('TV Shows (JSON)'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey[800],
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20)),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _importShowsJson,
+                          icon: const Icon(Icons.tv_outlined, size: 18),
+                          label: const Text('TV Shows (JSON)'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: colorScheme.onSurface,
+                            side: BorderSide(color: colorScheme.outlineVariant),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
                             ),
                           ),
-                          if (!kIsWeb)
-                            ElevatedButton.icon(
-                              onPressed: _importDbFile,
-                              icon: const Icon(Icons.settings_backup_restore, size: 18),
-                              label: const Text('Database (.db)'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).primaryColor,
-                                foregroundColor: Colors.black,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20)),
+                        ),
+                        if (!kIsWeb)
+                          FilledButton.icon(
+                            onPressed: _importDbFile,
+                            icon: const Icon(Icons.settings_backup_restore_rounded, size: 18),
+                            label: const Text('Database (.db)'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: colorScheme.primary,
+                              foregroundColor: colorScheme.onPrimary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
                               ),
                             ),
-                        ],
-                      ),
-                    ],
-                  ),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
 
             // Export Data Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
                 'Export Data',
-                style: TextStyle(
-                    color: Theme.of(context).primaryColor, fontSize: 20),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const CustomDivider(),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Card(
-                color: Colors.grey[900],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.2)),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.download, color: Theme.of(context).primaryColor, size: 28),
-                          const SizedBox(width: 12),
-                          const Text(
-                            'Export Shelf Database',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.download_rounded, color: colorScheme.primary, size: 28),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Export Shelf Database',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Export your local shelf database as JSON files (separate for movies and TV shows) or as the SQLite .db file itself.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _exportMoviesJson,
+                          icon: const Icon(Icons.movie_outlined, size: 18),
+                          label: const Text('Movies (JSON)'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: colorScheme.onSurface,
+                            side: BorderSide(color: colorScheme.outlineVariant),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Export your local shelf database as JSON files (separate for movies and TV shows) or as the SQLite .db file itself.',
-                        style: TextStyle(color: Colors.grey[400], height: 1.5, fontSize: 14),
-                      ),
-                      const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: _exportMoviesJson,
-                            icon: const Icon(Icons.movie, size: 18),
-                            label: const Text('Movies (JSON)'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey[800],
-                              foregroundColor: Colors.white,
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _exportShowsJson,
+                          icon: const Icon(Icons.tv_outlined, size: 18),
+                          label: const Text('TV Shows (JSON)'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: colorScheme.onSurface,
+                            side: BorderSide(color: colorScheme.outlineVariant),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                          ),
+                        ),
+                        if (!kIsWeb)
+                          FilledButton.icon(
+                            onPressed: _exportDbFile,
+                            icon: const Icon(Icons.save_rounded, size: 18),
+                            label: const Text('Database (.db)'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: colorScheme.primary,
+                              foregroundColor: colorScheme.onPrimary,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(24),
                               ),
                             ),
                           ),
-                          ElevatedButton.icon(
-                            onPressed: _exportShowsJson,
-                            icon: const Icon(Icons.tv, size: 18),
-                            label: const Text('TV Shows (JSON)'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey[800],
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ),
-                          ),
-                          if (!kIsWeb)
-                            ElevatedButton.icon(
-                              onPressed: _exportDbFile,
-                              icon: const Icon(Icons.save, size: 18),
-                              label: const Text('Database (.db)'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).primaryColor,
-                                foregroundColor: Colors.black,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
 
             // Region Selection Section
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
                 'Select Region',
-                style: TextStyle(
-                    color: Theme.of(context).primaryColor, fontSize: 20),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const CustomDivider(),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Consumer<RegionProvider>(
                 builder: (context, regionProvider, child) {
                   return DropdownButtonFormField<String>(
+                    dropdownColor: colorScheme.surfaceContainerHigh,
                     decoration: InputDecoration(
-                      fillColor: Theme.of(context).primaryColor,
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHigh,
                       labelText: 'Select Region',
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20)),
-                      labelStyle:
-                          TextStyle(color: Theme.of(context).primaryColor),
-                      hintStyle: TextStyle(color: Theme.of(context).primaryColor),
-                      focusColor: Theme.of(context).primaryColor,
-                      hoverColor: Theme.of(context).primaryColor,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      labelStyle: TextStyle(color: colorScheme.primary),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide(color: colorScheme.primary, width: 2),
+                      ),
                     ),
                     initialValue: regionProvider.currentRegion,
+                    style: TextStyle(color: colorScheme.onSurface, fontSize: 16),
                     items: [
                       DropdownMenuItem<String>(
                         value: 'iran',
-                        child: Text('Iran',
-                            style:
-                                TextStyle(color: Theme.of(context).primaryColor)),
+                        child: Text('Iran', style: TextStyle(color: colorScheme.onSurface)),
                       ),
                       DropdownMenuItem<String>(
                         value: 'worldwide',
-                        child: Text('Worldwide',
-                            style:
-                                TextStyle(color: Theme.of(context).primaryColor)),
+                        child: Text('Worldwide', style: TextStyle(color: colorScheme.onSurface)),
                       ),
                     ],
                     onChanged: (String? newValue) {
@@ -920,6 +958,28 @@ extendBody: true,
                         .setTheme(AppThemes.nothingFontTheme);
                   },
                 ),
+                if (AppPlatform.isAndroid)
+                  ListTile(
+                    title: const Text('Material You (Dynamic Colors)',
+                        style: TextStyle(color: Colors.white, fontSize: 16)),
+                    subtitle: Text(
+                      'Use system wallpaper colors',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 12,
+                      ),
+                    ),
+                    trailing: Icon(
+                      Icons.palette_outlined,
+                      color: Provider.of<ThemeProvider>(context).isDynamicTheme
+                          ? Theme.of(context).primaryColor
+                          : Colors.grey,
+                    ),
+                    onTap: () {
+                      Provider.of<ThemeProvider>(context, listen: false)
+                          .setDynamicTheme();
+                    },
+                  ),
                 if (Provider.of<ThemeProvider>(context).isOmarchyLinux)
                   ListTile(
                     title: const Text('Omarchy Theme',
@@ -1427,12 +1487,18 @@ extendBody: true,
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const PopScope(
+          builder: (context) => PopScope(
             canPop: false,
             child: AlertDialog(
-              content: Row(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ),
+              ),
+              content: const Row(
                 children: [
-                  CircularProgressIndicator(),
+                  M3ExpressiveSpinner(size: 28),
                   SizedBox(width: 20),
                   Expanded(child: Text('Importing movie watch history...')),
                 ],
@@ -1530,12 +1596,18 @@ extendBody: true,
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const PopScope(
+          builder: (context) => PopScope(
             canPop: false,
             child: AlertDialog(
-              content: Row(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ),
+              ),
+              content: const Row(
                 children: [
-                  CircularProgressIndicator(),
+                  M3ExpressiveSpinner(size: 28),
                   SizedBox(width: 20),
                   Expanded(child: Text('Importing TV shows watch history...')),
                 ],

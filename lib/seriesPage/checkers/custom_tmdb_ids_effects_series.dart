@@ -32,7 +32,7 @@ TextStyle getSeriesAboutTextStyle(BuildContext context, int tmdbId) =>
 
 Color getSeriesColor(BuildContext context, int tmdbId) => switch (tmdbId) {
       _ when isBreakingBad(tmdbId) => const Color(0xFF583724),
-      _ => Theme.of(context).primaryColor,
+      _ => Theme.of(context).colorScheme.primary,
     };
 
 TextStyle getSeriesButtonTextStyle(int tmdbId) => switch (tmdbId) {
@@ -44,6 +44,6 @@ TextStyle getSeriesButtonTextStyle(int tmdbId) => switch (tmdbId) {
       _ => const TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          color: Colors.black,
+          color: Colors.white,
         ),
     };

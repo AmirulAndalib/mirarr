@@ -45,7 +45,10 @@ class _ListGridViewMoviesState extends State<ListGridViewMovies> {
             final movie = widget.movieList[index];
             return GestureDetector(
               onTap: () => onTapMovie(movie.title, movie.id, context),
-              child: CustomMovieWidget(movie: movie),
+              child: CustomMovieWidget(
+                movie: movie,
+                showAvailability: false,
+              ),
             );
           },
         ),

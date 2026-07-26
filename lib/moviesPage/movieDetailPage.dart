@@ -1,4 +1,3 @@
-import 'package:Mirarr/widgets/profile.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:Mirarr/functions/platform_helper.dart';
 
@@ -11,7 +10,6 @@ import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:Mirarr/functions/share_content.dart';
 import 'package:Mirarr/moviesPage/checkers/custom_tmdb_ids_effects.dart';
 import 'package:Mirarr/moviesPage/functions/get_imdb_rating.dart';
-import 'package:Mirarr/moviesPage/functions/movie_tmdb_actions.dart';
 import 'package:Mirarr/moviesPage/functions/torrent_links.dart';
 import 'package:Mirarr/moviesPage/functions/watch_links.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -23,11 +21,12 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
 import 'package:Mirarr/moviesPage/UI/cast_crew_row.dart';
+import 'package:Mirarr/moviesPage/UI/movie_action_buttons.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
 import 'package:Mirarr/moviesPage/functions/check_availability.dart';
 import 'package:Mirarr/widgets/custom_divider.dart';
 import 'package:Mirarr/widgets/image_gallery_page.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:Mirarr/widgets/m3_expressive_spinner.dart';
 import 'package:provider/provider.dart';
 import 'package:screenshot/screenshot.dart';
 import 'dart:ui';
@@ -47,7 +46,7 @@ class MovieDetailPage extends StatefulWidget {
 }
 
 class _MovieDetailPageState extends State<MovieDetailPage> {
-  late Future<List<String>> _castImagesFuture;
+  Future<List<String>>? _castImagesFuture;
   bool? isMovieWatchlist;
   Future<dynamic>? _creditsFuture;
   Future<dynamic>? _availabilityFuture;
@@ -97,14 +96,13 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   @override
   void initState() {
     super.initState();
-    checkUserLogin();
-    _fetchMovieDetails();
-    checkAccountState();
-    _loadMovieImages();
-    _checkWatchedStatus();
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     _availabilityFuture = checkAvailability(widget.movieId, region);
+    _initPageData(region);
+  }
+
+  void _initPageData(String region) {
     _creditsFuture = fetchCredits(widget.movieId, region).then((data) {
       final List<dynamic> crewList = data['crew'] ?? [];
       for (var crewMember in crewList) {
@@ -119,10 +117,29 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
       }
       return data;
     });
+
+    Future.wait([
+      checkUserLogin(),
+      _fetchMovieDetails(),
+      checkAccountState(),
+      _checkWatchedStatus(),
+    ]).catchError((_) => <dynamic>[]);
   }
 
-  void _loadMovieImages() {
-    _castImagesFuture = _fetchMovieImages(widget.movieId);
+  Future<void> _openGalleryOnDemand() async {
+    _castImagesFuture ??= _fetchMovieImages(widget.movieId);
+    try {
+      final imageUrls = await _castImagesFuture!;
+      if (mounted) {
+        _openImageGallery(imageUrls);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to load image gallery')),
+        );
+      }
+    }
   }
 
   void _openImageGallery(List<String> imageUrls) {
@@ -244,77 +261,6 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
       setState(() {
         isWatched = watched;
       });
-    }
-  }
-
-  Future<void> _markAsWatched() async {
-    try {
-      await _watchHistoryDb.addMovieToHistory(
-        tmdbId: widget.movieId,
-        title: widget.movieTitle,
-        posterPath: posterPath,
-        userRating: userRating,
-      );
-      
-      if (mounted) {
-        setState(() {
-          isWatched = true;
-        });
-      }
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${widget.movieTitle} marked as watched!'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error marking movie as watched: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _removeFromWatched() async {
-    try {
-      final watchHistory = await _watchHistoryDb.getWatchHistoryByTmdbId(widget.movieId, 'movie');
-      if (watchHistory.isNotEmpty) {
-        await _watchHistoryDb.deleteWatchHistoryItem(watchHistory.first.id!);
-        if (mounted) {
-          setState(() {
-            isWatched = false;
-          });
-        }
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${widget.movieTitle} removed from watched!'),
-              backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error removing movie from watched: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
     }
   }
 

@@ -392,7 +392,7 @@ class _TvChartTableState extends State<TvChartTable> {
       columnWidths[i + 1] = const FixedColumnWidth(55);
     }
 
-    final screenWidth = MediaQuery.of(context).size.width;
+    final screenWidth = MediaQuery.sizeOf(context).width;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0),

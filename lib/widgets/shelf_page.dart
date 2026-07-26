@@ -12,8 +12,10 @@ import 'package:Mirarr/moviesPage/movieDetailPage.dart';
 import 'package:Mirarr/seriesPage/checkers/custom_tmdb_ids_effects_series.dart';
 import 'package:Mirarr/seriesPage/serieDetailPage.dart';
 import 'package:flutter/material.dart';
+import 'package:Mirarr/widgets/m3_expressive_spinner.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
+import 'package:Mirarr/widgets/expressive_page_route.dart';
 import 'package:Mirarr/database/watch_history_database.dart';
 import 'package:Mirarr/models/watch_history_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -36,8 +38,8 @@ class _ShelfPageState extends State<ShelfPage> {
   Future<void> _navigateToMovie(String title, int id) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => MovieDetailPage(movieTitle: title, movieId: id),
+      ExpressivePageRoute(
+        page: MovieDetailPage(movieTitle: title, movieId: id),
       ),
     );
     if (mounted) {
@@ -48,8 +50,8 @@ class _ShelfPageState extends State<ShelfPage> {
   Future<void> _navigateToSerie(String title, int id) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => SerieDetailPage(serieName: title, serieId: id),
+      ExpressivePageRoute(
+        page: SerieDetailPage(serieName: title, serieId: id),
       ),
     );
     if (mounted) {
@@ -312,36 +314,56 @@ class _ShelfPageState extends State<ShelfPage> {
     showDialog(
       context: context,
       builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
         return AlertDialog(
-          backgroundColor: Colors.grey[900],
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Theme.of(context).primaryColor),
-              const SizedBox(width: 8),
-              const Text('Fetch Watch Times', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+            side: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            ),
+          ),
+          icon: Icon(Icons.warning_amber_rounded, color: colorScheme.primary, size: 32),
+          title: Text(
+            'Fetch Watch Times',
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
           ),
           content: Text(
             'This will query TMDB API for $uncachedItemsCount uncached watch logs to calculate exact runtimes. This may take a while depending on network conditions.',
-            style: const TextStyle(color: Colors.white70),
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              height: 1.5,
+            ),
           ),
           actions: [
-            TextButton(
+            OutlinedButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: colorScheme.onSurface,
+                side: BorderSide(color: colorScheme.outlineVariant),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+              child: const Text('Cancel'),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
               ),
               onPressed: () {
                 Navigator.pop(context);
                 _fetchRuntimes();
               },
-              child: const Text('Calculate Now', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('Calculate Now'),
             ),
           ],
         );
@@ -394,7 +416,7 @@ class _ShelfPageState extends State<ShelfPage> {
     return Scaffold(
       extendBody: true,
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const M3ExpressiveSpinner()
           : isLargeScreen
               ? _buildDesktopLayout(region)
               : _buildMobileLayout(region),
@@ -783,21 +805,22 @@ class _ShelfPageState extends State<ShelfPage> {
     );
   }
 
-  // Mobile top segment selector
   Widget _buildMobileSegmentControl() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final sections = [
-      {'id': 'movies', 'label': 'Movies', 'icon': Icons.movie},
-      {'id': 'shows', 'label': 'Shows', 'icon': Icons.tv},
-      {'id': 'diary', 'label': 'Diary', 'icon': Icons.book},
+      {'id': 'movies', 'label': 'Movies', 'icon': Icons.movie_outlined},
+      {'id': 'shows', 'label': 'Shows', 'icon': Icons.tv_outlined},
+      {'id': 'diary', 'label': 'Diary', 'icon': Icons.book_outlined},
     ];
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: sections.map((sec) {
@@ -815,22 +838,14 @@ class _ShelfPageState extends State<ShelfPage> {
                 });
               },
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? Theme.of(context).primaryColor
+                      ? colorScheme.primaryContainer
                       : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          )
-                        ]
-                      : [],
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -838,29 +853,32 @@ class _ShelfPageState extends State<ShelfPage> {
                     Icon(
                       sec['icon'] as IconData,
                       size: 16,
-                      color: isSelected ? Colors.black : Colors.white,
+                      color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       sec['label'] as String,
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.black : Colors.white70,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(width: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: isSelected ? Colors.black.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
+                        color: isSelected
+                            ? colorScheme.primary.withValues(alpha: 0.2)
+                            : colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         count.toString(),
                         style: TextStyle(
-                          fontSize: 9,
-                          color: isSelected ? Colors.black : Colors.white70,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -874,8 +892,12 @@ class _ShelfPageState extends State<ShelfPage> {
     );
   }
 
+
   // Mobile controls (Search & View Modes)
   Widget _buildMobileControls() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final activeController = _activeSection == 'movies'
         ? _movieSearchController
         : _activeSection == 'shows'
@@ -889,32 +911,32 @@ class _ShelfPageState extends State<ShelfPage> {
           Expanded(
             child: TextField(
               controller: activeController,
-              style: TextStyle(color: Theme.of(context).primaryColor),
-              cursorColor: Theme.of(context).primaryColor,
+              style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface),
+              cursorColor: colorScheme.primary,
               onChanged: (value) => _debouncedSetState(() {
                 if (_activeSection == 'movies') _movieQuery = value;
                 if (_activeSection == 'shows') _showQuery = value;
                 if (_activeSection == 'diary') _diaryQuery = value;
               }),
               decoration: InputDecoration(
-                prefixIcon: Icon(Icons.search, color: Theme.of(context).primaryColor, size: 18),
+                prefixIcon: Icon(Icons.search_rounded, color: colorScheme.onSurfaceVariant, size: 20),
                 hintText: 'Search $_activeSection...',
-                hintStyle: TextStyle(color: Theme.of(context).primaryColor.withValues(alpha: 0.5), fontSize: 13),
+                hintStyle: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
                 filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.02),
+                fillColor: colorScheme.surfaceContainerHigh,
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor.withValues(alpha: 0.3)),
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor.withValues(alpha: 0.2)),
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide(color: colorScheme.primary, width: 2),
                 ),
               ),
             ),
@@ -928,13 +950,16 @@ class _ShelfPageState extends State<ShelfPage> {
 
   // Mobile watch stats banner
   Widget _buildMobileWatchTimeBanner() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.02),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        color: colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -943,42 +968,42 @@ class _ShelfPageState extends State<ShelfPage> {
             children: [
               Column(
                 children: [
-                  const Text('Movies Time', style: TextStyle(fontSize: 10, color: Colors.white30)),
-                  const SizedBox(height: 2),
-                  Text(_formatWatchTime(totalMovieMinutes), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text('Movies Time', style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                  const SizedBox(height: 4),
+                  Text(_formatWatchTime(totalMovieMinutes), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
                   const SizedBox(height: 2),
                   Text(
                     _formatWatchTimeYMD(totalMovieMinutes),
-                    style: const TextStyle(fontSize: 9, color: Colors.white38),
+                    style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
-              Container(width: 1, height: 32, color: Colors.white10),
+              Container(height: 30, width: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
               Column(
                 children: [
-                  const Text('TV Shows Time', style: TextStyle(fontSize: 10, color: Colors.white30)),
-                  const SizedBox(height: 2),
-                  Text(_formatWatchTime(totalTvMinutes), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text('TV Shows Time', style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                  const SizedBox(height: 4),
+                  Text(_formatWatchTime(totalTvMinutes), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
                   const SizedBox(height: 2),
                   Text(
                     _formatWatchTimeYMD(totalTvMinutes),
-                    style: const TextStyle(fontSize: 9, color: Colors.white38),
+                    style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
-              Container(width: 1, height: 32, color: Colors.white10),
+              Container(height: 30, width: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
               Column(
                 children: [
-                  const Text('Total Time', style: TextStyle(fontSize: 10, color: Colors.white30)),
-                  const SizedBox(height: 2),
+                  Text('Total Time', style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                  const SizedBox(height: 4),
                   Text(
                     _formatWatchTime(totalMovieMinutes + totalTvMinutes),
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor),
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     _formatWatchTimeYMD(totalMovieMinutes + totalTvMinutes),
-                    style: const TextStyle(fontSize: 9, color: Colors.white38),
+                    style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -2129,27 +2154,53 @@ class _ShelfPageState extends State<ShelfPage> {
     return await showDialog<bool>(
       context: context,
       builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
         return AlertDialog(
-          backgroundColor: Colors.grey[900],
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Delete Watch Log', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+            side: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            ),
+          ),
+          icon: Icon(Icons.delete_outline_rounded, color: colorScheme.error, size: 32),
+          title: Text(
+            'Delete Watch Log',
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
+          ),
           content: Text(
             'Are you sure you want to remove "${item.title}" from your watch history?',
-            style: const TextStyle(color: Colors.white),
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              height: 1.5,
+            ),
           ),
           actions: [
-            TextButton(
+            OutlinedButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: colorScheme.onSurface,
+                side: BorderSide(color: colorScheme.outlineVariant),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+              child: const Text('Cancel'),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: colorScheme.error,
+                foregroundColor: colorScheme.onError,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
               ),
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('Delete'),
             ),
           ],
         );

@@ -32,7 +32,6 @@ class _MovieDetailPageMobile extends StatelessWidget {
     final availabilityFuture = state._availabilityFuture;
     final creditsFuture = state._creditsFuture;
     final directorMoviesFuture = state._directorMoviesFuture;
-    final castImagesFuture = state._castImagesFuture;
     final screenshotController = state.screenshotController;
     final language = state.language;
 
@@ -47,9 +46,7 @@ class _MovieDetailPageMobile extends StatelessWidget {
     final bool isTv = TvFocusModeManager.isTvDevice;
 
     final Widget bodyContent = moviedetails == null
-        ? const Center(
-            child: CircularProgressIndicator(),
-          )
+        ? const M3ExpressiveSpinner()
         : SingleChildScrollView(
             padding: EdgeInsets.only(
               bottom: isTv ? 0.0 : BottomBar.getHeight(context),
@@ -61,15 +58,14 @@ class _MovieDetailPageMobile extends StatelessWidget {
                       children: [
                         TvFocusWrapper(
                           onTap: () {
-                            castImagesFuture.then((imageUrls) {
-                              state._openImageGallery(imageUrls);
-                            });
+                            state._openGalleryOnDemand();
                           },
                           child: Stack(
                             children: [
                               CachedNetworkImage(
                                 imageUrl:
-                                    '${getImageBaseUrl(region)}/t/p/original$backdrops',
+                                    '${getImageBaseUrl(region)}/t/p/w780$backdrops',
+                                memCacheWidth: 780,
                                 placeholder: (context, url) => Skeletonizer(
                                   enabled: true,
                                   containersColor: Colors.white.withOpacity(0.05),
@@ -200,549 +196,302 @@ class _MovieDetailPageMobile extends StatelessWidget {
                             ],
                           ),
                         ),
-                        Visibility(
-                          visible: AppPlatform.isAndroid,
-                          child: Positioned(
-                            top: 190,
-                            right: 30,
-                            child: TvFocusWrapper(
-                              borderRadius: 30.0,
-                              onTap: () {
-                                showGeneralDialog(
-                                  context: context,
-                                  barrierDismissible: true,
-                                  barrierLabel: '',
-                                  transitionDuration:
-                                      const Duration(milliseconds: 300),
-                                  pageBuilder:
-                                      (context, animation1, animation2) =>
-                                          Container(),
-                                  transitionBuilder:
-                                      (context, animation1, animation2, child) {
-                                    final curvedValue = Curves.easeInOut
-                                            .transform(animation1.value) -
-                                        1.0;
-                                    return Transform(
-                                      transform: Matrix4.translationValues(
-                                          curvedValue * 300, 0, 0),
-                                      child: Align(
-                                        alignment: Alignment.centerRight,
-                                        child: Container(
-                                          height: 200,
-                                          width: 60,
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .scaffoldBackgroundColor,
-                                            borderRadius:
-                                                const BorderRadius.only(
-                                              topLeft: Radius.circular(20),
-                                              bottomLeft: Radius.circular(20),
-                                            ),
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 20),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                IconButton(
-                                                  onPressed: () {
-                                                    ShareContent.shareMovie(
-                                                        widget.movieId);
-                                                  },
-                                                  icon: const Icon(
-                                                    Icons.share,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 20),
-                                                IconButton(
-                                                  onPressed: () {
-                                                    ShareContent
-                                                        .sharePartialScreenshot(
-                                                      screenshotController,
-                                                      _buildScreenShotImage(context),
-                                                      widget.movieId,
-                                                    );
-                                                  },
-                                                  icon: const Icon(
-                                                    Icons.image,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
-                              child: const Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: Icon(
-                                  Icons.share,
-                                  color: Colors.white,
-                                  size: 25,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Visibility(
-                          visible: isUserLoggedIn == true,
-                          child: Positioned(
-                            top: 140,
-                            right: 30,
-                            child: TvFocusWrapper(
-                              borderRadius: 30.0,
-                              onTap: () async {
-                                if (isMovieWatchlist == null) {
-                                  return;
-                                }
-                                final movieId = widget.movieId;
-                                final openbox =
-                                    Hive.box('sessionBox');
-                                final String accountId =
-                                    openbox.get('accountId');
-                                final String sessionData =
-                                    openbox.get('sessionData');
-                                if (isMovieWatchlist) {
-                                  // Remove from watchlist
-                                  state.updateState(() {
-                                    state.isMovieWatchlist = false;
-                                  });
-                                  await removeFromWatchList(
-                                      accountId, sessionData, movieId, context);
-                                  profileRefreshNotifier.value++;
-                                } else {
-                                  // Add to watchlist
-                                  state.updateState(() {
-                                    state.isMovieWatchlist = true;
-                                  });
-                                  await addWatchList(
-                                      accountId, sessionData, movieId, context);
-                                  profileRefreshNotifier.value++;
-                                }
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Icon(
-                                  isMovieWatchlist == null
-                                      ? Icons.bookmark_border
-                                      : isMovieWatchlist
-                                          ? Icons.bookmark
-                                          : Icons.bookmark_border,
-                                  color: Colors.white,
-                                  size: 25,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Visibility(
-                          visible: isUserLoggedIn == true,
-                          child: Positioned(
-                            top: 90,
-                            right: 30,
-                            child: TvFocusWrapper(
-                              borderRadius: 30.0,
-                              onTap: () async {
-                                if (isMovieFavorite == null) {
-                                  return;
-                                }
-                                final movieId = widget.movieId;
-                                final openbox =
-                                    Hive.box('sessionBox');
-                                final String accountId =
-                                    openbox.get('accountId');
-                                final String sessionData =
-                                    openbox.get('sessionData');
-                                if (isMovieFavorite) {
-                                  state.updateState(() {
-                                    state.isMovieFavorite = false;
-                                  });
-                                  await removeFromFavorite(
-                                      accountId, sessionData, movieId, context);
-                                  profileRefreshNotifier.value++;
-                                } else {
-                                  state.updateState(() {
-                                    state.isMovieFavorite = true;
-                                  });
-                                  await addFavorite(
-                                      accountId, sessionData, movieId, context);
-                                  profileRefreshNotifier.value++;
-                                }
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Icon(
-                                  isMovieFavorite == null
-                                      ? Icons.favorite_border
-                                      : isMovieFavorite
-                                          ? Icons.favorite
-                                          : Icons.favorite_border,
-                                  color: Colors.white,
-                                  size: 25,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        // logged in and rated
-                        if (isUserLoggedIn == true &&
-                            isMovieRated != false &&
-                            userRating != null)
+                        if (AppPlatform.isAndroid)
                           Positioned(
-                            top: 40,
-                            right: 20,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(
-                                  color: Colors.black38,
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(30))),
-                              child: TvFocusWrapper(
-                                borderRadius: 30.0,
-                                onTap: () => showModalBottomSheet(
+                            top: 190,
+                            right: 24,
+                            child: Builder(
+                              builder: (buttonContext) {
+                                return _buildM3FloatingActionButton(
                                   context: context,
-                                  builder: (BuildContext context) {
-                                    return Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const SizedBox(
-                                          height: 20,
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: RatingBar.builder(
-                                            initialRating: userRating,
-                                            minRating: 1,
-                                            maxRating: 10,
-                                            itemSize: 35,
-                                            unratedColor: Colors.grey,
-                                            direction: Axis.horizontal,
-                                            allowHalfRating: true,
-                                            itemCount: 10,
-                                            itemPadding:
-                                                const EdgeInsets.symmetric(
-                                                    horizontal: 0),
-                                            itemBuilder: (context, _) =>
-                                                const Icon(
-                                              Icons.star,
-                                              color: Colors.amber,
-                                            ),
-                                            onRatingUpdate: (rating) async {
-                                              final movieId = widget.movieId;
-                                              final openbox =
-                                                  Hive.box('sessionBox');
+                                  onTap: () {
+                                    final RenderBox button = buttonContext
+                                        .findRenderObject() as RenderBox;
+                                    final RenderBox overlay =
+                                        Overlay.of(context)
+                                            .context
+                                            .findRenderObject() as RenderBox;
+                                    final RelativeRect position =
+                                        RelativeRect.fromRect(
+                                      Rect.fromPoints(
+                                        button.localToGlobal(Offset.zero,
+                                            ancestor: overlay),
+                                        button.localToGlobal(
+                                            button.size
+                                                .bottomRight(Offset.zero),
+                                            ancestor: overlay),
+                                      ),
+                                      Offset.zero & overlay.size,
+                                    );
 
-                                              final String sessionData =
-                                                  openbox.get('sessionData');
-                                              addRating(sessionData, movieId,
-                                                  rating, context);
-                                              state.updateState(() {
-                                                state.isMovieRated = {'value': rating};
-                                                state.userRating = rating;
-                                                profileRefreshNotifier.value++;
-                                              });
-                                            },
-                                          ),
-                                        ),
-                                        const CustomDivider(),
-                                        const SizedBox(
-                                          height: 10,
-                                        ),
-                                        GestureDetector(
-                                          onTap: () async {
-                                            final openbox = Hive.box('sessionBox');
-
-                                            final String sessionData =
-                                                openbox.get('sessionData');
-                                            removeRating(sessionData,
-                                                widget.movieId, context);
-                                            Navigator.of(context).pop();
-                                            state.updateState(() {
-                                              state.isMovieRated = false;
-                                              state.userRating = null;
-                                              profileRefreshNotifier.value++;
-                                            });
+                                    showMenu<String>(
+                                      context: context,
+                                      position: position,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainerHigh,
+                                      elevation: 8,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      items: [
+                                        PopupMenuItem<String>(
+                                          value: 'cover',
+                                          onTap: () {
+                                            ShareContent.sharePartialScreenshot(
+                                              screenshotController,
+                                              _buildScreenShotImage(context),
+                                              widget.movieId,
+                                            );
                                           },
-                                          child: const Text(
-                                            ' 🗑️ Delete Rating',
-                                            style: TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 18),
+                                          child: const Row(
+                                            children: [
+                                              Icon(Icons.image_rounded,
+                                                  size: 20),
+                                              SizedBox(width: 12),
+                                              Text('Cover Art'),
+                                            ],
                                           ),
                                         ),
-                                        const SizedBox(
-                                          height: 20,
+                                        PopupMenuItem<String>(
+                                          value: 'tmdb',
+                                          onTap: () {
+                                            ShareContent.shareMovie(
+                                                widget.movieId);
+                                          },
+                                          child: const Row(
+                                            children: [
+                                              Icon(Icons.movie_outlined,
+                                                  size: 20),
+                                              SizedBox(width: 12),
+                                              Text('TMDB Link'),
+                                            ],
+                                          ),
+                                        ),
+                                        PopupMenuItem<String>(
+                                          value: 'mirarr',
+                                          onTap: () {
+                                            ShareContent.shareMirarrWebMovie(
+                                                widget.movieId);
+                                          },
+                                          child: const Row(
+                                            children: [
+                                              Icon(Icons.language_rounded,
+                                                  size: 20),
+                                              SizedBox(width: 12),
+                                              Text('Mirarr WebApp Link'),
+                                            ],
+                                          ),
                                         ),
                                       ],
                                     );
                                   },
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                                  child: Text(
-                                    '👤 ${userRating.toStringAsFixed(1)}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w300,
-                                      fontSize: 13,
-                                      color: Colors.white,
-                                    ),
+                                  child: const Icon(
+                                    Icons.share_rounded,
+                                    color: Colors.white,
+                                    size: 22,
                                   ),
-                                ),
-                              ),
+                                );
+                              },
+                            ),
+                          ),
+
+                        if (isUserLoggedIn == true)
+                          Positioned(
+                            top: 140,
+                            right: 24,
+                            child: MovieWatchlistButton(
+                              movieId: widget.movieId,
+                              initialIsWatchlist: isMovieWatchlist,
+                              isUserLoggedIn: isUserLoggedIn,
+                              isDesktop: false,
+                            ),
+                          ),
+
+                        if (isUserLoggedIn == true)
+                          Positioned(
+                            top: 90,
+                            right: 24,
+                            child: MovieFavoriteButton(
+                              movieId: widget.movieId,
+                              initialIsFavorite: isMovieFavorite,
+                              isUserLoggedIn: isUserLoggedIn,
+                              isDesktop: false,
                             ),
                           ),
 
                         Positioned(
                           top: 40,
                           left: 20,
-                          child: TvFocusWrapper(
-                            borderRadius: 30.0,
-                            onTap: isWatched ? state._removeFromWatched : state._markAsWatched,
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: isWatched ? Colors.green.withValues(alpha: 0.7) : Colors.black38,
-                                borderRadius: const BorderRadius.all(Radius.circular(30)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    isWatched ? Icons.check_circle : Icons.visibility,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    isWatched ? 'Watched' : 'Mark as Watched',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w300,
-                                      fontSize: 13,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          child: MovieWatchedButton(
+                            movieId: widget.movieId,
+                            movieTitle: widget.movieTitle,
+                            posterPath: state.posterPath,
+                            userRating: userRating,
+                            initialIsWatched: isWatched,
+                            isDesktop: false,
                           ),
                         ),
-                        //logged in not rated
-                        if (isUserLoggedIn == true &&
-                            isMovieRated == false &&
-                            userRating == null)
+
+                        if (isUserLoggedIn == true)
                           Positioned(
                             top: 40,
-                            right: 30,
-                            child: TvFocusWrapper(
-                                  borderRadius: 30.0,
-                                  onTap: () {
-                                    showModalBottomSheet(
-                                      context: context,
-                                      builder: (BuildContext context) {
-                                        return Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const SizedBox(
-                                              height: 20,
-                                            ),
-                                            RatingBar.builder(
-                                              initialRating: 5,
-                                              minRating: 1,
-                                              maxRating: 10,
-                                              itemSize: 35,
-                                              unratedColor: Colors.grey,
-                                              direction: Axis.horizontal,
-                                              allowHalfRating: true,
-                                              itemCount: 10,
-                                              itemPadding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 0),
-                                              itemBuilder: (context, _) =>
-                                                  const Icon(
-                                                Icons.star,
-                                                color: Colors.amber,
-                                              ),
-                                              onRatingUpdate: (rating) async {
-                                                final movieId =
-                                                    widget.movieId;
-                                                final openbox =
-                                                    Hive.box('sessionBox');
-
-                                                final String sessionData =
-                                                    openbox
-                                                        .get('sessionData');
-                                                addRating(sessionData,
-                                                    movieId, rating, context);
-                                                state.updateState(() {
-                                                  state.isMovieRated = '"value":$rating';
-                                                  state.userRating = rating;
-                                                  profileRefreshNotifier.value++;
-                                                });
-                                              },
-                                            ),
-                                            const SizedBox(
-                                              height: 40,
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    );
-                                  },
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Icon(
-                                      Icons.add_reaction,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
+                            right: 24,
+                            child: MovieRatingButton(
+                              movieId: widget.movieId,
+                              isUserLoggedIn: isUserLoggedIn,
+                              initialIsRated: isMovieRated,
+                              initialUserRating: userRating,
+                              isDesktop: false,
+                            ),
                           ),
                       ],
                     ),
                   Center(
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      physics: const BouncingScrollPhysics(),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children:
-                            (genres as List<dynamic>).map<Widget>((genre) {
-                          return Text(
-                            genre['name'] + ' | ',
-                            style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w200),
+                        children: (genres as List<dynamic>).map<Widget>((genre) {
+                          return Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Text(
+                              genre['name'].toString(),
+                              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           );
                         }).toList(),
                       ),
                     ),
                   ),
-                  const CustomDivider(),
+                  const SizedBox(height: 12),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Container(
-                        alignment: Alignment.center,
-                        child: Text(
-                          about!,
-                          style:
-                              getMovieAboutTextStyle(context, widget.movieId),
-                          textAlign: TextAlign.left,
-                        )),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.15),
+                        ),
+                      ),
+                      child: Text(
+                        about ?? '',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          height: 1.5,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
                   ),
-                  const CustomDivider(),
+                  const SizedBox(height: 16),
                   Padding(
-                    padding: const EdgeInsets.all(15.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        SizedBox(
-                          width: 110,
+                        Expanded(
                           child: Container(
-                            padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                             decoration: BoxDecoration(
-                              color: getMovieBackgroundColor(
-                                  context, widget.movieId),
-                              borderRadius: BorderRadius.circular(10),
+                              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                              ),
                             ),
                             child: Column(
                               children: [
-                                const Text(
+                                Text(
                                   'Duration',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w200,
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "${hours}H ${minutes}M",
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "${hours}H ${minutes}M",
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        SizedBox(
-                          width: 110,
+                        const SizedBox(width: 10),
+                        Expanded(
                           child: Container(
-                            padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                             decoration: BoxDecoration(
-                              color: getMovieBackgroundColor(
-                                  context, widget.movieId),
-                              borderRadius: BorderRadius.circular(10),
+                              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                              ),
                             ),
                             child: Column(
                               children: [
-                                const Text(
+                                Text(
                                   'Year',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w200,
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    year,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  year,
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        SizedBox(
-                          width: 110,
+                        const SizedBox(width: 10),
+                        Expanded(
                           child: Container(
-                            padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                             decoration: BoxDecoration(
-                              color: getMovieBackgroundColor(
-                                  context, widget.movieId),
-                              borderRadius: BorderRadius.circular(10),
+                              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                              ),
                             ),
                             child: Column(
                               children: [
-                                const Text(
+                                Text(
                                   'Language',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w200,
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    language != null
-                                        ? language.toUpperCase()
-                                        : 'N/A',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  language != null ? language.toUpperCase() : 'N/A',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ],
@@ -752,88 +501,83 @@ class _MovieDetailPageMobile extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 20),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(25, 10, 25, 0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Center(
-                          child: FutureBuilder(
-                              future: availabilityFuture,
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  // Display loading indicator while fetching data
-                                  return const SizedBox();
-                                } else if (snapshot.hasError) {
-                                  // Display error message if fetching data fails
-                                  return const Text('Error loading data');
-                                } else {
-                                  // Display check mark if results are not empty
-                                  return snapshot.data == true
-                                      ? SizedBox(
-                                          width: double.maxFinite,
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.center,
-                                            mainAxisSize: MainAxisSize.max,
-
-                                            children: [
-                                              Expanded(
-                                                child: FloatingActionButton(
-                                                  heroTag: null,
-                                                  backgroundColor: getMovieColor(
-                                                      context, widget.movieId),
-                                                  onPressed: () => showWatchOptions(
-                                                      context,
-                                                      widget.movieId,
-                                                      widget.movieTitle,
-                                                      releaseDate ?? '',
-                                                      imdbId ?? ''),
-                                                  child: Text(
-                                                    'Watch',
-                                                    style: getMovieButtonTextStyle(
-                                                        widget.movieId),
-                                                  ),
-                                                ),
-                                              ),
-
-                                            ],
+                        FutureBuilder(
+                          future: availabilityFuture,
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const SizedBox();
+                            } else if (snapshot.hasError) {
+                              return const SizedBox();
+                            } else {
+                              return snapshot.data == true
+                                  ? Container(
+                                      width: double.infinity,
+                                      height: 56,
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      child: FilledButton.icon(
+                                        icon: const Icon(Icons.play_arrow_rounded, size: 26),
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: getMovieColor(context, widget.movieId),
+                                          foregroundColor: Colors.white,
+                                          elevation: 2,
+                                          shadowColor: getMovieColor(context, widget.movieId).withValues(alpha: 0.4),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(28),
                                           ),
-                                        )
-                                      : const SizedBox();
-                                }
-                              }),
-                        )
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(25, 10, 25, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                            child: SizedBox(
-                                width: double.maxFinite,
-                                child: FloatingActionButton(
-                                  heroTag: null,
-                                  backgroundColor:
-                                      getMovieColor(context, widget.movieId),
-                                  onPressed: () => showTorrentOptions(
-                                      context,
-                                      widget.movieId,
-                                      widget.movieTitle,
-                                      releaseDate,
-                                      imdbId),
-                                  child: Text(
-                                    'Torrent Search',
-                                    style:
-                                        getMovieButtonTextStyle(widget.movieId),
-                                  ),
-                                )))
+                                        ),
+                                        onPressed: () => showWatchOptions(
+                                          context,
+                                          widget.movieId,
+                                          widget.movieTitle,
+                                          releaseDate ?? '',
+                                          imdbId ?? '',
+                                        ),
+                                        label: Text(
+                                          'Watch',
+                                          style: getMovieButtonTextStyle(widget.movieId).copyWith(fontSize: 16),
+                                        ),
+                                      ),
+                                    )
+                                  : const SizedBox();
+                            }
+                          },
+                        ),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: FilledButton.icon(
+                            icon: const Icon(Icons.download_rounded, size: 22),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+                              foregroundColor: Theme.of(context).colorScheme.onSurface,
+                              side: BorderSide(
+                                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(28),
+                              ),
+                            ),
+                            onPressed: () => showTorrentOptions(
+                              context,
+                              widget.movieId,
+                              widget.movieTitle,
+                              releaseDate,
+                              imdbId,
+                            ),
+                            label: Text(
+                              'Torrent Search',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -841,7 +585,7 @@ class _MovieDetailPageMobile extends StatelessWidget {
                     future: creditsFuture,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
+                        return buildCastCrewSkeletonRow(isDesktop: false);
                       } else if (snapshot.hasError) {
                         return const Text(
                             'Error loading cast and crew details');
@@ -1478,6 +1222,40 @@ class _MovieDetailPageMobile extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildM3FloatingActionButton({
+    required BuildContext context,
+    required Widget child,
+    required VoidCallback onTap,
+    Color? backgroundColor,
+    Color? borderColor,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final defaultBg = colorScheme.surfaceContainerHigh.withValues(alpha: 0.85);
+    final defaultBorder = colorScheme.outlineVariant.withValues(alpha: 0.3);
+
+    return Container(
+      width: 46,
+      height: 46,
+      decoration: BoxDecoration(
+        color: backgroundColor ?? defaultBg,
+        shape: BoxShape.circle,
+        border: Border.all(color: borderColor ?? defaultBorder, width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TvFocusWrapper(
+        borderRadius: 23.0,
+        onTap: onTap,
+        child: Center(child: child),
       ),
     );
   }

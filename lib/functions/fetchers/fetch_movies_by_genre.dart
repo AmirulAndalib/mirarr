@@ -1,6 +1,4 @@
-import 'dart:isolate';
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:Mirarr/moviesPage/models/movie.dart';
@@ -15,8 +13,7 @@ class Genre {
   Genre({required this.id, required this.name});
 }
 
-// Isolate parsing function for genres
-List<Genre> _parseGenresInIsolate(String responseBody) {
+List<Genre> _parseGenres(String responseBody) {
   final List<Genre> genres = [];
   final List<dynamic> results = json.decode(responseBody)['genres'];
   for (var result in results) {
@@ -29,37 +26,21 @@ List<Genre> _parseGenresInIsolate(String responseBody) {
   return genres;
 }
 
-// Isolate parsing function for movies
-List<Movie> _parseMoviesInIsolate(String responseBody) {
+List<Movie> _parseMovies(String responseBody) {
   final List<Movie> movies = [];
-  final List<dynamic> results = json.decode(responseBody)['results'];
+  final List<dynamic> results = json.decode(responseBody)['results'] ?? [];
   for (var result in results) {
     final movie = Movie(
-      title: result['title'],
-      releaseDate: result['release_date'],
+      title: result['title'] ?? '',
+      releaseDate: result['release_date'] ?? '',
       posterPath: result['poster_path'] ?? '',
       overView: result['overview'] ?? '',
-      id: result['id'],
-      score: result['vote_average'] ?? 0.0,
+      id: (result['id'] as num?)?.toInt() ?? 0,
+      score: (result['vote_average'] as num?)?.toDouble() ?? 0.0,
     );
     movies.add(movie);
   }
   return movies;
-}
-
-// Isolate handler functions
-void _genreIsolateFunction(Map<String, dynamic> message) {
-  final SendPort sendPort = message['sendPort'];
-  final String responseBody = message['responseBody'];
-  final genres = _parseGenresInIsolate(responseBody);
-  sendPort.send(genres);
-}
-
-void _movieIsolateFunction(Map<String, dynamic> message) {
-  final SendPort sendPort = message['sendPort'];
-  final String responseBody = message['responseBody'];
-  final movies = _parseMoviesInIsolate(responseBody);
-  sendPort.send(movies);
 }
 
 Future<List<Genre>> fetchGenres(String region) async {
@@ -69,25 +50,7 @@ Future<List<Genre>> fetchGenres(String region) async {
   );
 
   if (response.statusCode == 200) {
-    if (kIsWeb) {
-      return _parseGenresInIsolate(response.body);
-    }
-    final receivePort = ReceivePort();
-
-    try {
-      await Isolate.spawn(
-        _genreIsolateFunction,
-        {
-          'sendPort': receivePort.sendPort,
-          'responseBody': response.body,
-        },
-      );
-
-      final genres = await receivePort.first as List<Genre>;
-      return genres;
-    } finally {
-      receivePort.close();
-    }
+    return _parseGenres(response.body);
   } else {
     throw Exception('Failed to load genres');
   }
@@ -103,26 +66,9 @@ Future<List<Movie>> fetchMoviesByGenre(int genreId, String region) async {
   );
 
   if (response.statusCode == 200) {
-    if (kIsWeb) {
-      return _parseMoviesInIsolate(response.body);
-    }
-    final receivePort = ReceivePort();
-
-    try {
-      await Isolate.spawn(
-        _movieIsolateFunction,
-        {
-          'sendPort': receivePort.sendPort,
-          'responseBody': response.body,
-        },
-      );
-
-      final movies = await receivePort.first as List<Movie>;
-      return movies;
-    } finally {
-      receivePort.close();
-    }
+    return _parseMovies(response.body);
   } else {
     throw Exception('Failed to load movies by genre');
   }
 }
+

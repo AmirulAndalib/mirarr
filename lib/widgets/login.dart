@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:Mirarr/functions/show_error_dialog.dart';
 import 'package:Mirarr/widgets/settings_screen.dart';
+import 'package:Mirarr/widgets/expressive_page_route.dart';
 import 'package:flutter/material.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
@@ -118,204 +119,220 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-extendBody: true,
+      extendBody: true,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: Theme.of(context).primaryColor,
-        title: const Text(
-          'Login',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          'Account Login',
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: Icon(Icons.settings_outlined, color: colorScheme.onSurface),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const SettingsPage()),
+                ExpressivePageRoute(page: const SettingsPage()),
               );
             },
           ),
         ],
       ),
       body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
         padding: EdgeInsets.only(
-          bottom: TvFocusModeManager.isTvDevice ? 0.0 : BottomBar.getHeight(context),
+          left: 24,
+          right: 24,
+          top: 16,
+          bottom: TvFocusModeManager.isTvDevice ? 24.0 : BottomBar.getHeight(context) + 16,
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(
-              height: 20,
-            ),
-            const Column(
-              children: [
-                Text(
-                  'Login or SignUp to MovieDB',
-                  style: TextStyle(color: Colors.white, fontSize: 20),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.2),
                 ),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(80, 8, 80, 8),
-                  child: Text(
-                    textAlign: TextAlign.center,
-                    'Notice that this app uses MovieDB for authentication and storing information.',
-                    style: TextStyle(color: Colors.grey, fontSize: 10),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(
-              height: 60,
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
+              ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  TextField(
-                    autocorrect: false,
-                    style: const TextStyle(
-                      color: Colors.black,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer,
+                      shape: BoxShape.circle,
                     ),
-                    cursorColor: Colors.black,
-                    controller: _emailController,
-                    keyboardType: TextInputType.text,
-                    decoration: InputDecoration(
-                      labelText: 'Username',
-                      labelStyle: const TextStyle(
-                          color: Colors.black, fontWeight: FontWeight.bold),
-                      filled: true,
-                      fillColor: Theme.of(context).hintColor,
-                      focusedBorder: OutlineInputBorder(
-                        borderSide:
-                            BorderSide(color: Theme.of(context).primaryColor),
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide:
-                            BorderSide(color: Theme.of(context).primaryColor),
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      floatingLabelBehavior: FloatingLabelBehavior.never,
+                    child: Icon(
+                      Icons.movie_filter_rounded,
+                      size: 40,
+                      color: colorScheme.onPrimaryContainer,
                     ),
                   ),
-                  const SizedBox(height: 20.0),
-                  TextField(
-                    obscureText: true,
-                    autocorrect: false,
-                    style: const TextStyle(
-                      color: Colors.black,
-                    ),
-                    cursorColor: Colors.black,
-                    controller: _passwordController,
-                    keyboardType: TextInputType.visiblePassword,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      labelStyle: const TextStyle(
-                          color: Colors.black, fontWeight: FontWeight.bold),
-                      filled: true,
-                      fillColor: Theme.of(context).hintColor,
-                      focusedBorder: OutlineInputBorder(
-                        borderSide:
-                            BorderSide(color: Theme.of(context).primaryColor),
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide:
-                            BorderSide(color: Theme.of(context).primaryColor),
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      floatingLabelBehavior: FloatingLabelBehavior.never,
+                  const SizedBox(height: 16),
+                  Text(
+                    'TMDB Authentication',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 20.0),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 0, 12, 0),
-                        child: GestureDetector(
-                          onTap: () {
-                            _forgotpassword();
-                          },
-                          child: const Text(
-                            'Forgot password?',
-                            style: TextStyle(color: Colors.white, fontSize: 12),
-                          ),
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: _isLoading ? null : _login,
-                        style: _isLoading
-                            ? ButtonStyle(
-                                backgroundColor:
-                                    WidgetStateProperty.all<Color>(
-                                        Colors.black),
-                                shape: WidgetStateProperty.all<
-                                    RoundedRectangleBorder>(
-                                  RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10.0),
-                                  ),
-                                ),
-                              )
-                            : ButtonStyle(
-                                backgroundColor:
-                                    WidgetStateProperty.all<Color>(
-                                        Theme.of(context).primaryColor),
-                                shape: WidgetStateProperty.all<
-                                    RoundedRectangleBorder>(
-                                  RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20.0),
-                                  ),
-                                ),
-                              ),
-                        child: _isLoading
-                            ? const RefreshProgressIndicator()
-                            : const Text(
-                                'Login',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                ),
-                              ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 80,
-                  ),
-                  const Center(
-                    child: Text(
-                      'Don\'t have an account?',
-                      style: TextStyle(color: Colors.white, fontSize: 15),
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 10,
-                  ),
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: _signup,
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStateProperty.all<Color>(
-                            Theme.of(context).primaryColor),
-                        shape:
-                            WidgetStateProperty.all<RoundedRectangleBorder>(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                                20.0), // Adjust the value for the roundness you desire
-                          ),
-                        ),
-                      ),
-                      child: const Text(
-                        'Sign up',
-                        style: TextStyle(
-                          color: Colors.black, // Text color
-                        ),
-                      ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Log in with your TMDB account to sync watchlists, ratings, and favorites across device instances.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      height: 1.4,
                     ),
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 28),
+            TextField(
+              autocorrect: false,
+              style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
+              cursorColor: colorScheme.primary,
+              controller: _emailController,
+              keyboardType: TextInputType.text,
+              decoration: InputDecoration(
+                labelText: 'Username or Email',
+                prefixIcon: Icon(Icons.person_outline_rounded, color: colorScheme.onSurfaceVariant),
+                filled: true,
+                fillColor: colorScheme.surfaceContainerHigh,
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: colorScheme.primary, width: 2),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+              ),
+            ),
+            const SizedBox(height: 16.0),
+            TextField(
+              obscureText: true,
+              autocorrect: false,
+              style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
+              cursorColor: colorScheme.primary,
+              controller: _passwordController,
+              keyboardType: TextInputType.visiblePassword,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                prefixIcon: Icon(Icons.lock_outline_rounded, color: colorScheme.onSurfaceVariant),
+                filled: true,
+                fillColor: colorScheme.surfaceContainerHigh,
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: colorScheme.primary, width: 2),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+              ),
+            ),
+            const SizedBox(height: 12.0),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _forgotpassword,
+                child: Text(
+                  'Forgot password?',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16.0),
+            SizedBox(
+              height: 54,
+              child: FilledButton(
+                onPressed: _isLoading ? null : _login,
+                style: FilledButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                ),
+                child: _isLoading
+                    ? SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: colorScheme.onPrimary,
+                        ),
+                      )
+                    : Text(
+                        'Sign In',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: colorScheme.onPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 36),
+            Row(
+              children: [
+                Expanded(child: Divider(color: colorScheme.outlineVariant.withValues(alpha: 0.3))),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    "Don't have an account?",
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                Expanded(child: Divider(color: colorScheme.outlineVariant.withValues(alpha: 0.3))),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 54,
+              child: OutlinedButton(
+                onPressed: _signup,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: colorScheme.outlineVariant),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                ),
+                child: Text(
+                  'Create TMDB Account',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
@@ -324,3 +341,4 @@ extendBody: true,
     );
   }
 }
+

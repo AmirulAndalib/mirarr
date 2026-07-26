@@ -1,5 +1,4 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:Mirarr/widgets/bottom_bar.dart';
@@ -9,7 +8,7 @@ import 'package:webfeed_plus/domain/rss_category.dart';
 import 'package:webfeed_plus/domain/rss_feed.dart';
 
 class RssScreen extends StatefulWidget {
-  RssScreen({Key? key}) : super(key: key);
+  const RssScreen({Key? key}) : super(key: key);
 
   @override
   _RssScreenState createState() => _RssScreenState();
@@ -49,26 +48,25 @@ class _RssScreenState extends State<RssScreen> with TickerProviderStateMixin {
     }
   }
 
-  Icon _getCategoryIcon(List<RssCategory>? categories) {
+  Widget _getCategoryIcon(List<RssCategory>? categories) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     if (categories != null) {
       for (var category in categories) {
         if (category.value.contains("Movies")) {
-          return Icon(
-            Icons.movie,
-            color: Theme.of(context).secondaryHeaderColor,
-          );
+          return Icon(Icons.movie_outlined, color: colorScheme.primary);
         } else if (category.value.contains("TV")) {
-          return Icon(
-            Icons.tv,
-            color: Theme.of(context).secondaryHeaderColor,
-          );
+          return Icon(Icons.tv_outlined, color: colorScheme.primary);
         }
       }
     }
-    return const Icon(Icons.info);
+    return Icon(Icons.rss_feed_rounded, color: colorScheme.onSurfaceVariant);
   }
 
   Widget _buildFeedList(RssFeed feed, String category) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final filteredItems = feed.items!.where((item) {
       final categories = item.categories ?? [];
       return categories.any((cat) => cat.value.contains(category));
@@ -76,27 +74,59 @@ class _RssScreenState extends State<RssScreen> with TickerProviderStateMixin {
 
     return ListView.builder(
       padding: EdgeInsets.only(
-        left: 8.0,
-        right: 8.0,
-        top: 8.0,
-        bottom: TvFocusModeManager.isTvDevice ? 8.0 : BottomBar.getHeight(context),
+        left: 16.0,
+        right: 16.0,
+        top: 12.0,
+        bottom: TvFocusModeManager.isTvDevice ? 16.0 : BottomBar.getHeight(context),
       ),
+      physics: const BouncingScrollPhysics(),
       itemCount: filteredItems.length,
       itemBuilder: (context, index) {
         final item = filteredItems[index];
-        return ListTile(
-          leading: _getCategoryIcon(item.categories),
-          title: Text(
-            item.title ?? '',
-            style: const TextStyle(color: Colors.white),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+            ),
           ),
-          subtitle: Text(
-            item.pubDate.toString(),
-            style: const TextStyle(color: Colors.white),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: _getCategoryIcon(item.categories),
+            ),
+            title: Text(
+              item.title ?? '',
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            subtitle: item.pubDate != null
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text(
+                      item.pubDate.toString(),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  )
+                : null,
+            trailing: Icon(Icons.arrow_forward_rounded, color: colorScheme.onSurfaceVariant, size: 18),
+            onTap: () {
+              if (item.link != null) {
+                _launchUrl(Uri.parse(item.link!));
+              }
+            },
           ),
-          onTap: () {
-            _launchUrl(Uri.parse(item.link!));
-          },
         );
       },
     );
@@ -104,70 +134,88 @@ class _RssScreenState extends State<RssScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final bool isTv = TvFocusModeManager.isTvDevice;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    final Widget feedBody = ScrollConfiguration(
-      behavior: const ScrollBehavior().copyWith(
-        physics: const BouncingScrollPhysics(),
-        scrollbars: true,
-        dragDevices: {
-          PointerDeviceKind.touch,
-          PointerDeviceKind.mouse,
-          PointerDeviceKind.trackpad,
-        },
+    return Scaffold(
+      extendBody: true,
+      backgroundColor: colorScheme.surface,
+      appBar: AppBar(
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          'RSS Feed',
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              padding: const EdgeInsets.all(4),
+              child: TabBar(
+                controller: _tabController,
+                labelColor: colorScheme.onPrimaryContainer,
+                unselectedLabelColor: colorScheme.onSurfaceVariant,
+                dividerColor: Colors.transparent,
+                indicatorSize: TabBarIndicatorSize.tab,
+                indicator: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  color: colorScheme.primaryContainer,
+                ),
+                tabs: const [
+                  Tab(text: 'Movies'),
+                  Tab(text: 'TV Shows'),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
-      child: FutureBuilder(
-        future: _feedFuture,
-        builder: (context, AsyncSnapshot<RssFeed> snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else {
-            final feed = snapshot.requireData;
-            return Builder(
-              builder: (context) => TabBarView(
+      body: ScrollConfiguration(
+        behavior: const ScrollBehavior().copyWith(
+          physics: const BouncingScrollPhysics(),
+          scrollbars: true,
+          dragDevices: {
+            PointerDeviceKind.touch,
+            PointerDeviceKind.mouse,
+            PointerDeviceKind.trackpad,
+          },
+        ),
+        child: FutureBuilder<RssFeed>(
+          future: _feedFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(
+                child: Text(
+                  'Error loading RSS feed',
+                  style: TextStyle(color: colorScheme.error),
+                ),
+              );
+            } else {
+              final feed = snapshot.requireData;
+              return TabBarView(
                 controller: _tabController,
                 children: [
                   _buildFeedList(feed, "Movies"),
                   _buildFeedList(feed, "TV"),
                 ],
-              ),
-            );
-          }
-        },
-      ),
-    );
-
-    return Scaffold(
-extendBody: true,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).primaryColor,
-        title: const Text(
-          'RSS Feed',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        bottom: TabBar(
-          labelColor: Colors.black,
-          indicatorSize: TabBarIndicatorSize.tab,
-          controller: _tabController,
-          tabs: const [
-            Tab(
-              text: 'Movies',
-            ),
-            Tab(text: 'TV'),
-          ],
+              );
+            }
+          },
         ),
       ),
-      body: isTv
-          ? Column(
-              children: [
-                const BottomBar(),
-                Expanded(child: feedBody),
-              ],
-            )
-          : feedBody,
-      bottomNavigationBar: isTv ? null : const BottomBar(),
     );
   }
 }
+

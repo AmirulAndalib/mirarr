@@ -9,6 +9,9 @@ import 'package:Mirarr/seriesPage/function/on_tap_gridview_serie.dart';
 import 'package:Mirarr/widgets/rss_screen.dart';
 import 'package:Mirarr/widgets/settings_screen.dart';
 import 'package:Mirarr/widgets/watchlist_calendar_screen.dart';
+import 'package:Mirarr/utils/expressive_motion.dart';
+import 'package:Mirarr/widgets/expressive_interactive_container.dart';
+import 'package:Mirarr/widgets/expressive_page_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive/hive.dart';
@@ -59,8 +62,8 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _navigateToMovie(String title, int id) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => MovieDetailPage(movieTitle: title, movieId: id),
+      ExpressivePageRoute(
+        page: MovieDetailPage(movieTitle: title, movieId: id),
       ),
     );
     checkInternetAndFetchData();
@@ -69,8 +72,8 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _navigateToSerie(String title, int id) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => SerieDetailPage(serieName: title, serieId: id),
+      ExpressivePageRoute(
+        page: SerieDetailPage(serieName: title, serieId: id),
       ),
     );
     checkInternetAndFetchData();
@@ -342,15 +345,42 @@ class _ProfilePageState extends State<ProfilePage> {
       showDialog(
         context: context,
         builder: (BuildContext context) {
+          final colorScheme = Theme.of(context).colorScheme;
+          final textTheme = Theme.of(context).textTheme;
           return AlertDialog(
-            title: const Text('No Internet Connection'),
-            content:
-                const Text('Please connect to the internet and try again.'),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+              side: BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+              ),
+            ),
+            icon: Icon(Icons.wifi_off_rounded, color: colorScheme.error, size: 32),
+            title: Text(
+              'No Internet Connection',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            content: Text(
+              'Please connect to the internet and try again.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
             actions: [
-              TextButton(
+              FilledButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
+                style: FilledButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
                 child: const Text('OK'),
               ),
             ],
@@ -362,20 +392,43 @@ class _ProfilePageState extends State<ProfilePage> {
       showDialog(
         context: context,
         builder: (BuildContext context) {
+          final colorScheme = Theme.of(context).colorScheme;
+          final textTheme = Theme.of(context).textTheme;
           return AlertDialog(
-            titleTextStyle: TextStyle(
-                color: Theme.of(context).secondaryHeaderColor, fontSize: 20),
-            contentTextStyle:
-                TextStyle(color: Theme.of(context).primaryColor, fontSize: 16),
-            title: const Text('Network Error'),
-            content: const Text(
-                'An error occurred while fetching data. Please try again later.'),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+              side: BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+              ),
+            ),
+            icon: Icon(Icons.error_outline_rounded, color: colorScheme.error, size: 32),
+            title: Text(
+              'Network Error',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            content: Text(
+              'An error occurred while fetching data. Please try again later.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
             actions: [
-              TextButton(
+              FilledButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                   checkInternetAndFetchData();
                 },
+                style: FilledButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
                 child: const Text('OK'),
               ),
             ],
@@ -753,24 +806,57 @@ class _ProfilePageState extends State<ProfilePage> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        final textTheme = Theme.of(context).textTheme;
+
         return AlertDialog(
-          title: const Text('Logout'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+            side: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+            ),
+          ),
+          icon: Icon(Icons.logout_rounded, color: colorScheme.error, size: 32),
+          title: Text(
+            'Logout',
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
+          ),
           content: Text(
-            'Are you sure you want to logout?',
-            style: TextStyle(color: Theme.of(context).highlightColor),
+            'Are you sure you want to logout from your account?',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              height: 1.5,
+            ),
           ),
           actions: <Widget>[
-            TextButton(
+            OutlinedButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: colorScheme.onSurface,
+                side: BorderSide(color: colorScheme.outlineVariant),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
               child: const Text('Cancel'),
             ),
-            TextButton(
+            FilledButton(
               onPressed: () {
                 Navigator.of(context).pop();
                 _logout(context);
               },
+              style: FilledButton.styleFrom(
+                backgroundColor: colorScheme.error,
+                foregroundColor: colorScheme.onError,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
               child: const Text('Logout'),
             ),
           ],
@@ -785,129 +871,136 @@ class _ProfilePageState extends State<ProfilePage> {
     required VoidCallback onTap,
     Color? iconColor,
   }) {
-    final primaryColor = Theme.of(context).primaryColor;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Expanded(
-      child: Card(
-        color: Colors.grey[950],
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-          side: BorderSide(
-            color: primaryColor.withValues(alpha: 0.3),
-            width: 1,
+      child: ExpressiveInteractiveContainer(
+        onTap: onTap,
+        borderRadius: 20,
+        pressedBorderRadius: 26,
+        speed: ExpressiveSpeed.fast,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.2),
           ),
         ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(15),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: primaryColor.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    icon,
-                    color: iconColor ?? primaryColor,
-                    size: 26,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: (iconColor ?? colorScheme.primary).withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: iconColor ?? colorScheme.primary,
+                size: 22,
+              ),
             ),
-          ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildProfileHeader() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final String username = _accountDetails?['username'] ?? 'Mirarr User';
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Theme.of(context).primaryColor.withValues(alpha: 0.15),
-            Theme.of(context).primaryColor.withValues(alpha: 0.02),
-            Colors.transparent,
-          ],
-          stops: const [0.0, 0.7, 1.0],
-        ),
+        color: colorScheme.surface,
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Welcome back, $username',
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: 0.5,
-            ),
-            textAlign: TextAlign.center,
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: colorScheme.primaryContainer,
+                child: Icon(Icons.person_rounded, color: colorScheme.onPrimaryContainer, size: 26),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Welcome back',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  Text(
+                    username,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _buildActionTile(
-                icon: Icons.calendar_month,
+                icon: Icons.calendar_month_outlined,
                 label: 'Calendar',
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const WatchlistCalendarScreen()),
+                    ExpressivePageRoute(page: const WatchlistCalendarScreen()),
                   );
                 },
               ),
               const SizedBox(width: 8),
               _buildActionTile(
-                icon: Icons.rss_feed,
+                icon: Icons.rss_feed_rounded,
                 label: 'RSS Feed',
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => RssScreen()),
+                    ExpressivePageRoute(page: const RssScreen()),
                   );
                 },
               ),
               const SizedBox(width: 8),
               _buildActionTile(
-                icon: Icons.settings,
+                icon: Icons.settings_outlined,
                 label: 'Settings',
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const SettingsPage()),
+                    ExpressivePageRoute(page: const SettingsPage()),
                   );
                 },
               ),
               const SizedBox(width: 8),
               _buildActionTile(
-                icon: Icons.logout,
+                icon: Icons.logout_rounded,
                 label: 'Logout',
-                iconColor: Colors.redAccent,
+                iconColor: colorScheme.error,
                 onTap: () {
                   _showLogoutDialog(context);
                 },
@@ -921,6 +1014,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final navProvider = Provider.of<NavigationProvider>(context);
     if (navProvider.currentIndex == 4 && _lastIndex != 4) {
       _lastIndex = 4;
@@ -932,23 +1028,30 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     return Scaffold(
-extendBody: true,
-        appBar: AppBar(
-          title: const Text(
-            'Profile',
-            style: TextStyle(fontWeight: FontWeight.bold),
+      extendBody: true,
+      backgroundColor: colorScheme.surface,
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          'Profile',
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
           ),
-          automaticallyImplyLeading: false,
-          backgroundColor: Theme.of(context).primaryColor,
         ),
-        body: ScrollConfiguration(
-          behavior: ScrollConfiguration.of(context).copyWith(
-            dragDevices: {
-              PointerDeviceKind.touch,
-              PointerDeviceKind.mouse,
-              PointerDeviceKind.trackpad,
-            },
-          ),
+      ),
+      body: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(
+          dragDevices: {
+            PointerDeviceKind.touch,
+            PointerDeviceKind.mouse,
+            PointerDeviceKind.trackpad,
+          },
+        ),
+
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
             padding: EdgeInsets.only(
@@ -1009,13 +1112,17 @@ extendBody: true,
                             ),
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
                               itemCount: moviesWatchList.length,
                               itemBuilder: (context, index) {
                                 final movie = moviesWatchList[index];
-                                return GestureDetector(
-                                  onTap: () => _navigateToMovie(movie.title, movie.id),
-                                  child: CustomMovieWidget(
-                                    movie: movie,
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: GestureDetector(
+                                    onTap: () => _navigateToMovie(movie.title, movie.id),
+                                    child: CustomMovieWidget(
+                                      movie: movie,
+                                    ),
                                   ),
                                 );
                               },
@@ -1084,17 +1191,20 @@ extendBody: true,
                             ),
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
                               itemCount: recentEpisodes.length,
                               itemBuilder: (context, index) {
 
                                 final serie = recentEpisodes[index];
-                                return GestureDetector(
-                                  onTap: () => _navigateToSerie(serie.name, serie.id),
-                                  child: Stack(
-                                    children: [
-                                      CustomSeriesWidget(
-                                        serie: serie,
-                                      ),
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: GestureDetector(
+                                    onTap: () => _navigateToSerie(serie.name, serie.id),
+                                    child: Stack(
+                                      children: [
+                                        CustomSeriesWidget(
+                                          serie: serie,
+                                        ),
                                       Visibility(
                                         visible: serie.lastAirDate != null,
                                         child: Positioned(
@@ -1135,10 +1245,11 @@ extendBody: true,
                                             ),
                                           ),
                                         ),
-                                      )
+                                      ),
                                     ],
                                   ),
-                                );
+                                ),
+                              );
                               },
                             ),
                           ),
@@ -1206,13 +1317,17 @@ extendBody: true,
                             ),
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
                               itemCount: tvWatchList.length,
                               itemBuilder: (context, index) {
                                 final serie = tvWatchList[index];
-                                return GestureDetector(
-                                  onTap: () => _navigateToSerie(serie.name, serie.id),
-                                  child: CustomSeriesWidget(
-                                    serie: serie,
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: GestureDetector(
+                                    onTap: () => _navigateToSerie(serie.name, serie.id),
+                                    child: CustomSeriesWidget(
+                                      serie: serie,
+                                    ),
                                   ),
                                 );
                               },
@@ -1280,13 +1395,17 @@ extendBody: true,
                             ),
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
                               itemCount: movieFavorites.length,
                               itemBuilder: (context, index) {
                                 final movie = movieFavorites[index];
-                                return GestureDetector(
-                                  onTap: () => _navigateToMovie(movie.title, movie.id),
-                                  child: CustomMovieWidget(
-                                    movie: movie,
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: GestureDetector(
+                                    onTap: () => _navigateToMovie(movie.title, movie.id),
+                                    child: CustomMovieWidget(
+                                      movie: movie,
+                                    ),
                                   ),
                                 );
                               },
@@ -1356,13 +1475,17 @@ extendBody: true,
                             ),
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
                               itemCount: tvFavorites.length,
                               itemBuilder: (context, index) {
                                 final serie = tvFavorites[index];
-                                return GestureDetector(
-                                  onTap: () => _navigateToSerie(serie.name, serie.id),
-                                  child: CustomSeriesWidget(
-                                    serie: serie,
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: GestureDetector(
+                                    onTap: () => _navigateToSerie(serie.name, serie.id),
+                                    child: CustomSeriesWidget(
+                                      serie: serie,
+                                    ),
                                   ),
                                 );
                               },
@@ -1432,13 +1555,17 @@ extendBody: true,
                             ),
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
                               itemCount: movieRated.length,
                               itemBuilder: (context, index) {
                                 final movie = movieRated[index];
-                                return GestureDetector(
-                                  onTap: () => _navigateToMovie(movie.title, movie.id),
-                                  child: CustomMovieWidget(
-                                    movie: movie,
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: GestureDetector(
+                                    onTap: () => _navigateToMovie(movie.title, movie.id),
+                                    child: CustomMovieWidget(
+                                      movie: movie,
+                                    ),
                                   ),
                                 );
                               },
@@ -1508,13 +1635,17 @@ extendBody: true,
                             ),
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
                               itemCount: tvRated.length,
                               itemBuilder: (context, index) {
                                 final serie = tvRated[index];
-                                return GestureDetector(
-                                  onTap: () => _navigateToSerie(serie.name, serie.id),
-                                  child: CustomSeriesWidget(
-                                    serie: serie,
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: GestureDetector(
+                                    onTap: () => _navigateToSerie(serie.name, serie.id),
+                                    child: CustomSeriesWidget(
+                                      serie: serie,
+                                    ),
                                   ),
                                 );
                               },

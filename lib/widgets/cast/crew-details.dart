@@ -10,6 +10,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:Mirarr/widgets/custom_divider.dart';
 import 'package:Mirarr/widgets/image_gallery_page.dart';
+import 'package:Mirarr/widgets/m3_expressive_spinner.dart';
+import 'package:Mirarr/widgets/expressive_page_route.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:provider/provider.dart';
 
@@ -107,14 +109,17 @@ class _CrewDetailPageState extends State<CrewDetailPage> {
   void _openImageGallery(List<String> imageUrls) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => ImageGalleryPage(imageUrls: imageUrls),
+      ExpressivePageRoute(
+        page: ImageGalleryPage(imageUrls: imageUrls),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return FutureBuilder<Map<String, dynamic>>(
       future: _castDetailsFuture,
       builder: (context, snapshot) {
@@ -129,23 +134,27 @@ class _CrewDetailPageState extends State<CrewDetailPage> {
 
         return Scaffold(
           extendBody: true,
+          backgroundColor: colorScheme.surface,
           appBar: AppBar(
-                  toolbarHeight: 40,
-                  backgroundColor: Theme.of(context).primaryColor,
-                  iconTheme: const IconThemeData(color: Colors.black),
-                  actions: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(0, 0, 20, 0),
-                        child: Text(
-                          crewName,
-                          style: const TextStyle(color: Colors.black),
-                        ),
-                      ),
-                    ]),
+            backgroundColor: colorScheme.surface,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back_rounded, color: colorScheme.onSurface),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(
+              crewName,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ),
           body: snapshot.connectionState == ConnectionState.waiting
-              ? const Center(child: CircularProgressIndicator())
+              ? const M3ExpressiveSpinner()
               : snapshot.hasError
-                  ? Center(child: Text('Error: ${snapshot.error}'))
+                  ? Center(child: Text('Error: ${snapshot.error}', style: TextStyle(color: colorScheme.error)))
                   : _buildContent(snapshot.data!),
         );
       },
@@ -153,178 +162,168 @@ class _CrewDetailPageState extends State<CrewDetailPage> {
   }
 
   Widget _buildContent(Map<String, dynamic> castData) {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final isMobileLayout = MediaQuery.of(context).size.width < 800;
+
     return isMobileLayout
-        ? Scaffold(
-extendBody: true,
-            body: FutureBuilder<Map<String, dynamic>>(
-              future: _castDetailsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                } else if (snapshot.hasError) {
-                  return Center(
-                    child: Text('Error: ${snapshot.error}'),
-                  );
-                } else {
-                  final castData = snapshot.data!;
-                  return SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            _castImagesFuture.then((imageUrls) {
-                              _openImageGallery(imageUrls);
-                            });
-                          },
-                          child: Stack(
-                            children: [
-                              castData['profile_path'] == null
-                                  ? Container(
-                                      color: Theme.of(context).primaryColor,
-                                      width: double.infinity,
-                                      height: 300,
-                                      child: const SizedBox(),
-                                    )
-                                  : CachedNetworkImage(
-                                      imageUrl:
-                                          '${getImageBaseUrl(region)}/t/p/original${castData['profile_path']}',
-                                      placeholder: (context, url) =>
-                                          const Center(
-                                        child: CircularProgressIndicator(),
-                                      ),
-                                      errorWidget: (context, url, error) =>
-                                          const Icon(Icons.error),
-                                      imageBuilder: (context, imageProvider) =>
-                                          Container(
-                                        height: 300,
-                                        width: double.infinity,
-                                        decoration: BoxDecoration(
-                                          image: DecorationImage(
-                                            fit: BoxFit.cover,
-                                            image: imageProvider,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(0, 30, 0, 0),
-                                child: AnimatedOpacity(
-                                  opacity: _showIcon ? 1.0 : 0.0,
-                                  duration: const Duration(milliseconds: 500),
-                                  child: Center(
-                                    child: Container(
-                                      color: Colors.transparent,
-                                      child: const Icon(
-                                        Icons
-                                            .touch_app, // You can change the icon as needed
-                                        color: Colors.white,
-                                        size: 40,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                height: 300,
-                                width: double.infinity,
-                                decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.bottomCenter,
-                                    end: Alignment.topCenter,
-                                    colors: [Colors.black, Colors.transparent],
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                bottom: 30,
-                                left: 10,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: const BoxDecoration(
-                                        borderRadius: BorderRadius.all(
-                                            Radius.circular(20)),
-                                      ),
-                                      child: Text(
-                                        castData['name']!,
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            ],
-                          ),
+        ? SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    _castImagesFuture.then((imageUrls) {
+                      _openImageGallery(imageUrls);
+                    });
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
                         ),
-                        const CustomDivider(),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-                          child: Container(
-                            alignment: Alignment.center,
-                            child: ExpansionTile(
-                              collapsedIconColor:
-                                  Theme.of(context).primaryColor,
-                              title: const Text(
-                                'Biography',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              children: [
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                                  child: Container(
-                                      decoration: const BoxDecoration(
-                                        borderRadius: BorderRadius.all(
-                                            Radius.circular(20)),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: Stack(
+                        children: [
+                          castData['profile_path'] == null
+                              ? Container(
+                                  color: colorScheme.surfaceContainerHigh,
+                                  height: 360,
+                                  width: double.infinity,
+                                  child: Icon(Icons.person_rounded, size: 80, color: colorScheme.onSurfaceVariant),
+                                )
+                              : CachedNetworkImage(
+                                  imageUrl: '${getImageBaseUrl(region)}/t/p/original${castData['profile_path']}',
+                                  placeholder: (context, url) => Container(
+                                    height: 360,
+                                    color: colorScheme.surfaceContainerHigh,
+                                    child: const M3ExpressiveSpinner(),
+                                  ),
+                                  errorWidget: (context, url, error) => Container(
+                                    height: 360,
+                                    color: colorScheme.surfaceContainerHigh,
+                                    child: Icon(Icons.error_outline, color: colorScheme.error),
+                                  ),
+                                  imageBuilder: (context, imageProvider) => Container(
+                                    height: 360,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      image: DecorationImage(
+                                        fit: BoxFit.cover,
+                                        image: imageProvider,
                                       ),
-                                      child: castData['birthday'] == null
-                                          ? const SizedBox.shrink()
-                                          : Text(
-                                              'Born:  ${castData['birthday']}',
-                                              style: const TextStyle(
-                                                fontSize: 13,
-                                                color: Colors.white,
-                                              ),
-                                            )),
-                                ),
-                                if (castData['biography'] != null)
-                                  Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Text(
-                                      castData['biography'],
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w300,
-                                      ),
-                                      textAlign: TextAlign.left,
                                     ),
                                   ),
+                                ),
+                          Positioned.fill(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withValues(alpha: 0.4),
+                                    Colors.black.withValues(alpha: 0.85),
+                                  ],
+                                  stops: const [0.3, 0.7, 1.0],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 16,
+                            left: 16,
+                            right: 16,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  castData['name']!,
+                                  style: theme.textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                if (castData['birthday'] != null) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Born: ${castData['birthday']}',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
-                        ),
-                        const CustomDivider(),
-                        _buildOtherMoviesGrid(),
-                      ],
+                        ],
+                      ),
                     ),
-                  );
-                }
-              },
+                  ),
+                ),
+                if (castData['biography'] != null && castData['biography'].toString().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Theme(
+                        data: theme.copyWith(dividerColor: Colors.transparent),
+                        child: ExpansionTile(
+                          iconColor: colorScheme.primary,
+                          collapsedIconColor: colorScheme.onSurfaceVariant,
+                          title: Text(
+                            'Biography',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              child: Text(
+                                castData['biography'],
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                  child: Text(
+                    'Crew Credits',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+                _buildOtherMoviesGrid(),
+              ],
             ),
           )
         : Row(
@@ -333,8 +332,7 @@ extendBody: true,
               Expanded(
                 flex: 2,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                      40, 0, 20, 20), // Adjusted padding
+                  padding: const EdgeInsets.all(20),
                   child: GestureDetector(
                     onTap: () {
                       _castImagesFuture.then((imageUrls) {
@@ -344,41 +342,35 @@ extendBody: true,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        castData['profile_path'] == null
-                            ? Container(
-                                color: Theme.of(context).primaryColor,
-                                height: 400, // Adjusted height
-                                child: const SizedBox(),
-                              )
-                            : CachedNetworkImage(
-                                imageUrl:
-                                    '${getImageBaseUrl(region)}/t/p/original${castData['profile_path']}',
-                                placeholder: (context, url) => const Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                                errorWidget: (context, url, error) =>
-                                    const Icon(Icons.error),
-                                imageBuilder: (context, imageProvider) =>
-                                    Container(
-                                  height: 400, // Adjusted height
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20),
-                                    image: DecorationImage(
-                                      fit: BoxFit.cover,
-                                      image: imageProvider,
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(28),
+                          child: castData['profile_path'] == null
+                              ? Container(
+                                  color: colorScheme.surfaceContainerHigh,
+                                  height: 400,
+                                  width: double.infinity,
+                                  child: Icon(Icons.person_rounded, size: 100, color: colorScheme.onSurfaceVariant),
+                                )
+                              : CachedNetworkImage(
+                                  imageUrl: '${getImageBaseUrl(region)}/t/p/original${castData['profile_path']}',
+                                  placeholder: (context, url) => const M3ExpressiveSpinner(),
+                                  errorWidget: (context, url, error) => const Icon(Icons.error),
+                                  imageBuilder: (context, imageProvider) => Container(
+                                    height: 400,
+                                    decoration: BoxDecoration(
+                                      image: DecorationImage(
+                                        fit: BoxFit.cover,
+                                        image: imageProvider,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 20, 8, 0),
-                          child: Text(
-                            castData['name']!,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          castData['name']!,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
@@ -386,80 +378,38 @@ extendBody: true,
                   ),
                 ),
               ),
-              if (castData['biography'] != '')
-                ScrollConfiguration(
-                  behavior: const ScrollBehavior().copyWith(
-                    dragDevices: {
-                      PointerDeviceKind.touch,
-                      PointerDeviceKind.mouse,
-                      PointerDeviceKind.trackpad,
-                    },
-                  ),
-                  child: Expanded(
-                    flex: 3,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                          20, 30, 40, 80), // Adjusted padding
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text(
-                              'Biography',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            if (castData['birthday'] != null)
-                              Text(
-                                'Born: ${castData['birthday']}',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            if (castData['biography'] != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.fromLTRB(0, 20, 0, 20),
-                                child: Text(
-                                  castData['biography'],
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w300,
-                                  ),
-                                  textAlign: TextAlign.left,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               Expanded(
                 flex: 5,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                      20, 0, 40, 20), // Adjusted padding
-                  child: Padding(
-                    padding: const EdgeInsets.all(25.0),
-                    child: ScrollConfiguration(
-                        behavior: const ScrollBehavior().copyWith(
-                          dragDevices: {
-                            PointerDeviceKind.touch,
-                            PointerDeviceKind.mouse,
-                            PointerDeviceKind.trackpad,
-                          },
+                  padding: const EdgeInsets.all(20),
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (castData['biography'] != null && castData['biography'].toString().isNotEmpty) ...[
+                          Text(
+                            'Biography',
+                            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            castData['biography'],
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                        Text(
+                          'Crew Credits',
+                          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                         ),
-                        child: SingleChildScrollView(
-                          child: _buildOtherMoviesGrid(),
-                        )),
+                        const SizedBox(height: 12),
+                        _buildOtherMoviesGrid(),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -468,14 +418,17 @@ extendBody: true,
   }
 
   Widget _buildOtherMoviesGrid() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return FutureBuilder<List<dynamic>>(
       future: _otherMoviesFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const M3ExpressiveSpinner();
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Error loading movies: ${snapshot.error}'));
+          return Center(child: Text('Error loading movies', style: TextStyle(color: colorScheme.error)));
         }
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(child: Text('No movies found'));
@@ -484,10 +437,13 @@ extendBody: true,
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: snapshot.data!.length,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            childAspectRatio: 0.75,
+            crossAxisCount: 3,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.68,
           ),
           itemBuilder: (context, index) {
             final movie = snapshot.data![index];
@@ -499,56 +455,63 @@ extendBody: true,
   }
 
   Widget _buildMovieItem(dynamic movie) {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
+
     return TvFocusWrapper(
       borderRadius: 20.0,
       onTap: () => onTapMovie(movie['title'], movie['id'], context),
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Stack(
-          children: [
-            CachedNetworkImage(
-              imageUrl:
-                  '${getImageBaseUrl(region)}/t/p/w500${movie['poster_path']}',
-              placeholder: (context, url) => const Center(
-                child: CircularProgressIndicator(),
-              ),
-              errorWidget: (context, url, error) => const Icon(Icons.error),
-              imageBuilder: (context, imageProvider) => Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  image: DecorationImage(
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: colorScheme.surfaceContainerHigh,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            children: [
+              if (movie['poster_path'] != null && movie['poster_path'] != '')
+                Positioned.fill(
+                  child: CachedNetworkImage(
+                    imageUrl: '${getImageBaseUrl(region)}/t/p/w500${movie['poster_path']}',
                     fit: BoxFit.cover,
-                    image: imageProvider,
+                  ),
+                ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.8),
+                      ],
+                      stops: const [0.5, 1.0],
+                    ),
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              bottom: 5,
-              left: 5,
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(5),
-                ),
+              Positioned(
+                bottom: 8,
+                left: 8,
+                right: 8,
                 child: Text(
-                  movie['title'],
-                  maxLines: 1,
+                  movie['title'] ?? '',
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  maxLines: 2,
+                  style: theme.textTheme.labelMedium?.copyWith(
                     color: Colors.white,
-                    fontSize: 8,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
+

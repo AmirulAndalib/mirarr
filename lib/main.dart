@@ -15,6 +15,8 @@ import 'dart:io';
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:dynamic_color/dynamic_color.dart';
+
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
@@ -75,11 +77,13 @@ class _MyAppState extends State<MyApp> {
       // Handle initial URI if the app was launched from a link
       try {
         final uri = await _appLinks.getInitialAppLink();
-        if (uri != null) {
+        final initialUrl =
+            uri?.toString() ?? (kIsWeb ? Uri.base.toString() : null);
+        if (initialUrl != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             if (navigatorKey.currentContext != null) {
               await TMDBUrlParser.handleUrl(
-                  uri.toString(), navigatorKey.currentContext!);
+                  initialUrl, navigatorKey.currentContext!);
             }
           });
         }
@@ -104,17 +108,26 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
-      return Listener(
-        onPointerDown: (_) => TvFocusModeManager.onPointerDown(),
-        child: MaterialApp(
-          navigatorKey: navigatorKey,
-          debugShowCheckedModeBanner: false,
-          title: 'Mirarr',
-          theme: themeProvider.currentTheme,
-          home: const Scaffold(
-            body: AppInitWidget(),
-          ),
-        ),
+      return DynamicColorBuilder(
+        builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+          if (darkDynamic != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              themeProvider.updateSystemDynamicColorScheme(darkDynamic);
+            });
+          }
+          return Listener(
+            onPointerDown: (_) => TvFocusModeManager.onPointerDown(),
+            child: MaterialApp(
+              navigatorKey: navigatorKey,
+              debugShowCheckedModeBanner: false,
+              title: 'Mirarr',
+              theme: themeProvider.currentTheme,
+              home: const Scaffold(
+                body: AppInitWidget(),
+              ),
+            ),
+          );
+        },
       );
     });
   }

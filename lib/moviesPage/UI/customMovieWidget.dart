@@ -6,7 +6,6 @@ import 'package:Mirarr/moviesPage/models/movie.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
 import 'package:provider/provider.dart';
 
 class CustomMovieWidget extends StatelessWidget {
@@ -24,25 +23,19 @@ class CustomMovieWidget extends StatelessWidget {
   });
 
   Future<bool> checkAvailability(int movieId, BuildContext context) async {
-    if (movieId < 0) {
-      return false;
-    }
+    if (movieId < 0) return false;
     if (_availabilityCache.containsKey(movieId)) {
       return _availabilityCache[movieId]!;
     }
-    final baseUrl =
-        getBaseUrl(Provider.of<RegionProvider>(context).currentRegion);
+    final baseUrl = getBaseUrl(Provider.of<RegionProvider>(context, listen: false).currentRegion);
     final apiKey = dotenv.env['TMDB_API_KEY'];
     final response = await http.get(
-      Uri.parse(
-        '${baseUrl}movie/$movieId/watch/providers?api_key=$apiKey',
-      ),
+      Uri.parse('${baseUrl}movie/$movieId/watch/providers?api_key=$apiKey'),
     );
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
       final Map<String, dynamic> results = data['results'];
-
       _availabilityCache[movieId] = results.isNotEmpty;
       return results.isNotEmpty;
     } else {
@@ -53,78 +46,109 @@ class CustomMovieWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      child: Container(
-        height: 500,
-        width: 250,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: movie.posterPath.isEmpty ? Colors.grey[900] : null,
-          image: movie.posterPath.isNotEmpty
-              ? DecorationImage(
-                  image: CachedNetworkImageProvider(
-                    '${getImageBaseUrl(Provider.of<RegionProvider>(context).currentRegion)}/t/p/w500${movie.posterPath}',
-                  ),
-                  fit: BoxFit.cover,
-                  colorFilter: isWatched
-                      ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
-                      : null,
-                )
-              : null,
-        ),
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      height: 500,
+      width: 250,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        color: colorScheme.surfaceContainerHigh,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
         child: Stack(
           children: [
             if (movie.posterPath.isNotEmpty)
-              Container(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [Colors.black, Colors.transparent]),
-                  borderRadius: BorderRadius.circular(20),
+              Positioned.fill(
+                child: CachedNetworkImage(
+                  imageUrl: '${getImageBaseUrl(Provider.of<RegionProvider>(context, listen: false).currentRegion)}/t/p/w342${movie.posterPath}',
+                  memCacheWidth: 350,
+                  fit: BoxFit.cover,
+                  color: isWatched ? Colors.black.withValues(alpha: 0.4) : null,
+                  colorBlendMode: isWatched ? BlendMode.darken : null,
+                  placeholder: (context, url) => Container(color: colorScheme.surfaceContainerHigh),
+                  errorWidget: (context, url, error) => Container(
+                    color: colorScheme.surfaceContainerHigh,
+                    child: Icon(Icons.movie, size: 48, color: colorScheme.onSurfaceVariant),
+                  ),
                 ),
               ),
-            Container(
-              margin: const EdgeInsets.only(top: 8, left: 10),
-              padding: const EdgeInsets.all(10),
-              decoration: const BoxDecoration(),
-              child: Text(
-                '⭐ ${movie.score?.toStringAsFixed(1)}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.white,
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.9),
+                      Colors.black.withValues(alpha: 0.3),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  ),
                 ),
               ),
             ),
+            // Rating Badge Pill
+            if (movie.score != null && movie.score! > 0)
+              Positioned(
+                top: 12,
+                left: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface.withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
+                      const SizedBox(width: 4),
+                      Text(
+                        movie.score!.toStringAsFixed(1),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            // Watched Badge
             if (isWatched)
               Positioned(
-                right: showAvailability ? 50 : 10,
+                top: 12,
+                right: showAvailability ? 54 : 12,
                 child: Container(
-                  margin: const EdgeInsets.only(top: 14),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: Colors.white24,
-                      width: 1,
-                    ),
+                    color: Colors.green.withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
-                        size: 14,
-                      ),
+                      Icon(Icons.check_circle_rounded, color: Colors.white, size: 14),
                       SizedBox(width: 4),
                       Text(
                         'WATCHED',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 9,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,
                         ),
@@ -133,78 +157,67 @@ class CustomMovieWidget extends StatelessWidget {
                   ),
                 ),
               ),
+            // Availability Icon
             if (showAvailability)
               Positioned(
-                right: 10,
+                top: 12,
+                right: 12,
                 child: Container(
-                  margin: const EdgeInsets.only(top: 8),
-                  padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(),
-                  child: FutureBuilder(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface.withValues(alpha: 0.85),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: FutureBuilder<bool>(
                     future: checkAvailability(movie.id, context),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Padding(
-                          padding: EdgeInsets.all(5.0),
-                          child: SizedBox(
-                              height: 10,
-                              width: 10,
-                              child: CircularProgressIndicator()),
+                        return const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         );
-                      } else if (snapshot.hasError) {
-                        return const Text('Error loading data');
-                      } else {
-                        return snapshot.data == true
-                            ? const Icon(
-                                Icons.download_rounded,
-                                color: Colors.yellow,
-                              )
-                            : const Icon(
-                                Icons.file_download_off_sharp,
-                                color: Colors.yellow,
-                              );
                       }
+                      return Icon(
+                        snapshot.data == true ? Icons.download_rounded : Icons.cloud_off_rounded,
+                        size: 18,
+                        color: snapshot.data == true ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                      );
                     },
                   ),
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
+            // Details
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 16,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    decoration: const BoxDecoration(
-                      borderRadius: BorderRadius.all(Radius.circular(20)),
-                    ),
-                    child: Text(
-                      movie.title,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                  Text(
+                    movie.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      height: 1.2,
                     ),
                   ),
-                  const SizedBox(
-                    height: 5,
-                  ),
-                  Container(
-                    decoration: const BoxDecoration(
-                      borderRadius: BorderRadius.all(Radius.circular(20)),
-                    ),
-                    child: Text(
+                  if (movie.releaseDate.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
                       movie.releaseDate,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.white,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white70,
                       ),
                     ),
-                  ),
-                  const SizedBox(
-                    height: 10,
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -214,3 +227,4 @@ class CustomMovieWidget extends StatelessWidget {
     );
   }
 }
+

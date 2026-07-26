@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:flutter/material.dart';
@@ -6,7 +7,6 @@ import 'package:Mirarr/moviesPage/models/movie.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
 import 'package:provider/provider.dart';
 
 class MovieSearchResult extends StatelessWidget {
@@ -24,7 +24,6 @@ class MovieSearchResult extends StatelessWidget {
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = json.decode(response.body);
       final Map<String, dynamic> results = data['results'];
-
       return results.isNotEmpty;
     } else {
       return false;
@@ -33,110 +32,129 @@ class MovieSearchResult extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    return Card(
-      elevation: 4,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        decoration: BoxDecoration(
-          image: movie.backdropPath != null && movie.backdropPath!.isNotEmpty
-              ? DecorationImage(
-                  image: CachedNetworkImageProvider(
-                    '${getImageBaseUrl(region)}/t/p/w780${movie.backdropPath}',
-                  ),
-                  fit: BoxFit.cover,
-                )
-              : null,
-          color: Colors.grey[900],
-        ),
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: colorScheme.surfaceContainerHigh,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
         child: Stack(
           children: [
+            if (movie.backdropPath != null && movie.backdropPath!.isNotEmpty)
+              Positioned.fill(
+                child: CachedNetworkImage(
+                  imageUrl: '${getImageBaseUrl(region)}/t/p/w780${movie.backdropPath}',
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(color: colorScheme.surfaceContainerHigh),
+                  errorWidget: (context, url, err) => Container(color: colorScheme.surfaceContainerHigh),
+                ),
+              )
+            else if (movie.posterPath.isNotEmpty)
+              Positioned.fill(
+                child: CachedNetworkImage(
+                  imageUrl: '${getImageBaseUrl(region)}/t/p/w500${movie.posterPath}',
+                  fit: BoxFit.cover,
+                ),
+              ),
             Positioned.fill(
-              child: Container(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withValues(alpha: 0.15),
-                      Colors.black.withValues(alpha: 0.4),
-                      Colors.black.withValues(alpha: 0.85),
+                      Colors.black.withValues(alpha: 0.2),
+                      Colors.black.withValues(alpha: 0.5),
+                      Colors.black.withValues(alpha: 0.9),
                     ],
-                    stops: const [0.0, 0.5, 1.0],
+                    stops: const [0.0, 0.4, 1.0],
                   ),
                 ),
               ),
             ),
+            // Score Pill Badge
             Positioned(
-              top: 8,
-              left: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.star, color: Colors.amber, size: 14),
-                    const SizedBox(width: 4),
-                    Text(
-                      movie.score != null ? movie.score!.toStringAsFixed(1) : '0.0',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+              top: 10,
+              left: 10,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface.withValues(alpha: 0.65),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: colorScheme.outlineVariant.withValues(alpha: 0.2),
                       ),
                     ),
-                  ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
+                        const SizedBox(width: 3),
+                        Text(
+                          movie.score != null ? movie.score!.toStringAsFixed(1) : '0.0',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
+            // Availability Icon Badge
             Positioned(
-              top: 8,
-              right: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: FutureBuilder<bool>(
-                  future: checkAvailability(movie.id, region),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const SizedBox(
-                        height: 12,
-                        width: 12,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.yellow),
-                        ),
-                      );
-                    } else if (snapshot.hasError) {
-                      return const Icon(
-                        Icons.error_outline,
-                        color: Colors.red,
-                        size: 14,
-                      );
-                    } else {
-                      return snapshot.data == true
-                          ? const Icon(
-                              Icons.download_rounded,
-                              color: Colors.yellow,
-                              size: 16,
-                            )
-                          : const Icon(
-                              Icons.file_download_off_sharp,
-                              color: Colors.yellow,
-                              size: 16,
-                            );
-                    }
-                  },
+              top: 10,
+              right: 10,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface.withValues(alpha: 0.65),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: FutureBuilder<bool>(
+                      future: checkAvailability(movie.id, region),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const SizedBox(
+                            height: 14,
+                            width: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          );
+                        }
+                        return Icon(
+                          snapshot.data == true ? Icons.download_rounded : Icons.cloud_off_rounded,
+                          color: snapshot.data == true ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                          size: 14,
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -152,10 +170,9 @@ class MovieSearchResult extends StatelessWidget {
                     movie.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
+                    style: theme.textTheme.titleSmall?.copyWith(
                       color: Colors.white,
+                      fontWeight: FontWeight.bold,
                       height: 1.2,
                     ),
                   ),
@@ -165,9 +182,8 @@ class MovieSearchResult extends StatelessWidget {
                       movie.releaseDate.contains('-')
                           ? movie.releaseDate.split('-')[0]
                           : movie.releaseDate,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.7),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white70,
                       ),
                     ),
                 ],
@@ -179,3 +195,4 @@ class MovieSearchResult extends StatelessWidget {
     );
   }
 }
+
