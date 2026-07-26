@@ -910,20 +910,37 @@ class _MovieDetailPageDesktop extends StatelessWidget {
   }) {
     return Tooltip(
       message: tooltip ?? '',
-      child: InkWell(
+      child: TvFocusWrapper(
+        borderRadius: 23.0,
         onTap: onTap,
-        borderRadius: BorderRadius.circular(30),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          width: 46,
+          height: 46,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: 0.07),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            color: iconColor != Colors.white
+                ? iconColor.withValues(alpha: 0.2)
+                : Colors.white.withValues(alpha: 0.1),
+            border: Border.all(
+              color: iconColor != Colors.white
+                  ? iconColor.withValues(alpha: 0.5)
+                  : Colors.white.withValues(alpha: 0.2),
+              width: 1.2,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 8,
+                offset: Offset(0, 3),
+              ),
+            ],
           ),
-          child: Icon(
-            icon,
-            color: iconColor,
-            size: 20,
+          child: Center(
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: 22,
+            ),
           ),
         ),
       ),

@@ -11,6 +11,7 @@ import 'package:Mirarr/seriesPage/function/fetch_episode_cast_crew.dart';
 import 'package:Mirarr/seriesPage/function/torrent_links_series.dart';
 import 'package:Mirarr/seriesPage/function/watch_links_series.dart';
 import 'package:Mirarr/widgets/custom_divider.dart';
+import 'package:Mirarr/widgets/m3_expressive_spinner.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -229,7 +230,7 @@ void seasonsAndEpisodes(
                 return Container(
                   height: sheetHeight,
                   alignment: Alignment.center,
-                  child: const CircularProgressIndicator(),
+                  child: const M3ExpressiveSpinner(),
                 );
               } else if (snapshot.hasError) {
                 return Container(
@@ -497,7 +498,7 @@ void episodesGuide(int seasonNumber, BuildContext context, int serieId,
                 return Container(
                   height: sheetHeight,
                   alignment: Alignment.center,
-                  child: const CircularProgressIndicator(),
+                  child: const M3ExpressiveSpinner(),
                 );
               } else if (snapshot.hasError) {
                 return Container(
@@ -767,7 +768,7 @@ void episodeDetails(int seasonNumber, int episodeNumber, BuildContext context,
                 return Container(
                   height: 250,
                   alignment: Alignment.center,
-                  child: const CircularProgressIndicator(),
+                  child: const M3ExpressiveSpinner(),
                 );
               } else if (snapshot.hasError) {
                 return Container(

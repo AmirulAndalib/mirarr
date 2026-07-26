@@ -248,6 +248,11 @@ void showWatchOptions(BuildContext context, int movieId, String movieTitle,
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
+    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    clipBehavior: Clip.antiAlias,
     builder: (BuildContext bottomSheetContext) {
       Color mainColor = getColor(context, movieId);
       final region = Provider.of<RegionProvider>(context).currentRegion;

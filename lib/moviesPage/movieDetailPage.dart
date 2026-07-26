@@ -27,6 +27,7 @@ import 'package:Mirarr/widgets/bottom_bar.dart';
 import 'package:Mirarr/moviesPage/functions/check_availability.dart';
 import 'package:Mirarr/widgets/custom_divider.dart';
 import 'package:Mirarr/widgets/image_gallery_page.dart';
+import 'package:Mirarr/widgets/m3_expressive_spinner.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:screenshot/screenshot.dart';

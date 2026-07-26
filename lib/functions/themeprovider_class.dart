@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io' as io;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeProvider extends ChangeNotifier {
@@ -17,19 +17,45 @@ class ThemeProvider extends ChangeNotifier {
 
   StreamSubscription<io.FileSystemEvent>? _fileSubscription;
 
+  ColorScheme? _systemDynamicColorScheme;
+  ColorScheme? get systemDynamicColorScheme => _systemDynamicColorScheme;
+
+  bool _isDynamicTheme = false;
+  bool get isDynamicTheme => _isDynamicTheme;
+
   ThemeProvider(this._currentTheme) {
     loadTheme();
   }
 
   ThemeData get currentTheme => _currentTheme;
 
+  void updateSystemDynamicColorScheme(ColorScheme? darkDynamic) {
+    if (darkDynamic == null) return;
+    _systemDynamicColorScheme = darkDynamic;
+    if (_isDynamicTheme) {
+      _currentTheme = AppThemes.buildDynamicTheme(darkDynamic);
+      notifyListeners();
+    }
+  }
+
   void setTheme(ThemeData theme) async {
+    _isDynamicTheme = false;
     _currentTheme = theme;
     notifyListeners();
     await _saveTheme();
   }
 
+  void setDynamicTheme() async {
+    _isDynamicTheme = true;
+    if (_systemDynamicColorScheme != null) {
+      _currentTheme = AppThemes.buildDynamicTheme(_systemDynamicColorScheme!);
+    }
+    notifyListeners();
+    await _saveTheme();
+  }
+
   Future<void> setOmarchyTheme() async {
+    _isDynamicTheme = false;
     if (_isOmarchyLinux) {
       final colors = await _loadOmarchyColors();
       _omarchyTheme = _buildOmarchyThemeFromColors(colors);
@@ -185,7 +211,12 @@ class ThemeProvider extends ChangeNotifier {
 
     String? themeName = _prefs?.getString('theme');
     if (themeName != null) {
-      if (themeName == 'omarchy' && _isOmarchyLinux) {
+      if (themeName == 'dynamic') {
+        _isDynamicTheme = true;
+        if (_systemDynamicColorScheme != null) {
+          _currentTheme = AppThemes.buildDynamicTheme(_systemDynamicColorScheme!);
+        }
+      } else if (themeName == 'omarchy' && _isOmarchyLinux) {
         final colors = await _loadOmarchyColors();
         _omarchyTheme = _buildOmarchyThemeFromColors(colors);
         _currentTheme = _omarchyTheme!;
@@ -227,7 +258,9 @@ class ThemeProvider extends ChangeNotifier {
 
   Future<void> _saveTheme() async {
     String themeName = 'orange'; // Default
-    if (_currentTheme == AppThemes.blueTheme) {
+    if (_isDynamicTheme) {
+      themeName = 'dynamic';
+    } else if (_currentTheme == AppThemes.blueTheme) {
       themeName = 'blue';
     } else if (_currentTheme == AppThemes.redTheme) {
       themeName = 'red';
@@ -257,289 +290,364 @@ class ThemeProvider extends ChangeNotifier {
 }
 
 class AppThemes {
-  static final ThemeData orangeTheme = ThemeData(
-    progressIndicatorTheme: const ProgressIndicatorThemeData(),
-    pageTransitionsTheme: PageTransitionsTheme(
-      builders: Map<TargetPlatform, PageTransitionsBuilder>.fromIterable(
-        TargetPlatform.values,
-        value: (_) => const FadeForwardsPageTransitionsBuilder(),
+  static ThemeData buildDynamicTheme(
+    ColorScheme dynamicColorScheme, {
+    String? fontFamily,
+  }) {
+    final baseColorScheme = dynamicColorScheme.copyWith(
+      brightness: Brightness.dark,
+      surface: const Color(0xFF0E0E12),
+      onSurface: const Color(0xFFE6E1E5),
+      surfaceContainerLowest: const Color(0xFF09090C),
+      surfaceContainerLow: const Color(0xFF141419),
+      surfaceContainer: const Color(0xFF1C1C22),
+      surfaceContainerHigh: const Color(0xFF272730),
+      surfaceContainerHighest: const Color(0xFF32323E),
+    );
+
+    final TextTheme baseTextTheme = ThemeData.dark().textTheme;
+
+    TextTheme expressiveTextTheme;
+    if (fontFamily == 'RobotoMono') {
+      expressiveTextTheme = GoogleFonts.robotoMonoTextTheme(baseTextTheme);
+    } else if (fontFamily == 'Nothing') {
+      expressiveTextTheme = baseTextTheme.apply(fontFamily: 'Nothing');
+    } else {
+      expressiveTextTheme = GoogleFonts.plusJakartaSansTextTheme(baseTextTheme);
+    }
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: baseColorScheme,
+      scaffoldBackgroundColor: const Color(0xFF0E0E12),
+      textTheme: expressiveTextTheme,
+      fontFamily: fontFamily,
+      pageTransitionsTheme: PageTransitionsTheme(
+        builders: Map<TargetPlatform, PageTransitionsBuilder>.fromIterable(
+          TargetPlatform.values,
+          value: (_) => const ZoomPageTransitionsBuilder(),
+        ),
       ),
-    ),
-    fontFamily: 'Poppins',
-    colorScheme: const ColorScheme(
-      brightness: Brightness.light,
-      primary: Color.fromARGB(255, 255, 161, 20),
-      onPrimary: Colors.orange,
-      secondary: Colors.orangeAccent,
-      onSecondary: Colors.deepOrange,
-      error: Colors.red,
-      onError: Colors.orange,
-      surface: Colors.black,
-      onSurface: Colors.black,
-    ),
-    highlightColor: Colors.deepOrange,
-    secondaryHeaderColor: Colors.deepOrange,
-    hintColor: Colors.orangeAccent[200],
-    cardColor: Colors.orange,
-    scaffoldBackgroundColor: Colors.black,
-    focusColor: Colors.deepOrange.withValues(alpha: 0.3),
-    hoverColor: Colors.deepOrange.withValues(alpha: 0.15),
-    listTileTheme: const ListTileThemeData(
-      selectedColor: Colors.deepOrange,
-    ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: baseColorScheme.surfaceContainer,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24.0),
+        ),
+        clipBehavior: Clip.antiAlias,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: baseColorScheme.surfaceContainerHigh,
+        surfaceTintColor: baseColorScheme.surfaceTint,
+        modalBackgroundColor: baseColorScheme.surfaceContainerHigh,
+        elevation: 6,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28.0)),
+        ),
+        dragHandleColor: baseColorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+        dragHandleSize: const Size(36, 4),
+        showDragHandle: true,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: baseColorScheme.surfaceContainerHigh,
+        elevation: 6,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28.0),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: baseColorScheme.surfaceContainerLow,
+        selectedColor: baseColorScheme.primaryContainer,
+        secondarySelectedColor: baseColorScheme.primary,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        labelStyle: expressiveTextTheme.bodyMedium?.copyWith(
+          color: baseColorScheme.onSurface,
+          fontWeight: FontWeight.w600,
+        ),
+        secondaryLabelStyle: expressiveTextTheme.bodyMedium?.copyWith(
+          color: baseColorScheme.onPrimary,
+          fontWeight: FontWeight.w600,
+        ),
+        brightness: Brightness.dark,
+        shape: const StadiumBorder(),
+        side: BorderSide(
+          color: baseColorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: baseColorScheme.surfaceContainerHigh,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: BorderSide(
+            color: baseColorScheme.outlineVariant.withValues(alpha: 0.2),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: BorderSide(
+            color: baseColorScheme.primary,
+            width: 2,
+          ),
+        ),
+        hintStyle: expressiveTextTheme.bodyMedium?.copyWith(
+          color: baseColorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: baseColorScheme.primaryContainer,
+        foregroundColor: baseColorScheme.onPrimaryContainer,
+        elevation: 3,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: baseColorScheme.inverseSurface,
+        contentTextStyle: expressiveTextTheme.bodyMedium?.copyWith(
+          color: baseColorScheme.onInverseSurface,
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        height: 70,
+        backgroundColor: Colors.transparent,
+        indicatorColor: baseColorScheme.primaryContainer,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return expressiveTextTheme.labelMedium?.copyWith(
+              color: baseColorScheme.primary,
+              fontWeight: FontWeight.bold,
+            );
+          }
+          return expressiveTextTheme.labelMedium?.copyWith(
+            color: baseColorScheme.onSurfaceVariant,
+          );
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return IconThemeData(color: baseColorScheme.onPrimaryContainer);
+          }
+          return IconThemeData(color: baseColorScheme.onSurfaceVariant);
+        }),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: baseColorScheme.primary,
+        linearTrackColor: baseColorScheme.surfaceContainerHigh,
+        circularTrackColor: baseColorScheme.primary.withValues(alpha: 0.15),
+        refreshBackgroundColor: baseColorScheme.surfaceContainerHigh,
+      ),
+    );
+  }
+
+  static ThemeData buildExpressiveTheme({
+    required Color seedColor,
+    String? fontFamily,
+    Brightness brightness = Brightness.dark,
+  }) {
+    final baseColorScheme = ColorScheme.fromSeed(
+      seedColor: seedColor,
+      brightness: brightness,
+      surface: const Color(0xFF0E0E12),
+      onSurface: const Color(0xFFE6E1E5),
+      surfaceContainerLowest: const Color(0xFF09090C),
+      surfaceContainerLow: const Color(0xFF141419),
+      surfaceContainer: const Color(0xFF1C1C22),
+      surfaceContainerHigh: const Color(0xFF272730),
+      surfaceContainerHighest: const Color(0xFF32323E),
+    );
+
+    final TextTheme baseTextTheme = brightness == Brightness.dark
+        ? ThemeData.dark().textTheme
+        : ThemeData.light().textTheme;
+
+    TextTheme expressiveTextTheme;
+    if (fontFamily == 'RobotoMono') {
+      expressiveTextTheme = GoogleFonts.robotoMonoTextTheme(baseTextTheme);
+    } else if (fontFamily == 'Nothing') {
+      expressiveTextTheme = baseTextTheme.apply(fontFamily: 'Nothing');
+    } else {
+      expressiveTextTheme = GoogleFonts.plusJakartaSansTextTheme(baseTextTheme);
+    }
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      colorScheme: baseColorScheme,
+      scaffoldBackgroundColor: const Color(0xFF0E0E12),
+      textTheme: expressiveTextTheme,
+      fontFamily: fontFamily,
+      pageTransitionsTheme: PageTransitionsTheme(
+        builders: Map<TargetPlatform, PageTransitionsBuilder>.fromIterable(
+          TargetPlatform.values,
+          value: (_) => const ZoomPageTransitionsBuilder(),
+        ),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: baseColorScheme.surfaceContainer,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24.0),
+        ),
+        clipBehavior: Clip.antiAlias,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: baseColorScheme.surfaceContainerHigh,
+        surfaceTintColor: baseColorScheme.surfaceTint,
+        modalBackgroundColor: baseColorScheme.surfaceContainerHigh,
+        elevation: 6,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28.0)),
+        ),
+        dragHandleColor: baseColorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+        dragHandleSize: const Size(36, 4),
+        showDragHandle: true,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: baseColorScheme.surfaceContainerHigh,
+        elevation: 6,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28.0),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: baseColorScheme.surfaceContainerLow,
+        selectedColor: baseColorScheme.primaryContainer,
+        secondarySelectedColor: baseColorScheme.primary,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        labelStyle: expressiveTextTheme.bodyMedium?.copyWith(
+          color: baseColorScheme.onSurface,
+          fontWeight: FontWeight.w600,
+        ),
+        secondaryLabelStyle: expressiveTextTheme.bodyMedium?.copyWith(
+          color: baseColorScheme.onPrimary,
+          fontWeight: FontWeight.w600,
+        ),
+        brightness: brightness,
+        shape: const StadiumBorder(),
+        side: BorderSide(
+          color: baseColorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: baseColorScheme.surfaceContainerHigh,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: BorderSide(
+            color: baseColorScheme.outlineVariant.withValues(alpha: 0.2),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: BorderSide(
+            color: baseColorScheme.primary,
+            width: 2,
+          ),
+        ),
+        hintStyle: expressiveTextTheme.bodyMedium?.copyWith(
+          color: baseColorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: baseColorScheme.primaryContainer,
+        foregroundColor: baseColorScheme.onPrimaryContainer,
+        elevation: 3,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: baseColorScheme.inverseSurface,
+        contentTextStyle: expressiveTextTheme.bodyMedium?.copyWith(
+          color: baseColorScheme.onInverseSurface,
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        height: 70,
+        backgroundColor: Colors.transparent,
+        indicatorColor: baseColorScheme.primaryContainer,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return expressiveTextTheme.labelMedium?.copyWith(
+              color: baseColorScheme.primary,
+              fontWeight: FontWeight.bold,
+            );
+          }
+          return expressiveTextTheme.labelMedium?.copyWith(
+            color: baseColorScheme.onSurfaceVariant,
+          );
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return IconThemeData(color: baseColorScheme.onPrimaryContainer);
+          }
+          return IconThemeData(color: baseColorScheme.onSurfaceVariant);
+        }),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: baseColorScheme.primary,
+        linearTrackColor: baseColorScheme.surfaceContainerHigh,
+        circularTrackColor: baseColorScheme.primary.withValues(alpha: 0.15),
+        refreshBackgroundColor: baseColorScheme.surfaceContainerHigh,
+      ),
+    );
+  }
+
+  static final ThemeData orangeTheme = buildExpressiveTheme(
+    seedColor: const Color(0xFFFF9800),
   );
 
-  static final ThemeData blueTheme = ThemeData(
-    progressIndicatorTheme: const ProgressIndicatorThemeData(),
-    pageTransitionsTheme: PageTransitionsTheme(
-      builders: Map<TargetPlatform, PageTransitionsBuilder>.fromIterable(
-        TargetPlatform.values,
-        value: (_) => const FadeForwardsPageTransitionsBuilder(),
-      ),
-    ),
-    fontFamily: 'Poppins',
-    colorScheme: const ColorScheme(
-      brightness: Brightness.light,
-      primary: Colors.blue,
-      onPrimary: Colors.lightBlue,
-      secondary: Colors.lightBlueAccent,
-      onSecondary: Colors.blueAccent,
-      error: Colors.red,
-      onError: Colors.blue,
-      surface: Colors.black,
-      onSurface: Colors.black,
-    ),
-    highlightColor: Colors.blueAccent,
-    secondaryHeaderColor: Colors.blueAccent,
-    hintColor: Colors.lightBlue[200],
-    cardColor: Colors.blue,
-    scaffoldBackgroundColor: Colors.black,
-    focusColor: Colors.blueAccent.withValues(alpha: 0.3),
-    hoverColor: Colors.blueAccent.withValues(alpha: 0.15),
-    listTileTheme: const ListTileThemeData(
-      selectedColor: Colors.blueAccent,
-    ),
+  static final ThemeData blueTheme = buildExpressiveTheme(
+    seedColor: const Color(0xFF2196F3),
   );
 
-  static final ThemeData redTheme = ThemeData(
-    progressIndicatorTheme: const ProgressIndicatorThemeData(),
-    pageTransitionsTheme: PageTransitionsTheme(
-      builders: Map<TargetPlatform, PageTransitionsBuilder>.fromIterable(
-        TargetPlatform.values,
-        value: (_) => const FadeForwardsPageTransitionsBuilder(),
-      ),
-    ),
-    fontFamily: 'Poppins',
-    colorScheme: const ColorScheme(
-      brightness: Brightness.light,
-      primary: Colors.red,
-      onPrimary: Colors.redAccent,
-      secondary: Colors.pink,
-      onSecondary: Colors.pinkAccent,
-      error: Colors.deepOrange,
-      onError: Colors.red,
-      surface: Colors.black,
-      onSurface: Colors.black,
-    ),
-    highlightColor: Colors.redAccent,
-    secondaryHeaderColor: Colors.redAccent,
-    hintColor: Colors.red[200],
-    cardColor: Colors.red,
-    scaffoldBackgroundColor: Colors.black,
-    focusColor: Colors.redAccent.withValues(alpha: 0.3),
-    hoverColor: Colors.redAccent.withValues(alpha: 0.15),
-    listTileTheme: const ListTileThemeData(
-      selectedColor: Colors.redAccent,
-    ),
+  static final ThemeData redTheme = buildExpressiveTheme(
+    seedColor: const Color(0xFFF44336),
   );
 
-  static final ThemeData greyTheme = ThemeData(
-    progressIndicatorTheme: const ProgressIndicatorThemeData(),
-    pageTransitionsTheme: PageTransitionsTheme(
-      builders: Map<TargetPlatform, PageTransitionsBuilder>.fromIterable(
-        TargetPlatform.values,
-        value: (_) => const FadeForwardsPageTransitionsBuilder(),
-      ),
-    ),
-    fontFamily: 'Poppins',
-    colorScheme: const ColorScheme(
-      brightness: Brightness.light,
-      primary: Colors.grey,
-      onPrimary: Colors.blueGrey,
-      secondary: Colors.blueGrey,
-      onSecondary: Colors.grey,
-      error: Colors.red,
-      onError: Colors.grey,
-      surface: Colors.black,
-      onSurface: Colors.black,
-    ),
-    highlightColor: Colors.blueGrey,
-    secondaryHeaderColor: Colors.blueGrey,
-    hintColor: Colors.grey[400],
-    cardColor: Colors.grey,
-    scaffoldBackgroundColor: Colors.black,
-    focusColor: Colors.blueGrey.withValues(alpha: 0.3),
-    hoverColor: Colors.blueGrey.withValues(alpha: 0.15),
-    listTileTheme: const ListTileThemeData(
-      selectedColor: Colors.blueGrey,
-    ),
+  static final ThemeData greyTheme = buildExpressiveTheme(
+    seedColor: const Color(0xFF9E9E9E),
   );
 
-  static final ThemeData yellowTheme = ThemeData(
-    progressIndicatorTheme: const ProgressIndicatorThemeData(),
-    pageTransitionsTheme: PageTransitionsTheme(
-      builders: Map<TargetPlatform, PageTransitionsBuilder>.fromIterable(
-        TargetPlatform.values,
-        value: (_) => const FadeForwardsPageTransitionsBuilder(),
-      ),
-    ),
-    fontFamily: 'Poppins',
-    colorScheme: const ColorScheme(
-      brightness: Brightness.light,
-      primary: Colors.yellow,
-      onPrimary: Colors.amber,
-      secondary: Colors.amber,
-      onSecondary: Colors.yellowAccent,
-      error: Colors.red,
-      onError: Colors.yellow,
-      surface: Colors.black,
-      onSurface: Colors.black,
-    ),
-    highlightColor: Colors.amber,
-    secondaryHeaderColor: Colors.amber,
-    hintColor: Colors.yellow[200],
-    cardColor: Colors.yellow,
-    scaffoldBackgroundColor: Colors.black,
-    focusColor: Colors.amber.withValues(alpha: 0.3),
-    hoverColor: Colors.amber.withValues(alpha: 0.15),
-    listTileTheme: const ListTileThemeData(
-      selectedColor: Colors.amber,
-    ),
+  static final ThemeData yellowTheme = buildExpressiveTheme(
+    seedColor: const Color(0xFFFFEB3B),
   );
 
-  static final ThemeData brownTheme = ThemeData(
-    progressIndicatorTheme: const ProgressIndicatorThemeData(),
-    pageTransitionsTheme: PageTransitionsTheme(
-      builders: Map<TargetPlatform, PageTransitionsBuilder>.fromIterable(
-        TargetPlatform.values,
-        value: (_) => const FadeForwardsPageTransitionsBuilder(),
-      ),
-    ),
-    fontFamily: 'Poppins',
-    colorScheme: const ColorScheme(
-      brightness: Brightness.light,
-      primary: Colors.brown,
-      onPrimary: Colors.amber,
-      secondary: Colors.amber,
-      onSecondary: Colors.brown,
-      error: Colors.red,
-      onError: Colors.brown,
-      surface: Colors.black,
-      onSurface: Colors.black,
-    ),
-    highlightColor: Colors.amber,
-    secondaryHeaderColor: Colors.amber,
-    hintColor: Colors.brown[200],
-    cardColor: Colors.brown,
-    scaffoldBackgroundColor: Colors.black,
-    focusColor: Colors.amber.withValues(alpha: 0.3),
-    hoverColor: Colors.amber.withValues(alpha: 0.15),
-    listTileTheme: const ListTileThemeData(
-      selectedColor: Colors.amber,
-    ),
+  static final ThemeData brownTheme = buildExpressiveTheme(
+    seedColor: const Color(0xFF795548),
   );
-  static final ThemeData greenTheme = ThemeData(
-    progressIndicatorTheme: const ProgressIndicatorThemeData(),
-    pageTransitionsTheme: PageTransitionsTheme(
-      builders: Map<TargetPlatform, PageTransitionsBuilder>.fromIterable(
-        TargetPlatform.values,
-        value: (_) => const FadeForwardsPageTransitionsBuilder(),
-      ),
-    ),
-    fontFamily: 'Poppins',
-    colorScheme: const ColorScheme(
-      brightness: Brightness.light,
-      primary: Colors.green,
-      onPrimary: Colors.lightGreen,
-      secondary: Colors.lightGreenAccent,
-      onSecondary: Colors.greenAccent,
-      error: Colors.red,
-      onError: Colors.green,
-      surface: Colors.black,
-      onSurface: Colors.black,
-    ),
-    highlightColor: Colors.greenAccent,
-    secondaryHeaderColor: Colors.greenAccent,
-    hintColor: Colors.lightGreen[200],
-    cardColor: Colors.green,
-    scaffoldBackgroundColor: Colors.black,
-    focusColor: Colors.greenAccent.withValues(alpha: 0.3),
-    hoverColor: Colors.greenAccent.withValues(alpha: 0.15),
-    listTileTheme: const ListTileThemeData(
-      selectedColor: Colors.greenAccent,
-    ),
+
+  static final ThemeData greenTheme = buildExpressiveTheme(
+    seedColor: const Color(0xFF4CAF50),
   );
-  static final ThemeData monoFontTheme = ThemeData(
-    progressIndicatorTheme: const ProgressIndicatorThemeData(),
-    pageTransitionsTheme: PageTransitionsTheme(
-      builders: Map<TargetPlatform, PageTransitionsBuilder>.fromIterable(
-        TargetPlatform.values,
-        value: (_) => const FadeForwardsPageTransitionsBuilder(),
-      ),
-    ),
+
+  static final ThemeData monoFontTheme = buildExpressiveTheme(
+    seedColor: const Color(0xFF607D8B),
     fontFamily: 'RobotoMono',
-    colorScheme: const ColorScheme(
-      brightness: Brightness.light,
-      primary: Colors.grey,
-      onPrimary: Colors.blueGrey,
-      secondary: Colors.blueGrey,
-      onSecondary: Colors.grey,
-      error: Colors.red,
-      onError: Colors.grey,
-      surface: Colors.black,
-      onSurface: Colors.black,
-    ),
-    highlightColor: Colors.blueGrey,
-    secondaryHeaderColor: Colors.blueGrey,
-    hintColor: Colors.grey[400],
-    cardColor: Colors.grey,
-    scaffoldBackgroundColor: Colors.black,
-    focusColor: Colors.blueGrey.withValues(alpha: 0.3),
-    hoverColor: Colors.blueGrey.withValues(alpha: 0.15),
-    listTileTheme: const ListTileThemeData(
-      selectedColor: Colors.blueGrey,
-    ),
   );
 
-  static final ThemeData nothingFontTheme = ThemeData(
-    progressIndicatorTheme: const ProgressIndicatorThemeData(),
-    pageTransitionsTheme: PageTransitionsTheme(
-      builders: Map<TargetPlatform, PageTransitionsBuilder>.fromIterable(
-        TargetPlatform.values,
-        value: (_) => const FadeForwardsPageTransitionsBuilder(),
-      ),
-    ),
+  static final ThemeData nothingFontTheme = buildExpressiveTheme(
+    seedColor: const Color(0xFFD32F2F),
     fontFamily: 'Nothing',
-    colorScheme: const ColorScheme(
-      brightness: Brightness.light,
-      primary: Colors.grey,
-      onPrimary: Colors.blueGrey,
-      secondary: Colors.blueGrey,
-      onSecondary: Colors.grey,
-      error: Colors.red,
-      onError: Colors.grey,
-      surface: Colors.black,
-      onSurface: Colors.black,
-    ),
-    highlightColor: Colors.blueGrey,
-    secondaryHeaderColor: Colors.blueGrey,
-    hintColor: Colors.grey[400],
-    cardColor: Colors.grey,
-    scaffoldBackgroundColor: Colors.black,
-    focusColor: Colors.blueGrey.withValues(alpha: 0.3),
-    hoverColor: Colors.blueGrey.withValues(alpha: 0.15),
-    listTileTheme: const ListTileThemeData(
-      selectedColor: Colors.blueGrey,
-    ),
   );
 }
+

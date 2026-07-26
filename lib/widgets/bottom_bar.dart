@@ -11,24 +11,25 @@ class BottomBar extends StatelessWidget {
     final bool isTv = TvFocusModeManager.isTvDevice;
     if (isTv) return 0.0;
     final double bottomPadding = MediaQuery.of(context).padding.bottom;
-    return 68.0 + (bottomPadding > 0 ? bottomPadding : 16.0);
+    return 72.0 + (bottomPadding > 0 ? bottomPadding : 16.0);
   }
 
   @override
   Widget build(BuildContext context) {
     final navProvider = Provider.of<NavigationProvider>(context);
     final bool isTv = TvFocusModeManager.isTvDevice;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     if (isTv) {
-      // Keep the current native BottomNavigationBar logic for TV
       return Focus(
         focusNode: TvFocusModeManager.bottomBarFocusNode,
         canRequestFocus: false,
         child: BottomNavigationBar(
-          selectedItemColor: Theme.of(context).highlightColor,
-          selectedIconTheme: IconThemeData(color: Theme.of(context).highlightColor),
+          selectedItemColor: colorScheme.primary,
+          selectedIconTheme: IconThemeData(color: colorScheme.primary),
           selectedFontSize: 16,
-          unselectedItemColor: Theme.of(context).primaryColor,
+          unselectedItemColor: colorScheme.onSurfaceVariant,
           currentIndex: navProvider.currentIndex,
           onTap: (int index) {
             navProvider.setIndex(index);
@@ -36,23 +37,28 @@ class BottomBar extends StatelessWidget {
           },
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.movie),
+              icon: Icon(Icons.movie_outlined),
+              activeIcon: Icon(Icons.movie),
               label: 'Movies',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.local_movies),
+              icon: Icon(Icons.tv_outlined),
+              activeIcon: Icon(Icons.tv),
               label: 'Series',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.search),
+              icon: Icon(Icons.search_outlined),
+              activeIcon: Icon(Icons.search),
               label: 'Search',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.shelves),
+              icon: Icon(Icons.video_library_outlined),
+              activeIcon: Icon(Icons.video_library),
               label: 'Shelf',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.person),
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
               label: 'Account',
             ),
           ],
@@ -60,39 +66,53 @@ class BottomBar extends StatelessWidget {
       );
     }
 
-    // For any other case: Modern Hovering Island Navigation Bar (Glassmorphic & Dynamic Width)!
     final double bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    final items = const [
+      _NavItemData(activeIcon: Icons.movie, inactiveIcon: Icons.movie_outlined, label: 'Movies'),
+      _NavItemData(activeIcon: Icons.tv, inactiveIcon: Icons.tv_outlined, label: 'Series'),
+      _NavItemData(activeIcon: Icons.search, inactiveIcon: Icons.search_outlined, label: 'Search'),
+      _NavItemData(activeIcon: Icons.video_library, inactiveIcon: Icons.video_library_outlined, label: 'Shelf'),
+      _NavItemData(activeIcon: Icons.person, inactiveIcon: Icons.person_outline, label: 'Account'),
+    ];
 
     return Center(
       heightFactor: 1.0,
       child: Padding(
         padding: EdgeInsets.fromLTRB(16.0, 8.0, 16.0, bottomPadding > 0 ? bottomPadding : 16.0),
-        child: IntrinsicWidth(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(30.0),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-              child: Container(
-                height: 60,
-                padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(30.0),
-                  border: Border.all(
-                    color: Theme.of(context).cardColor,
-                    width: 1.5,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(36.0),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
+            child: Container(
+              height: 66,
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(36.0),
+                border: Border.all(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  width: 1.0,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildIslandItem(context, navProvider, 0, Icons.movie, 'Movies'),
-                    _buildIslandItem(context, navProvider, 1, Icons.local_movies, 'Series'),
-                    _buildIslandItem(context, navProvider, 2, Icons.search, 'Search'),
-                    _buildIslandItem(context, navProvider, 3, Icons.shelves, 'Shelf'),
-                    _buildIslandItem(context, navProvider, 4, Icons.person, 'Account'),
-                  ],
-                ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: List.generate(items.length, (index) {
+                  return _buildM3ExpressiveItem(
+                    context,
+                    navProvider,
+                    index,
+                    items[index],
+                  );
+                }),
               ),
             ),
           ),
@@ -101,52 +121,68 @@ class BottomBar extends StatelessWidget {
     );
   }
 
-  Widget _buildIslandItem(
+  Widget _buildM3ExpressiveItem(
     BuildContext context,
     NavigationProvider navProvider,
     int index,
-    IconData iconData,
-    String label,
+    _NavItemData itemData,
   ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final bool isSelected = navProvider.currentIndex == index;
-    final Color itemColor = isSelected
-        ? Theme.of(context).highlightColor
-        : Theme.of(context).primaryColor;
 
-    return SizedBox(
-      width: 68, // Fixed item width to support shrink-wrap dynamic sizing
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () {
-          navProvider.setIndex(index);
-          Navigator.popUntil(context, (route) => route.isFirst);
-        },
+    return InkWell(
+      onTap: () {
+        navProvider.setIndex(index);
+        Navigator.popUntil(context, (route) => route.isFirst);
+      },
+      borderRadius: BorderRadius.circular(24),
+      splashColor: colorScheme.primary.withValues(alpha: 0.12),
+      highlightColor: Colors.transparent,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutBack,
+              width: isSelected ? 52 : 38,
+              height: 32,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? Theme.of(context).highlightColor.withValues(alpha: 0.15)
+                    ? colorScheme.primaryContainer
                     : Colors.transparent,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: Icon(
-                iconData,
-                color: itemColor,
-                size: isSelected ? 24 : 20,
+              child: Center(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                  child: Icon(
+                    isSelected ? itemData.activeIcon : itemData.inactiveIcon,
+                    key: ValueKey(isSelected),
+                    color: isSelected
+                        ? colorScheme.onPrimaryContainer
+                        : colorScheme.onSurfaceVariant,
+                    size: 22,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 2),
-            Text(
-              label,
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
               style: TextStyle(
-                color: itemColor,
-                fontSize: 9,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                letterSpacing: 0.2,
               ),
+              child: Text(itemData.label),
             ),
           ],
         ),
@@ -154,3 +190,16 @@ class BottomBar extends StatelessWidget {
     );
   }
 }
+
+class _NavItemData {
+  final IconData activeIcon;
+  final IconData inactiveIcon;
+  final String label;
+
+  const _NavItemData({
+    required this.activeIcon,
+    required this.inactiveIcon,
+    required this.label,
+  });
+}
+

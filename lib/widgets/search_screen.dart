@@ -432,17 +432,20 @@ class _SearchScreenState extends State<SearchScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final isDiscoverTab = _tabController.index == 3;
 
     return Scaffold(
       extendBody: true,
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: Column(
           children: [
-            // Unified search bar at the top, only shown if not on the Discover tab
+            // Unified search bar at top
             if (!isDiscoverTab)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                 child: Align(
                   alignment: Alignment.center,
                   child: ConstrainedBox(
@@ -450,146 +453,115 @@ class _SearchScreenState extends State<SearchScreen>
                     child: TextField(
                       focusNode: _searchFocusNode,
                       autocorrect: false,
-                      style: const TextStyle(
-                        color: Colors.white,
-                      ),
-                      cursorColor: Theme.of(context).primaryColor,
+                      style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
+                      cursorColor: colorScheme.primary,
                       controller: _searchController,
                       keyboardType: TextInputType.text,
                       decoration: InputDecoration(
                         hintText: _getSearchLabelText(),
-                        hintStyle: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.5),
+                        hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                         ),
                         prefixIcon: Icon(
                           Icons.search_rounded,
-                          color: Colors.white.withValues(alpha: 0.5),
+                          color: colorScheme.onSurfaceVariant,
                         ),
                         filled: true,
-                        fillColor: Colors.grey[900]!.withValues(alpha: 0.6),
+                        fillColor: colorScheme.surfaceContainerHigh,
                         focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Theme.of(context).primaryColor,
-                            width: 2,
-                          ),
-                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide(color: colorScheme.primary, width: 2),
+                          borderRadius: BorderRadius.circular(28),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderSide: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            width: 1.5,
+                            color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                            width: 1,
                           ),
-                          borderRadius: BorderRadius.circular(30),
+                          borderRadius: BorderRadius.circular(28),
                         ),
-                        floatingLabelBehavior: FloatingLabelBehavior.never,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 20,
-                        ),
-                        suffixIcon: IconButton(
-                          icon: Visibility(
-                            visible: _searchController.text.isNotEmpty,
-                            child: const Icon(
-                              Icons.clear,
-                              color: Colors.white,
-                            ),
-                          ),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              movieResults.clear();
-                              tvResults.clear();
-                              personResults.clear();
-                            });
-                          },
-                        ),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(Icons.close_rounded, color: colorScheme.onSurfaceVariant),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    movieResults.clear();
+                                    tvResults.clear();
+                                    personResults.clear();
+                                  });
+                                },
+                              )
+                            : null,
                       ),
                     ),
                   ),
                 ),
               ),
 
-            // Premium pill-shaped TabBar
+            // Material 3 Expressive Segmented TabBar
             LayoutBuilder(
               builder: (context, constraints) {
-                final double width = MediaQuery.of(context).size.width;
-                final bool isMobileWidth = width < 600;
-
                 return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: TabBar(
-                    controller: _tabController,
-                    isScrollable: !isMobileWidth,
-                    tabAlignment: isMobileWidth ? null : TabAlignment.center,
-                    labelColor: Colors.black,
-                    unselectedLabelColor: Colors.white70,
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    indicator: BoxDecoration(
-                      borderRadius: BorderRadius.circular(25),
-                      color: Theme.of(context).primaryColor,
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(28),
                     ),
-                    tabs: [
-                      Tab(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: isMobileWidth ? 4.0 : 8.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (!isMobileWidth) ...const [
-                                Icon(Icons.movie_outlined, size: 18),
-                                SizedBox(width: 8),
-                              ],
-                              const Text('Movies'),
-                            ],
+                    padding: const EdgeInsets.all(4),
+                    child: TabBar(
+                      controller: _tabController,
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      labelPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      labelColor: colorScheme.onPrimaryContainer,
+                      unselectedLabelColor: colorScheme.onSurfaceVariant,
+                      dividerColor: Colors.transparent,
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      indicator: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        color: colorScheme.primaryContainer,
+                      ),
+                      tabs: const [
+                        Tab(
+                          height: 36,
+                          child: Text(
+                            'Movies',
+                            maxLines: 1,
+                            softWrap: false,
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
-                      ),
-                      Tab(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: isMobileWidth ? 4.0 : 8.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (!isMobileWidth) ...const [
-                                Icon(Icons.tv_outlined, size: 18),
-                                SizedBox(width: 8),
-                              ],
-                              const Text('TV Shows'),
-                            ],
+                        Tab(
+                          height: 36,
+                          child: Text(
+                            'TV Shows',
+                            maxLines: 1,
+                            softWrap: false,
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
-                      ),
-                      Tab(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: isMobileWidth ? 4.0 : 8.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (!isMobileWidth) ...const [
-                                Icon(Icons.people_outline, size: 18),
-                                SizedBox(width: 8),
-                              ],
-                              const Text('People'),
-                            ],
+                        Tab(
+                          height: 36,
+                          child: Text(
+                            'People',
+                            maxLines: 1,
+                            softWrap: false,
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
-                      ),
-                      Tab(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: isMobileWidth ? 4.0 : 8.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (!isMobileWidth) ...const [
-                                Icon(Icons.explore_outlined, size: 18),
-                                SizedBox(width: 8),
-                              ],
-                              const Text('Discover'),
-                            ],
+                        Tab(
+                          height: 36,
+                          child: Text(
+                            'Discover',
+                            maxLines: 1,
+                            softWrap: false,
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },
@@ -612,6 +584,7 @@ class _SearchScreenState extends State<SearchScreen>
       ),
     );
   }
+
 
   @override
   void dispose() {

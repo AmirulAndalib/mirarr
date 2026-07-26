@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:Mirarr/functions/get_base_url.dart';
+import 'package:Mirarr/widgets/m3_expressive_spinner.dart';
 
 class ImageGalleryPage extends StatelessWidget {
   final List<String> imageUrls;
@@ -11,33 +12,64 @@ class ImageGalleryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
+
     return Scaffold(
-extendBody: true,
+      extendBody: true,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).primaryColor,
-        title: const Text('Image Gallery'),
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: colorScheme.onSurface),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Image Gallery',
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
+        ),
       ),
       body: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        physics: const BouncingScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          crossAxisSpacing: 4.0,
-          mainAxisSpacing: 4.0,
+          crossAxisSpacing: 12.0,
+          mainAxisSpacing: 12.0,
+          childAspectRatio: 0.75,
         ),
         itemCount: imageUrls.length,
         itemBuilder: (context, index) {
-          return CachedNetworkImage(
-            imageUrl:
-                '${getImageBaseUrl(region)}/t/p/original${imageUrls[index]}',
-            placeholder: (context, url) => const Center(
-              child: CircularProgressIndicator(),
+          return Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: colorScheme.surfaceContainerHigh,
             ),
-            errorWidget: (context, url, error) => const Icon(Icons.error),
-            fit: BoxFit.cover,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: CachedNetworkImage(
+                imageUrl: '${getImageBaseUrl(region)}/t/p/original${imageUrls[index]}',
+                placeholder: (context, url) => Container(
+                  color: colorScheme.surfaceContainerHigh,
+                  child: const M3ExpressiveSpinner(),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: colorScheme.surfaceContainerHigh,
+                  child: Icon(Icons.error_outline_rounded, color: colorScheme.error),
+                ),
+                fit: BoxFit.cover,
+              ),
+            ),
           );
         },
       ),
     );
   }
 }
+

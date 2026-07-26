@@ -42,84 +42,144 @@ void showTorrentOptions(BuildContext context, int movieId, String movieTitle,
 
   showModalBottomSheet(
     context: context,
+    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    clipBehavior: Clip.antiAlias,
     builder: (BuildContext context) {
       Color mainColor = getColor(context, movieId);
-      return Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-            child: Text(
-              'Search for torrents',
-              style: TextStyle(color: mainColor, fontSize: 16),
+      return SafeArea(
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-          Flexible(
-            child: Column(
-              children: [
-                const CustomDivider(), // Custom divider
-                Text(
-                  'Public Trackers',
-                  style: TextStyle(color: mainColor, fontSize: 12),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+              child: Text(
+                'Torrent Trackers ($movieTitle)',
+                style: TextStyle(
+                  color: mainColor,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: publicTorrents.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      String option = publicTorrents[index];
-                      String? url = optionPublicTorrents[option];
-                      return ListTile(
-                        leading: Icon(Icons.play_arrow, color: mainColor),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8, bottom: 8),
+                    child: Text(
+                      'PUBLIC TRACKERS',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                  ...publicTorrents.map((option) {
+                    final url = optionPublicTorrents[option];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: mainColor.withValues(alpha: 0.2),
+                          child: Icon(Icons.download_rounded, color: mainColor, size: 20),
+                        ),
                         title: Text(
                           option,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.open_in_new_rounded,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          size: 18,
                         ),
                         onTap: () {
                           if (url != null) {
                             _launchUrl(Uri.parse(url));
                           } else {
-                            showErrorDialog('Error',
-                                'URL not available for $option', context);
+                            showErrorDialog('Error', 'URL not available for $option', context);
                           }
                           Navigator.of(context).pop();
                         },
-                      );
-                    },
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8, bottom: 8),
+                    child: Text(
+                      'PRIVATE TRACKERS',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1,
+                      ),
+                    ),
                   ),
-                ),
-                const Divider(), // Custom divider
-                Text(
-                  'Private Trackers',
-                  style: TextStyle(color: mainColor, fontSize: 12),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: privateTorrents.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      String option = privateTorrents[index];
-                      String? url = optionPrivateTorrents[option];
-                      return ListTile(
-                        leading: Icon(Icons.play_arrow, color: mainColor),
+                  ...privateTorrents.map((option) {
+                    final url = optionPrivateTorrents[option];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: mainColor.withValues(alpha: 0.2),
+                          child: Icon(Icons.lock_outline_rounded, color: mainColor, size: 20),
+                        ),
                         title: Text(
                           option,
-                          style: const TextStyle(color: Colors.white),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.open_in_new_rounded,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          size: 18,
                         ),
                         onTap: () {
                           if (url != null) {
                             _launchUrl(Uri.parse(url));
                           } else {
-                            showErrorDialog('Error',
-                                'URL not available for $option', context);
+                            showErrorDialog('Error', 'URL not available for $option', context);
                           }
                           Navigator.of(context).pop();
                         },
-                      );
-                    },
-                  ),
-                ),
-              ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     },
   );

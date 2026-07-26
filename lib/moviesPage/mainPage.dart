@@ -154,15 +154,43 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
       showDialog(
         context: context,
         builder: (BuildContext context) {
+          final colorScheme = Theme.of(context).colorScheme;
+          final textTheme = Theme.of(context).textTheme;
+
           return AlertDialog(
-            title: const Text('No Internet Connection'),
-            content:
-                const Text('Please connect to the internet and try again.'),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+              side: BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+              ),
+            ),
+            icon: Icon(Icons.wifi_off_rounded, color: colorScheme.error, size: 32),
+            title: Text(
+              'No Internet Connection',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            content: Text(
+              'Please connect to the internet and try again.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
             actions: [
-              TextButton(
+              FilledButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
+                style: FilledButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
                 child: const Text('OK'),
               ),
             ],
@@ -174,20 +202,44 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
       showDialog(
         context: context,
         builder: (BuildContext context) {
+          final colorScheme = Theme.of(context).colorScheme;
+          final textTheme = Theme.of(context).textTheme;
+
           return AlertDialog(
-            titleTextStyle: TextStyle(
-                color: Theme.of(context).secondaryHeaderColor, fontSize: 20),
-            contentTextStyle:
-                TextStyle(color: Theme.of(context).primaryColor, fontSize: 16),
-            title: const Text('Network Error'),
-            content: const Text(
-                'An error occurred while fetching data. Please try again later.'),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+              side: BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+              ),
+            ),
+            icon: Icon(Icons.error_outline_rounded, color: colorScheme.error, size: 32),
+            title: Text(
+              'Network Error',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            content: Text(
+              'An error occurred while fetching data. Please try again later.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
             actions: [
-              TextButton(
+              FilledButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                   checkInternetAndFetchData();
                 },
+                style: FilledButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
                 child: const Text('OK'),
               ),
             ],
@@ -234,49 +286,35 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-extendBody: true,
-        backgroundColor: Colors.black,
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          backgroundColor: Theme.of(context).primaryColor,
-          title: const Text(
-            'Movies',
-            style: TextStyle(fontWeight: FontWeight.bold),
+      extendBody: true,
+      backgroundColor: colorScheme.surface,
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          'Movies',
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
           ),
         ),
-        body: Column(
-          children: [
-            Expanded(
-              child: Card(
-                  shadowColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.only(
-                      bottom: TvFocusModeManager.isTvDevice ? 0.0 : BottomBar.getHeight(context),
-                    ),
-                    child: Container(
-                      color: Colors.black,
-                      child: Column(
-                        children: <Widget>[
-                          const Row(
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.fromLTRB(15, 15, 0, 0),
-                                child: Text(
-                                  textAlign: TextAlign.left,
-                                  'Trending Movies',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+      ),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.only(
+          bottom: TvFocusModeManager.isTvDevice ? 16.0 : BottomBar.getHeight(context),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            _buildSectionHeader('Trending Movies', null),
+
                           const SizedBox(
                             height: 10,
                           ),
@@ -300,6 +338,8 @@ extendBody: true,
                                 ),
                                 child: ListView.builder(
                                   scrollDirection: Axis.horizontal,
+                                  physics: const BouncingScrollPhysics(),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
                                   itemCount: trendingMovies.isEmpty
                                       ? _dummyMovies.length
                                       : trendingMovies.length,
@@ -307,17 +347,20 @@ extendBody: true,
                                     final movie = trendingMovies.isEmpty
                                         ? _dummyMovies[index]
                                         : trendingMovies[index];
-                                     final widget = TvFocusWrapper(
-                                       autoFocus: index == 0 && trendingMovies.isNotEmpty,
-                                       onTap: trendingMovies.isEmpty
-                                           ? () {}
-                                           : () => _onMovieTapped(movie),
-                                       child: CustomMovieWidget(
-                                         movie: movie,
-                                         showAvailability: false,
-                                         isWatched: _watchedMovieIds.contains(movie.id),
-                                       ),
-                                     );
+                                    final widget = Padding(
+                                      padding: const EdgeInsets.only(right: 12),
+                                      child: TvFocusWrapper(
+                                        autoFocus: index == 0 && trendingMovies.isNotEmpty,
+                                        onTap: trendingMovies.isEmpty
+                                            ? () {}
+                                            : () => _onMovieTapped(movie),
+                                        child: CustomMovieWidget(
+                                          movie: movie,
+                                          showAvailability: false,
+                                          isWatched: _watchedMovieIds.contains(movie.id),
+                                        ),
+                                      ),
+                                    );
                                     if (trendingMovies.isEmpty) {
                                       final double opacity = (1.0 - (index * 0.18)).clamp(0.1, 1.0);
                                       return Opacity(
@@ -331,172 +374,162 @@ extendBody: true,
                               ),
                             ),
                           ),
-                          const SizedBox(
-                            height: 10,
+            const SizedBox(height: 12),
+            _buildSectionHeader('Popular Movies', null),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 320,
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: {
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.trackpad,
+                  },
+                ),
+                child: Skeletonizer(
+                  enabled: popularMovies.isEmpty,
+                  containersColor: colorScheme.surfaceContainerHigh,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: popularMovies.isEmpty ? _dummyMovies.length : popularMovies.length,
+                    itemBuilder: (context, index) {
+                      final movie = popularMovies.isEmpty ? _dummyMovies[index] : popularMovies[index];
+                      final widget = Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: TvFocusWrapper(
+                          onTap: popularMovies.isEmpty ? () {} : () => _onMovieTapped(movie),
+                          child: CustomMovieWidget(
+                            movie: movie,
+                            showAvailability: false,
+                            isWatched: _watchedMovieIds.contains(movie.id),
                           ),
-                          const Row(
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.fromLTRB(15, 15, 0, 0),
-                                child: Text(
-                                  'Popular Movies',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
+                        ),
+                      );
+                      if (popularMovies.isEmpty) {
+                        final double opacity = (1.0 - (index * 0.18)).clamp(0.1, 1.0);
+                        return Opacity(opacity: opacity, child: widget);
+                      }
+                      return widget;
+                    },
+                  ),
+                ),
+              ),
+            ),
+            for (var genre in (genres.isEmpty ? _dummyGenres : genres))
+              Skeletonizer(
+                enabled: genres.isEmpty,
+                containersColor: colorScheme.surfaceContainerHigh,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildSectionHeader(
+                      genre.name,
+                      genres.isEmpty ? null : () => onTapGridMovie(moviesByGenre[genre.id]!, context),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 320,
+                      child: ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.mouse,
+                            PointerDeviceKind.trackpad,
+                          },
+                        ),
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: genres.isEmpty
+                              ? (_dummyMoviesByGenre[genre.id]?.length ?? 0)
+                              : (moviesByGenre[genre.id]?.length ?? 0),
+                          itemBuilder: (context, index) {
+                            final movie = genres.isEmpty
+                                ? _dummyMoviesByGenre[genre.id]![index]
+                                : moviesByGenre[genre.id]![index];
+                            final widget = Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: TvFocusWrapper(
+                                onTap: genres.isEmpty ? () {} : () => _onMovieTapped(movie),
+                                child: CustomMovieWidget(
+                                  movie: movie,
+                                  showAvailability: false,
+                                  isWatched: _watchedMovieIds.contains(movie.id),
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          SizedBox(
-                            height: 320, // Set the height for the movie cards
-                            child: ScrollConfiguration(
-                              behavior:
-                                  ScrollConfiguration.of(context).copyWith(
-                                dragDevices: {
-                                  PointerDeviceKind.touch,
-                                  PointerDeviceKind.mouse,
-                                  PointerDeviceKind.trackpad,
-                                },
-                              ),
-                              child: Skeletonizer(
-                                enabled: popularMovies.isEmpty,
-                                containersColor: Colors.white.withOpacity(0.05),
-                                effect: ShimmerEffect(
-                                  baseColor: Colors.white.withOpacity(0.05),
-                                  highlightColor: Colors.white.withOpacity(0.15),
-                                ),
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: popularMovies.isEmpty
-                                      ? _dummyMovies.length
-                                      : popularMovies.length,
-                                  itemBuilder: (context, index) {
-                                    final movie = popularMovies.isEmpty
-                                        ? _dummyMovies[index]
-                                        : popularMovies[index];
-                                     final widget = TvFocusWrapper(
-                                       onTap: popularMovies.isEmpty
-                                           ? () {}
-                                           : () => _onMovieTapped(movie),
-                                       child: CustomMovieWidget(
-                                         movie: movie,
-                                         showAvailability: false,
-                                         isWatched: _watchedMovieIds.contains(movie.id),
-                                       ),
-                                     );
-                                    if (popularMovies.isEmpty) {
-                                      final double opacity = (1.0 - (index * 0.18)).clamp(0.1, 1.0);
-                                      return Opacity(
-                                        opacity: opacity,
-                                        child: widget,
-                                      );
-                                    }
-                                    return widget;
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                          for (var genre in (genres.isEmpty ? _dummyGenres : genres))
-                            Skeletonizer(
-                              enabled: genres.isEmpty,
-                              containersColor: Colors.white.withOpacity(0.05),
-                              effect: ShimmerEffect(
-                                baseColor: Colors.white.withOpacity(0.05),
-                                highlightColor: Colors.white.withOpacity(0.15),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Padding(
-                                    padding:
-                                        const EdgeInsets.fromLTRB(15, 15, 0, 0),
-                                    child: TvFocusWrapper(
-                                      borderRadius: 8.0,
-                                      onTap: genres.isEmpty
-                                          ? () {}
-                                          : () => onTapGridMovie(
-                                              moviesByGenre[genre.id]!, context),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8.0, vertical: 4.0),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              genre.name,
-                                              style: const TextStyle(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 5),
-                                            Icon(
-                                              Icons.arrow_forward_ios,
-                                              color: Theme.of(context).primaryColor,
-                                              size: 16,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  SizedBox(
-                                    height: 320,
-                                    child: ScrollConfiguration(
-                                      behavior: ScrollConfiguration.of(context)
-                                          .copyWith(
-                                        dragDevices: {
-                                          PointerDeviceKind.touch,
-                                          PointerDeviceKind.mouse,
-                                          PointerDeviceKind.trackpad,
-                                        },
-                                      ),
-                                      child: ListView.builder(
-                                        scrollDirection: Axis.horizontal,
-                                        itemCount: genres.isEmpty
-                                            ? (_dummyMoviesByGenre[genre.id]?.length ?? 0)
-                                            : (moviesByGenre[genre.id]?.length ?? 0),
-                                        itemBuilder: (context, index) {
-                                          final movie = genres.isEmpty
-                                              ? _dummyMoviesByGenre[genre.id]![index]
-                                              : moviesByGenre[genre.id]![index];
-                                           final widget = TvFocusWrapper(
-                                             onTap: genres.isEmpty
-                                                 ? () {}
-                                                 : () => _onMovieTapped(movie),
-                                             child: CustomMovieWidget(
-                                               movie: movie,
-                                               showAvailability: false,
-                                               isWatched: _watchedMovieIds.contains(movie.id),
-                                             ),
-                                           );
-                                          if (genres.isEmpty) {
-                                            final double opacity = (1.0 - (index * 0.18)).clamp(0.1, 1.0);
-                                            return Opacity(
-                                              opacity: opacity,
-                                              child: widget,
-                                            );
-                                          }
-                                          return widget;
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
+                            );
+                            if (genres.isEmpty) {
+                              final double opacity = (1.0 - (index * 0.18)).clamp(0.1, 1.0);
+                              return Opacity(opacity: opacity, child: widget);
+                            }
+                            return widget;
+                          },
+                        ),
                       ),
                     ),
-                  )),
-            )
+                  ],
+                ),
+              ),
           ],
-        ));
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, VoidCallback? onTap) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.3,
+            ),
+          ),
+          if (onTap != null)
+            InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'See All',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 14,
+                      color: colorScheme.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
+

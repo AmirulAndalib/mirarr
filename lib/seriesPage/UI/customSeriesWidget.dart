@@ -1,108 +1,121 @@
+import 'dart:ui';
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:flutter/material.dart';
 import 'package:Mirarr/seriesPage/models/serie.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 
 class CustomSeriesWidget extends StatelessWidget {
   final Serie serie;
 
   const CustomSeriesWidget({super.key, required this.serie});
-  Future<bool> checkAvailability(int movieId, BuildContext context) async {
-    if (movieId < 0) {
-      return false;
-    }
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final baseUrl = getBaseUrl(region);
-    final apiKey = dotenv.env['TMDB_API_KEY'];
-    final response = await http.get(
-      Uri.parse(
-        '${baseUrl}movie/$movieId/watch/providers?api_key=$apiKey',
-      ),
-    );
-
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> data = json.decode(response.body);
-      final Map<String, dynamic> results = data['results'];
-
-      return results.isNotEmpty;
-    } else {
-      return false;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    return Card(
-      elevation: 4,
-      child: Container(
-        height: 500,
-        width: 250,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: serie.posterPath.isEmpty ? Colors.grey[900] : null,
-          image: serie.posterPath.isNotEmpty
-              ? DecorationImage(
-                  image: CachedNetworkImageProvider(
-                    '${getImageBaseUrl(region)}/t/p/w500${serie.posterPath}',
-                  ),
-                  fit: BoxFit.cover,
-                )
-              : null, // No image if there's no poster path
-        ),
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
+
+    return Container(
+      height: 500,
+      width: 250,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        color: colorScheme.surfaceContainerHigh,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
         child: Stack(
           children: [
             if (serie.posterPath.isNotEmpty)
-              Container(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [Colors.black, Colors.transparent]),
-
-                  borderRadius: BorderRadius.circular(20), // Amber overlay
+              Positioned.fill(
+                child: CachedNetworkImage(
+                  imageUrl: '${getImageBaseUrl(region)}/t/p/w500${serie.posterPath}',
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(color: colorScheme.surfaceContainerHigh),
+                  errorWidget: (context, url, error) => Container(
+                    color: colorScheme.surfaceContainerHigh,
+                    child: Icon(Icons.tv, size: 48, color: colorScheme.onSurfaceVariant),
+                  ),
                 ),
               ),
-            Container(
-              margin: const EdgeInsets.only(top: 8, left: 10),
-              padding: const EdgeInsets.all(10),
-              decoration: const BoxDecoration(),
-              child: Text(
-                '⭐ ${serie.score?.toStringAsFixed(1)}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.white, // Text color on top of the image
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.9),
+                      Colors.black.withValues(alpha: 0.3),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  ),
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    decoration: const BoxDecoration(
-                      borderRadius: BorderRadius.all(Radius.circular(20)),
-                    ),
-                    child: Text(
-                      serie.name,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white, // Text color on top of the image
+            // Rating Badge Pill
+            if (serie.score != null && serie.score! > 0)
+              Positioned(
+                top: 12,
+                left: 12,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface.withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
+                          const SizedBox(width: 4),
+                          Text(
+                            serie.score!.toStringAsFixed(1),
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(
-                    height: 5,
+                ),
+              ),
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 16,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    serie.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      height: 1.2,
+                    ),
                   ),
                 ],
               ),
@@ -113,3 +126,4 @@ class CustomSeriesWidget extends StatelessWidget {
     );
   }
 }
+

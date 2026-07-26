@@ -160,7 +160,7 @@ Color getMovieColor(BuildContext context, int tmdbId) => switch (tmdbId) {
       _ when isMonsters(tmdbId) => const Color(0xFF5aff49),
       _ when isLotr(tmdbId) => const Color(0xFFb87316),
       _ when isHobbit(tmdbId) => const Color(0xFF201d05),
-      _ => Theme.of(context).primaryColor,
+      _ => Theme.of(context).colorScheme.primary,
     };
 
 TextStyle getMovieButtonTextStyle(int tmdbId) => switch (tmdbId) {
@@ -239,6 +239,6 @@ TextStyle getMovieButtonTextStyle(int tmdbId) => switch (tmdbId) {
       _ => const TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
-          color: Colors.black,
+          color: Colors.white,
         ),
     };

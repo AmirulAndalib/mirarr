@@ -13,6 +13,7 @@ import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:Mirarr/seriesPage/models/serie.dart';
 import 'package:Mirarr/seriesPage/serieDetailPage.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
+import 'package:Mirarr/widgets/m3_expressive_spinner.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 
 class WatchlistCalendarScreen extends StatefulWidget {
@@ -235,44 +236,73 @@ class _WatchlistCalendarScreenState extends State<WatchlistCalendarScreen> {
         final date = _parseAirDate(dateStr)!;
         final list = grouped[dateStr]!;
 
-        final String formattedDate = DateFormat('EEEE, MMMM d, yyyy').format(date);
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+
+        final String formattedDate = DateFormat('EEEE, MMM d, yyyy').format(date);
         final int difference = date.difference(today).inDays;
         final bool isDateToday = difference == 0;
+        final bool isDateTomorrow = difference == 1;
 
-        // Calculate remaining days text next to the date
         String remainingText = '';
-        if (difference == 0) {
+        Color badgeBgColor;
+        Color badgeFgColor;
+
+        if (isDateToday) {
           remainingText = 'Today';
-        } else if (difference == 1) {
-          remainingText = 'Tomorrow (1 day remaining)';
+          badgeBgColor = colorScheme.primaryContainer;
+          badgeFgColor = colorScheme.onPrimaryContainer;
+        } else if (isDateTomorrow) {
+          remainingText = 'Tomorrow';
+          badgeBgColor = colorScheme.secondaryContainer;
+          badgeFgColor = colorScheme.onSecondaryContainer;
         } else {
-          remainingText = '$difference days remaining';
+          remainingText = 'In $difference days';
+          badgeBgColor = colorScheme.surfaceContainerHigh;
+          badgeFgColor = colorScheme.onSurfaceVariant;
         }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
+              padding: const EdgeInsets.only(top: 20.0, bottom: 10.0),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    formattedDate,
-                    style: TextStyle(
-                      color: isDateToday ? Theme.of(context).highlightColor : Theme.of(context).primaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                  Expanded(
+                    child: Text(
+                      formattedDate,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: isDateToday ? colorScheme.primary : colorScheme.onSurface,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.2,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    '($remainingText)',
-                    style: TextStyle(
-                      color: isDateToday ? Theme.of(context).highlightColor.withValues(alpha: 0.8) : Colors.white54,
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: badgeBgColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isDateToday) ...[
+                          Icon(Icons.today_rounded, size: 13, color: badgeFgColor),
+                          const SizedBox(width: 4),
+                        ],
+                        Text(
+                          remainingText,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: badgeFgColor,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -286,6 +316,9 @@ class _WatchlistCalendarScreenState extends State<WatchlistCalendarScreen> {
   }
 
   Widget _buildEpisodeTile(BuildContext context, Serie serie, String region) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     final displayEpisodeCode = serie.nextEpisodeSeasonNumber != null && serie.nextEpisodeEpisodeNumber != null
         ? 'S${serie.nextEpisodeSeasonNumber.toString().padLeft(2, '0')}E${serie.nextEpisodeEpisodeNumber.toString().padLeft(2, '0')}'
         : '';
@@ -293,47 +326,57 @@ class _WatchlistCalendarScreenState extends State<WatchlistCalendarScreen> {
         ? ' - "${serie.nextEpisodeName}"'
         : '';
 
-    return Card(
-      color: Colors.white.withValues(alpha: 0.05),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: const EdgeInsets.only(bottom: 10),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+        ),
+      ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         leading: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(14),
           child: serie.posterPath.isNotEmpty
               ? CachedNetworkImage(
                   imageUrl: '${getImageBaseUrl(region)}/t/p/w185${serie.posterPath}',
-                  width: 50,
-                  height: 75,
+                  width: 48,
+                  height: 72,
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(color: Colors.grey[900]),
+                  placeholder: (context, url) => Container(color: colorScheme.surfaceContainerHigh),
                   errorWidget: (context, url, error) => Container(
-                    color: Colors.grey[900],
-                    child: const Icon(Icons.tv, color: Colors.white30, size: 20),
+                    color: colorScheme.surfaceContainerHigh,
+                    child: Icon(Icons.tv_rounded, color: colorScheme.onSurfaceVariant, size: 20),
                   ),
                 )
               : Container(
-                  color: Colors.grey[900],
-                  width: 50,
-                  height: 75,
-                  child: const Icon(Icons.tv, color: Colors.white30, size: 20),
+                  color: colorScheme.surfaceContainerHigh,
+                  width: 48,
+                  height: 72,
+                  child: Icon(Icons.tv_rounded, color: colorScheme.onSurfaceVariant, size: 20),
                 ),
         ),
         title: Text(
           serie.name,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4.0),
           child: Text(
             '$displayEpisodeCode$episodeName',
-            style: const TextStyle(color: Colors.white70, fontSize: 13),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white30, size: 16),
+        trailing: Icon(Icons.arrow_forward_rounded, color: colorScheme.onSurfaceVariant, size: 18),
         onTap: () {
           Navigator.push(
             context,
@@ -348,14 +391,13 @@ class _WatchlistCalendarScreenState extends State<WatchlistCalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isTv = TvFocusModeManager.isTvDevice;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final region = Provider.of<RegionProvider>(context).currentRegion;
 
     Widget body;
     if (_isLoading) {
-      body = const Center(
-        child: CircularProgressIndicator(),
-      );
+      body = const M3ExpressiveSpinner();
     } else if (_errorMessage != null) {
       body = Center(
         child: Padding(
@@ -363,20 +405,20 @@ class _WatchlistCalendarScreenState extends State<WatchlistCalendarScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+              Icon(Icons.error_outline_rounded, color: colorScheme.error, size: 48),
               const SizedBox(height: 12),
               Text(
                 'Error: $_errorMessage',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white70, fontSize: 15),
+                style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 20),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.refresh),
+              FilledButton.icon(
+                icon: const Icon(Icons.refresh_rounded),
                 label: const Text('Retry'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.black,
+                style: FilledButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 ),
                 onPressed: _fetchWatchlistAndDetails,
@@ -391,23 +433,25 @@ class _WatchlistCalendarScreenState extends State<WatchlistCalendarScreen> {
 
     return Scaffold(
       extendBody: true,
-      backgroundColor: Colors.black,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).primaryColor,
-        title: const Text(
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: colorScheme.onSurface),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
           'Upcoming Episodes',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
         ),
       ),
-      body: isTv
-          ? Column(
-              children: [
-                const BottomBar(),
-                Expanded(child: body),
-              ],
-            )
-          : body,
-      bottomNavigationBar: isTv ? null : const BottomBar(),
+      body: body,
     );
   }
+
 }

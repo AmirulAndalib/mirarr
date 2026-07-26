@@ -7,6 +7,8 @@ class _MovieDetailPageMobile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final widget = state.widget;
     final moviedetails = state.moviedetails;
     final duration = state.duration;
@@ -47,9 +49,7 @@ class _MovieDetailPageMobile extends StatelessWidget {
     final bool isTv = TvFocusModeManager.isTvDevice;
 
     final Widget bodyContent = moviedetails == null
-        ? const Center(
-            child: CircularProgressIndicator(),
-          )
+        ? const M3ExpressiveSpinner()
         : SingleChildScrollView(
             padding: EdgeInsets.only(
               bottom: isTv ? 0.0 : BottomBar.getHeight(context),
@@ -200,13 +200,12 @@ class _MovieDetailPageMobile extends StatelessWidget {
                             ],
                           ),
                         ),
-                        Visibility(
-                          visible: AppPlatform.isAndroid,
-                          child: Positioned(
+                        if (AppPlatform.isAndroid)
+                          Positioned(
                             top: 190,
-                            right: 30,
-                            child: TvFocusWrapper(
-                              borderRadius: 30.0,
+                            right: 24,
+                            child: _buildM3FloatingActionButton(
+                              context: context,
                               onTap: () {
                                 showGeneralDialog(
                                   context: context,
@@ -253,7 +252,7 @@ class _MovieDetailPageMobile extends StatelessWidget {
                                                         widget.movieId);
                                                   },
                                                   icon: const Icon(
-                                                    Icons.share,
+                                                    Icons.share_rounded,
                                                     color: Colors.white,
                                                   ),
                                                 ),
@@ -268,7 +267,7 @@ class _MovieDetailPageMobile extends StatelessWidget {
                                                     );
                                                   },
                                                   icon: const Icon(
-                                                    Icons.image,
+                                                    Icons.image_rounded,
                                                     color: Colors.white,
                                                   ),
                                                 ),
@@ -281,37 +280,33 @@ class _MovieDetailPageMobile extends StatelessWidget {
                                   },
                                 );
                               },
-                              child: const Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: Icon(
-                                  Icons.share,
-                                  color: Colors.white,
-                                  size: 25,
-                                ),
+                              child: const Icon(
+                                Icons.share_rounded,
+                                color: Colors.white,
+                                size: 22,
                               ),
                             ),
                           ),
-                        ),
-                        Visibility(
-                          visible: isUserLoggedIn == true,
-                          child: Positioned(
+
+                        if (isUserLoggedIn == true)
+                          Positioned(
                             top: 140,
-                            right: 30,
-                            child: TvFocusWrapper(
-                              borderRadius: 30.0,
+                            right: 24,
+                            child: _buildM3FloatingActionButton(
+                              context: context,
+                              backgroundColor: isMovieWatchlist == true
+                                  ? colorScheme.primaryContainer
+                                  : null,
+                              borderColor: isMovieWatchlist == true
+                                  ? colorScheme.primary.withValues(alpha: 0.6)
+                                  : null,
                               onTap: () async {
-                                if (isMovieWatchlist == null) {
-                                  return;
-                                }
+                                if (isMovieWatchlist == null) return;
                                 final movieId = widget.movieId;
-                                final openbox =
-                                    Hive.box('sessionBox');
-                                final String accountId =
-                                    openbox.get('accountId');
-                                final String sessionData =
-                                    openbox.get('sessionData');
+                                final openbox = Hive.box('sessionBox');
+                                final String accountId = openbox.get('accountId');
+                                final String sessionData = openbox.get('sessionData');
                                 if (isMovieWatchlist) {
-                                  // Remove from watchlist
                                   state.updateState(() {
                                     state.isMovieWatchlist = false;
                                   });
@@ -319,7 +314,6 @@ class _MovieDetailPageMobile extends StatelessWidget {
                                       accountId, sessionData, movieId, context);
                                   profileRefreshNotifier.value++;
                                 } else {
-                                  // Add to watchlist
                                   state.updateState(() {
                                     state.isMovieWatchlist = true;
                                   });
@@ -328,39 +322,36 @@ class _MovieDetailPageMobile extends StatelessWidget {
                                   profileRefreshNotifier.value++;
                                 }
                               },
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Icon(
-                                  isMovieWatchlist == null
-                                      ? Icons.bookmark_border
-                                      : isMovieWatchlist
-                                          ? Icons.bookmark
-                                          : Icons.bookmark_border,
-                                  color: Colors.white,
-                                  size: 25,
-                                ),
+                              child: Icon(
+                                isMovieWatchlist == true
+                                    ? Icons.bookmark_rounded
+                                    : Icons.bookmark_border_rounded,
+                                color: isMovieWatchlist == true
+                                    ? colorScheme.primary
+                                    : Colors.white,
+                                size: 22,
                               ),
                             ),
                           ),
-                        ),
-                        Visibility(
-                          visible: isUserLoggedIn == true,
-                          child: Positioned(
+
+                        if (isUserLoggedIn == true)
+                          Positioned(
                             top: 90,
-                            right: 30,
-                            child: TvFocusWrapper(
-                              borderRadius: 30.0,
+                            right: 24,
+                            child: _buildM3FloatingActionButton(
+                              context: context,
+                              backgroundColor: isMovieFavorite == true
+                                  ? Colors.redAccent.withValues(alpha: 0.25)
+                                  : null,
+                              borderColor: isMovieFavorite == true
+                                  ? Colors.redAccent.withValues(alpha: 0.6)
+                                  : null,
                               onTap: () async {
-                                if (isMovieFavorite == null) {
-                                  return;
-                                }
+                                if (isMovieFavorite == null) return;
                                 final movieId = widget.movieId;
-                                final openbox =
-                                    Hive.box('sessionBox');
-                                final String accountId =
-                                    openbox.get('accountId');
-                                final String sessionData =
-                                    openbox.get('sessionData');
+                                final openbox = Hive.box('sessionBox');
+                                final String accountId = openbox.get('accountId');
+                                final String sessionData = openbox.get('sessionData');
                                 if (isMovieFavorite) {
                                   state.updateState(() {
                                     state.isMovieFavorite = false;
@@ -377,126 +368,120 @@ class _MovieDetailPageMobile extends StatelessWidget {
                                   profileRefreshNotifier.value++;
                                 }
                               },
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Icon(
-                                  isMovieFavorite == null
-                                      ? Icons.favorite_border
-                                      : isMovieFavorite
-                                          ? Icons.favorite
-                                          : Icons.favorite_border,
-                                  color: Colors.white,
-                                  size: 25,
-                                ),
+                              child: Icon(
+                                isMovieFavorite == true
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
+                                color: isMovieFavorite == true
+                                    ? Colors.redAccent
+                                    : Colors.white,
+                                size: 22,
                               ),
                             ),
                           ),
-                        ),
                         // logged in and rated
                         if (isUserLoggedIn == true &&
                             isMovieRated != false &&
                             userRating != null)
                           Positioned(
                             top: 40,
-                            right: 20,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(
-                                  color: Colors.black38,
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(30))),
-                              child: TvFocusWrapper(
-                                borderRadius: 30.0,
-                                onTap: () => showModalBottomSheet(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const SizedBox(
-                                          height: 20,
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: RatingBar.builder(
-                                            initialRating: userRating,
-                                            minRating: 1,
-                                            maxRating: 10,
-                                            itemSize: 35,
-                                            unratedColor: Colors.grey,
-                                            direction: Axis.horizontal,
-                                            allowHalfRating: true,
-                                            itemCount: 10,
-                                            itemPadding:
-                                                const EdgeInsets.symmetric(
-                                                    horizontal: 0),
-                                            itemBuilder: (context, _) =>
-                                                const Icon(
-                                              Icons.star,
-                                              color: Colors.amber,
-                                            ),
-                                            onRatingUpdate: (rating) async {
-                                              final movieId = widget.movieId;
-                                              final openbox =
-                                                  Hive.box('sessionBox');
-
-                                              final String sessionData =
-                                                  openbox.get('sessionData');
-                                              addRating(sessionData, movieId,
-                                                  rating, context);
-                                              state.updateState(() {
-                                                state.isMovieRated = {'value': rating};
-                                                state.userRating = rating;
-                                                profileRefreshNotifier.value++;
-                                              });
-                                            },
+                            right: 24,
+                            child: _buildM3FloatingPillButton(
+                              context: context,
+                              backgroundColor: Colors.amber.withValues(alpha: 0.25),
+                              borderColor: Colors.amber.withValues(alpha: 0.6),
+                              onTap: () => showModalBottomSheet(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const SizedBox(
+                                        height: 20,
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(8.0),
+                                        child: RatingBar.builder(
+                                          initialRating: userRating,
+                                          minRating: 1,
+                                          maxRating: 10,
+                                          itemSize: 35,
+                                          unratedColor: Colors.grey,
+                                          direction: Axis.horizontal,
+                                          allowHalfRating: true,
+                                          itemCount: 10,
+                                          itemPadding:
+                                              const EdgeInsets.symmetric(
+                                                  horizontal: 0),
+                                          itemBuilder: (context, _) =>
+                                              const Icon(
+                                            Icons.star,
+                                            color: Colors.amber,
                                           ),
-                                        ),
-                                        const CustomDivider(),
-                                        const SizedBox(
-                                          height: 10,
-                                        ),
-                                        GestureDetector(
-                                          onTap: () async {
-                                            final openbox = Hive.box('sessionBox');
+                                          onRatingUpdate: (rating) async {
+                                            final movieId = widget.movieId;
+                                            final openbox =
+                                                Hive.box('sessionBox');
 
                                             final String sessionData =
                                                 openbox.get('sessionData');
-                                            removeRating(sessionData,
-                                                widget.movieId, context);
-                                            Navigator.of(context).pop();
+                                            addRating(sessionData, movieId,
+                                                rating, context);
                                             state.updateState(() {
-                                              state.isMovieRated = false;
-                                              state.userRating = null;
+                                              state.isMovieRated = {'value': rating};
+                                              state.userRating = rating;
                                               profileRefreshNotifier.value++;
                                             });
                                           },
-                                          child: const Text(
-                                            ' 🗑️ Delete Rating',
-                                            style: TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 18),
-                                          ),
                                         ),
-                                        const SizedBox(
-                                          height: 20,
+                                      ),
+                                      const CustomDivider(),
+                                      const SizedBox(
+                                        height: 10,
+                                      ),
+                                      GestureDetector(
+                                        onTap: () async {
+                                          final openbox = Hive.box('sessionBox');
+
+                                          final String sessionData =
+                                              openbox.get('sessionData');
+                                          removeRating(sessionData,
+                                              widget.movieId, context);
+                                          Navigator.of(context).pop();
+                                          state.updateState(() {
+                                            state.isMovieRated = false;
+                                            state.userRating = null;
+                                            profileRefreshNotifier.value++;
+                                          });
+                                        },
+                                        child: const Text(
+                                          ' 🗑️ Delete Rating',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 18),
                                         ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                                  child: Text(
-                                    '👤 ${userRating.toStringAsFixed(1)}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w300,
-                                      fontSize: 13,
-                                      color: Colors.white,
+                                      ),
+                                      const SizedBox(
+                                        height: 20,
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    userRating.toStringAsFixed(1),
+                                    style: theme.textTheme.labelLarge?.copyWith(
+                                      color: Colors.amber,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
                             ),
                           ),
@@ -504,34 +489,32 @@ class _MovieDetailPageMobile extends StatelessWidget {
                         Positioned(
                           top: 40,
                           left: 20,
-                          child: TvFocusWrapper(
-                            borderRadius: 30.0,
+                          child: _buildM3FloatingPillButton(
+                            context: context,
+                            backgroundColor: isWatched
+                                ? Colors.green.withValues(alpha: 0.25)
+                                : null,
+                            borderColor: isWatched
+                                ? Colors.green.withValues(alpha: 0.6)
+                                : null,
                             onTap: isWatched ? state._removeFromWatched : state._markAsWatched,
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: isWatched ? Colors.green.withValues(alpha: 0.7) : Colors.black38,
-                                borderRadius: const BorderRadius.all(Radius.circular(30)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    isWatched ? Icons.check_circle : Icons.visibility,
-                                    color: Colors.white,
-                                    size: 16,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isWatched ? Icons.check_circle_rounded : Icons.visibility_outlined,
+                                  color: isWatched ? Colors.greenAccent : Colors.white,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  isWatched ? 'Watched' : 'Mark as Watched',
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: isWatched ? Colors.greenAccent : Colors.white,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    isWatched ? 'Watched' : 'Mark as Watched',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w300,
-                                      fontSize: 13,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -541,208 +524,216 @@ class _MovieDetailPageMobile extends StatelessWidget {
                             userRating == null)
                           Positioned(
                             top: 40,
-                            right: 30,
-                            child: TvFocusWrapper(
-                                  borderRadius: 30.0,
-                                  onTap: () {
-                                    showModalBottomSheet(
-                                      context: context,
-                                      builder: (BuildContext context) {
-                                        return Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const SizedBox(
-                                              height: 20,
-                                            ),
-                                            RatingBar.builder(
-                                              initialRating: 5,
-                                              minRating: 1,
-                                              maxRating: 10,
-                                              itemSize: 35,
-                                              unratedColor: Colors.grey,
-                                              direction: Axis.horizontal,
-                                              allowHalfRating: true,
-                                              itemCount: 10,
-                                              itemPadding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 0),
-                                              itemBuilder: (context, _) =>
-                                                  const Icon(
-                                                Icons.star,
-                                                color: Colors.amber,
-                                              ),
-                                              onRatingUpdate: (rating) async {
-                                                final movieId =
-                                                    widget.movieId;
-                                                final openbox =
-                                                    Hive.box('sessionBox');
+                            right: 24,
+                            child: _buildM3FloatingActionButton(
+                              context: context,
+                              onTap: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const SizedBox(
+                                          height: 20,
+                                        ),
+                                        RatingBar.builder(
+                                          initialRating: 5,
+                                          minRating: 1,
+                                          maxRating: 10,
+                                          itemSize: 35,
+                                          unratedColor: Colors.grey,
+                                          direction: Axis.horizontal,
+                                          allowHalfRating: true,
+                                          itemCount: 10,
+                                          itemPadding:
+                                              const EdgeInsets.symmetric(
+                                                  horizontal: 0),
+                                          itemBuilder: (context, _) =>
+                                              const Icon(
+                                            Icons.star,
+                                            color: Colors.amber,
+                                          ),
+                                          onRatingUpdate: (rating) async {
+                                            final movieId =
+                                                widget.movieId;
+                                            final openbox =
+                                                Hive.box('sessionBox');
 
-                                                final String sessionData =
-                                                    openbox
-                                                        .get('sessionData');
-                                                addRating(sessionData,
-                                                    movieId, rating, context);
-                                                state.updateState(() {
-                                                  state.isMovieRated = '"value":$rating';
-                                                  state.userRating = rating;
-                                                  profileRefreshNotifier.value++;
-                                                });
-                                              },
-                                            ),
-                                            const SizedBox(
-                                              height: 40,
-                                            ),
-                                          ],
-                                        );
-                                      },
+                                            final String sessionData =
+                                                openbox
+                                                    .get('sessionData');
+                                            addRating(sessionData,
+                                                movieId, rating, context);
+                                            state.updateState(() {
+                                              state.isMovieRated = '"value":$rating';
+                                              state.userRating = rating;
+                                              profileRefreshNotifier.value++;
+                                            });
+                                          },
+                                        ),
+                                        const SizedBox(
+                                          height: 40,
+                                        ),
+                                      ],
                                     );
                                   },
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Icon(
-                                      Icons.add_reaction,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
+                                );
+                              },
+                              child: const Icon(
+                                Icons.star_outline_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                            ),
                           ),
                       ],
                     ),
                   Center(
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      physics: const BouncingScrollPhysics(),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children:
-                            (genres as List<dynamic>).map<Widget>((genre) {
-                          return Text(
-                            genre['name'] + ' | ',
-                            style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w200),
+                        children: (genres as List<dynamic>).map<Widget>((genre) {
+                          return Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Text(
+                              genre['name'].toString(),
+                              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           );
                         }).toList(),
                       ),
                     ),
                   ),
-                  const CustomDivider(),
+                  const SizedBox(height: 12),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Container(
-                        alignment: Alignment.center,
-                        child: Text(
-                          about!,
-                          style:
-                              getMovieAboutTextStyle(context, widget.movieId),
-                          textAlign: TextAlign.left,
-                        )),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.15),
+                        ),
+                      ),
+                      child: Text(
+                        about ?? '',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          height: 1.5,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
                   ),
-                  const CustomDivider(),
+                  const SizedBox(height: 16),
                   Padding(
-                    padding: const EdgeInsets.all(15.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        SizedBox(
-                          width: 110,
+                        Expanded(
                           child: Container(
-                            padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                             decoration: BoxDecoration(
-                              color: getMovieBackgroundColor(
-                                  context, widget.movieId),
-                              borderRadius: BorderRadius.circular(10),
+                              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                              ),
                             ),
                             child: Column(
                               children: [
-                                const Text(
+                                Text(
                                   'Duration',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w200,
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    "${hours}H ${minutes}M",
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "${hours}H ${minutes}M",
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        SizedBox(
-                          width: 110,
+                        const SizedBox(width: 10),
+                        Expanded(
                           child: Container(
-                            padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                             decoration: BoxDecoration(
-                              color: getMovieBackgroundColor(
-                                  context, widget.movieId),
-                              borderRadius: BorderRadius.circular(10),
+                              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                              ),
                             ),
                             child: Column(
                               children: [
-                                const Text(
+                                Text(
                                   'Year',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w200,
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    year,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  year,
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        SizedBox(
-                          width: 110,
+                        const SizedBox(width: 10),
+                        Expanded(
                           child: Container(
-                            padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                             decoration: BoxDecoration(
-                              color: getMovieBackgroundColor(
-                                  context, widget.movieId),
-                              borderRadius: BorderRadius.circular(10),
+                              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                              ),
                             ),
                             child: Column(
                               children: [
-                                const Text(
+                                Text(
                                   'Language',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w200,
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    language != null
-                                        ? language.toUpperCase()
-                                        : 'N/A',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  language != null ? language.toUpperCase() : 'N/A',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ],
@@ -752,88 +743,83 @@ class _MovieDetailPageMobile extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 20),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(25, 10, 25, 0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Center(
-                          child: FutureBuilder(
-                              future: availabilityFuture,
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  // Display loading indicator while fetching data
-                                  return const SizedBox();
-                                } else if (snapshot.hasError) {
-                                  // Display error message if fetching data fails
-                                  return const Text('Error loading data');
-                                } else {
-                                  // Display check mark if results are not empty
-                                  return snapshot.data == true
-                                      ? SizedBox(
-                                          width: double.maxFinite,
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.center,
-                                            mainAxisSize: MainAxisSize.max,
-
-                                            children: [
-                                              Expanded(
-                                                child: FloatingActionButton(
-                                                  heroTag: null,
-                                                  backgroundColor: getMovieColor(
-                                                      context, widget.movieId),
-                                                  onPressed: () => showWatchOptions(
-                                                      context,
-                                                      widget.movieId,
-                                                      widget.movieTitle,
-                                                      releaseDate ?? '',
-                                                      imdbId ?? ''),
-                                                  child: Text(
-                                                    'Watch',
-                                                    style: getMovieButtonTextStyle(
-                                                        widget.movieId),
-                                                  ),
-                                                ),
-                                              ),
-
-                                            ],
+                        FutureBuilder(
+                          future: availabilityFuture,
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const SizedBox();
+                            } else if (snapshot.hasError) {
+                              return const SizedBox();
+                            } else {
+                              return snapshot.data == true
+                                  ? Container(
+                                      width: double.infinity,
+                                      height: 56,
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      child: FilledButton.icon(
+                                        icon: const Icon(Icons.play_arrow_rounded, size: 26),
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: getMovieColor(context, widget.movieId),
+                                          foregroundColor: Colors.white,
+                                          elevation: 2,
+                                          shadowColor: getMovieColor(context, widget.movieId).withValues(alpha: 0.4),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(28),
                                           ),
-                                        )
-                                      : const SizedBox();
-                                }
-                              }),
-                        )
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(25, 10, 25, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                            child: SizedBox(
-                                width: double.maxFinite,
-                                child: FloatingActionButton(
-                                  heroTag: null,
-                                  backgroundColor:
-                                      getMovieColor(context, widget.movieId),
-                                  onPressed: () => showTorrentOptions(
-                                      context,
-                                      widget.movieId,
-                                      widget.movieTitle,
-                                      releaseDate,
-                                      imdbId),
-                                  child: Text(
-                                    'Torrent Search',
-                                    style:
-                                        getMovieButtonTextStyle(widget.movieId),
-                                  ),
-                                )))
+                                        ),
+                                        onPressed: () => showWatchOptions(
+                                          context,
+                                          widget.movieId,
+                                          widget.movieTitle,
+                                          releaseDate ?? '',
+                                          imdbId ?? '',
+                                        ),
+                                        label: Text(
+                                          'Watch',
+                                          style: getMovieButtonTextStyle(widget.movieId).copyWith(fontSize: 16),
+                                        ),
+                                      ),
+                                    )
+                                  : const SizedBox();
+                            }
+                          },
+                        ),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: FilledButton.icon(
+                            icon: const Icon(Icons.download_rounded, size: 22),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+                              foregroundColor: Theme.of(context).colorScheme.onSurface,
+                              side: BorderSide(
+                                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(28),
+                              ),
+                            ),
+                            onPressed: () => showTorrentOptions(
+                              context,
+                              widget.movieId,
+                              widget.movieTitle,
+                              releaseDate,
+                              imdbId,
+                            ),
+                            label: Text(
+                              'Torrent Search',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -841,7 +827,7 @@ class _MovieDetailPageMobile extends StatelessWidget {
                     future: creditsFuture,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
+                        return const M3ExpressiveSpinner();
                       } else if (snapshot.hasError) {
                         return const Text(
                             'Error loading cast and crew details');
@@ -1478,6 +1464,76 @@ class _MovieDetailPageMobile extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildM3FloatingActionButton({
+    required BuildContext context,
+    required Widget child,
+    required VoidCallback onTap,
+    Color? backgroundColor,
+    Color? borderColor,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final defaultBg = colorScheme.surfaceContainerHigh.withValues(alpha: 0.85);
+    final defaultBorder = colorScheme.outlineVariant.withValues(alpha: 0.3);
+
+    return Container(
+      width: 46,
+      height: 46,
+      decoration: BoxDecoration(
+        color: backgroundColor ?? defaultBg,
+        shape: BoxShape.circle,
+        border: Border.all(color: borderColor ?? defaultBorder, width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TvFocusWrapper(
+        borderRadius: 23.0,
+        onTap: onTap,
+        child: Center(child: child),
+      ),
+    );
+  }
+
+  Widget _buildM3FloatingPillButton({
+    required BuildContext context,
+    required Widget child,
+    required VoidCallback onTap,
+    Color? backgroundColor,
+    Color? borderColor,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final defaultBg = colorScheme.surfaceContainerHigh.withValues(alpha: 0.85);
+    final defaultBorder = colorScheme.outlineVariant.withValues(alpha: 0.3);
+
+    return Container(
+      height: 42,
+      decoration: BoxDecoration(
+        color: backgroundColor ?? defaultBg,
+        borderRadius: BorderRadius.circular(24.0),
+        border: Border.all(color: borderColor ?? defaultBorder, width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TvFocusWrapper(
+        borderRadius: 24.0,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
+          child: Center(child: child),
+        ),
       ),
     );
   }

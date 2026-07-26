@@ -7,6 +7,8 @@ class _SerieDetailPageMobile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final widget = state.widget;
     final serieDetails = state.serieDetails;
     final backdrops = state.backdrops;
@@ -35,9 +37,7 @@ class _SerieDetailPageMobile extends StatelessWidget {
     final bool isTv = TvFocusModeManager.isTvDevice;
 
     final Widget bodyContent = serieDetails == null
-        ? const Center(
-            child: CircularProgressIndicator(),
-          )
+        ? const M3ExpressiveSpinner()
         : SingleChildScrollView(
               padding: EdgeInsets.only(
                 bottom: isTv ? 0.0 : BottomBar.getHeight(context),
@@ -180,13 +180,12 @@ class _SerieDetailPageMobile extends StatelessWidget {
                           ],
                         ),
                       ),
-                      Visibility(
-                        visible: AppPlatform.isAndroid,
-                        child: Positioned(
+                      if (AppPlatform.isAndroid)
+                        Positioned(
                           top: 190,
-                          right: 30,
-                          child: TvFocusWrapper(
-                            borderRadius: 30.0,
+                          right: 24,
+                          child: _buildM3FloatingActionButton(
+                            context: context,
                             onTap: () {
                               showGeneralDialog(
                                 context: context,
@@ -232,7 +231,7 @@ class _SerieDetailPageMobile extends StatelessWidget {
                                                       widget.serieId);
                                                 },
                                                 icon: const Icon(
-                                                  Icons.share,
+                                                  Icons.share_rounded,
                                                   color: Colors.white,
                                                 ),
                                               ),
@@ -247,7 +246,7 @@ class _SerieDetailPageMobile extends StatelessWidget {
                                                   );
                                                 },
                                                 icon: const Icon(
-                                                  Icons.image,
+                                                  Icons.image_rounded,
                                                   color: Colors.white,
                                                 ),
                                               ),
@@ -260,36 +259,33 @@ class _SerieDetailPageMobile extends StatelessWidget {
                                 },
                               );
                             },
-                            child: const Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Icon(
-                                Icons.share,
-                                color: Colors.white,
-                                size: 25,
-                              ),
+                            child: const Icon(
+                              Icons.share_rounded,
+                              color: Colors.white,
+                              size: 22,
                             ),
                           ),
                         ),
-                      ),
 
-                      Visibility(
-                        visible: isUserLoggedIn == true,
-                        child: Positioned(
+                      if (isUserLoggedIn == true)
+                        Positioned(
                           top: 140,
-                          right: 30,
-                          child: TvFocusWrapper(
-                            borderRadius: 30.0,
+                          right: 24,
+                          child: _buildM3FloatingActionButton(
+                            context: context,
+                            backgroundColor: isSerieWatchlist == true
+                                ? colorScheme.primaryContainer
+                                : null,
+                            borderColor: isSerieWatchlist == true
+                                ? colorScheme.primary.withValues(alpha: 0.6)
+                                : null,
                             onTap: () async {
-                              if (isSerieWatchlist == null) {
-                                  return;
-                              }
+                              if (isSerieWatchlist == null) return;
                               final movieId = widget.serieId;
                               final openbox = Hive.box('sessionBox');
                               final String accountId = openbox.get('accountId');
-                              final String sessionData =
-                                  openbox.get('sessionData');
+                              final String sessionData = openbox.get('sessionData');
                               if (isSerieWatchlist) {
-                                // Remove from watchlist
                                 state.updateState(() {
                                   state.isSerieWatchlist = false;
                                 });
@@ -297,7 +293,6 @@ class _SerieDetailPageMobile extends StatelessWidget {
                                     accountId, sessionData, movieId, context);
                                 profileRefreshNotifier.value++;
                               } else {
-                                // Add to watchlist
                                 state.updateState(() {
                                   state.isSerieWatchlist = true;
                                 });
@@ -306,37 +301,35 @@ class _SerieDetailPageMobile extends StatelessWidget {
                                 profileRefreshNotifier.value++;
                               }
                             },
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Icon(
-                                isSerieWatchlist == null
-                                    ? Icons.bookmark_border
-                                    : isSerieWatchlist
-                                        ? Icons.bookmark
-                                        : Icons.bookmark_border,
-                                color: Colors.white,
-                                size: 25,
-                              ),
+                            child: Icon(
+                              isSerieWatchlist == true
+                                  ? Icons.bookmark_rounded
+                                  : Icons.bookmark_border_rounded,
+                              color: isSerieWatchlist == true
+                                  ? colorScheme.primary
+                                  : Colors.white,
+                              size: 22,
                             ),
                           ),
                         ),
-                      ),
-                      Visibility(
-                        visible: isUserLoggedIn == true,
-                        child: Positioned(
+                      if (isUserLoggedIn == true)
+                        Positioned(
                           top: 90,
-                          right: 30,
-                          child: TvFocusWrapper(
-                            borderRadius: 30.0,
+                          right: 24,
+                          child: _buildM3FloatingActionButton(
+                            context: context,
+                            backgroundColor: isSerieFavorite == true
+                                ? Colors.redAccent.withValues(alpha: 0.25)
+                                : null,
+                            borderColor: isSerieFavorite == true
+                                ? Colors.redAccent.withValues(alpha: 0.6)
+                                : null,
                             onTap: () async {
-                              if (isSerieFavorite == null) {
-                                return;
-                              }
+                              if (isSerieFavorite == null) return;
                               final movieId = widget.serieId;
                               final openbox = Hive.box('sessionBox');
                               final String accountId = openbox.get('accountId');
-                              final String sessionData =
-                                  openbox.get('sessionData');
+                              final String sessionData = openbox.get('sessionData');
                               if (isSerieFavorite) {
                                 state.updateState(() {
                                   state.isSerieFavorite = false;
@@ -353,124 +346,118 @@ class _SerieDetailPageMobile extends StatelessWidget {
                                 profileRefreshNotifier.value++;
                               }
                             },
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Icon(
-                                isSerieFavorite == null
-                                    ? Icons.favorite_border
-                                    : isSerieFavorite
-                                        ? Icons.favorite
-                                        : Icons.favorite_border,
-                                color: Colors.white,
-                                size: 25,
-                              ),
+                            child: Icon(
+                              isSerieFavorite == true
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              color: isSerieFavorite == true
+                                  ? Colors.redAccent
+                                  : Colors.white,
+                              size: 22,
                             ),
                           ),
                         ),
-                      ),
                       // logged in and rated
                       if (isUserLoggedIn == true &&
                           isSerieRated != false &&
                           userRating != null)
                         Positioned(
                           top: 40,
-                          right: 20,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(
-                                color: Colors.black38,
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(30))),
-                            child: TvFocusWrapper(
-                              borderRadius: 30.0,
-                              onTap: () => showModalBottomSheet(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const SizedBox(
-                                        height: 20,
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: RatingBar.builder(
-                                          initialRating: userRating,
-                                          minRating: 1,
-                                          maxRating: 10,
-                                          itemSize: 35,
-                                          unratedColor: Colors.grey,
-                                          direction: Axis.horizontal,
-                                          allowHalfRating: true,
-                                          itemCount: 10,
-                                          itemPadding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 0),
-                                          itemBuilder: (context, _) =>
-                                              const Icon(
-                                            Icons.star,
-                                            color: Colors.amber,
-                                          ),
-                                          onRatingUpdate: (rating) async {
-                                            final movieId = widget.serieId;
-                                            final openbox = Hive.box('sessionBox');
-                                            final String sessionData =
-                                                openbox.get('sessionData');
-                                            addRating(sessionData, movieId,
-                                                rating, context);
-                                            state.updateState(() {
-                                              state.isSerieRated = {'value': rating};
-                                              state.userRating = rating;
-                                              profileRefreshNotifier.value++;
-                                            });
-                                          },
+                          right: 24,
+                          child: _buildM3FloatingPillButton(
+                            context: context,
+                            backgroundColor: Colors.amber.withValues(alpha: 0.25),
+                            borderColor: Colors.amber.withValues(alpha: 0.6),
+                            onTap: () => showModalBottomSheet(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const SizedBox(
+                                      height: 20,
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: RatingBar.builder(
+                                        initialRating: userRating,
+                                        minRating: 1,
+                                        maxRating: 10,
+                                        itemSize: 35,
+                                        unratedColor: Colors.grey,
+                                        direction: Axis.horizontal,
+                                        allowHalfRating: true,
+                                        itemCount: 10,
+                                        itemPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 0),
+                                        itemBuilder: (context, _) =>
+                                            const Icon(
+                                          Icons.star,
+                                          color: Colors.amber,
                                         ),
-                                      ),
-                                      const CustomDivider(),
-                                      const SizedBox(
-                                        height: 10,
-                                      ),
-                                      GestureDetector(
-                                        onTap: () async {
-                                          final openbox =
-                                              Hive.box('sessionBox');
-
+                                        onRatingUpdate: (rating) async {
+                                          final movieId = widget.serieId;
+                                          final openbox = Hive.box('sessionBox');
                                           final String sessionData =
                                               openbox.get('sessionData');
-                                          removeRating(sessionData,
-                                              widget.serieId, context);
-                                          Navigator.of(context).pop();
+                                          addRating(sessionData, movieId,
+                                              rating, context);
                                           state.updateState(() {
-                                            state.isSerieRated = false;
-                                            state.userRating = null;
+                                            state.isSerieRated = {'value': rating};
+                                            state.userRating = rating;
+                                            profileRefreshNotifier.value++;
                                           });
                                         },
-                                        child: const Text(
-                                          ' 🗑️ Delete Rating',
-                                          style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 18),
-                                        ),
                                       ),
-                                      const SizedBox(
-                                        height: 20,
+                                    ),
+                                    const CustomDivider(),
+                                    const SizedBox(
+                                      height: 10,
+                                    ),
+                                    GestureDetector(
+                                      onTap: () async {
+                                        final openbox =
+                                            Hive.box('sessionBox');
+
+                                        final String sessionData =
+                                            openbox.get('sessionData');
+                                        removeRating(sessionData,
+                                            widget.serieId, context);
+                                        Navigator.of(context).pop();
+                                        state.updateState(() {
+                                          state.isSerieRated = false;
+                                          state.userRating = null;
+                                        });
+                                      },
+                                      child: const Text(
+                                        ' 🗑️ Delete Rating',
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18),
                                       ),
-                                    ],
-                                  );
-                                },
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                                child: Text(
-                                  '👤 ${userRating.toStringAsFixed(1)}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w300,
-                                    fontSize: 13,
-                                    color: Colors.white,
+                                    ),
+                                    const SizedBox(
+                                      height: 20,
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                                const SizedBox(width: 4),
+                                Text(
+                                  userRating.toStringAsFixed(1),
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    color: Colors.amber,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
                           ),
                         ),
@@ -480,74 +467,66 @@ class _SerieDetailPageMobile extends StatelessWidget {
                           userRating == null)
                         Positioned(
                           top: 40,
-                          right: 30,
-                          child: Container(
-                              decoration: const BoxDecoration(
-                                  color: Colors.black38,
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(30))),
-                              child: TvFocusWrapper(
-                                  borderRadius: 30.0,
-                                  onTap: () {
-                                    showModalBottomSheet(
-                                      context: context,
-                                      builder: (BuildContext context) {
-                                        return Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const SizedBox(
-                                              height: 20,
-                                            ),
-                                            RatingBar.builder(
-                                              initialRating: 5,
-                                              minRating: 1,
-                                              maxRating: 10,
-                                              itemSize: 35,
-                                              unratedColor: Colors.grey,
-                                              direction: Axis.horizontal,
-                                              allowHalfRating: true,
-                                              itemCount: 10,
-                                              itemPadding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 0),
-                                              itemBuilder: (context, _) =>
-                                                  const Icon(
-                                                Icons.star,
-                                                color: Colors.amber,
-                                              ),
-                                              onRatingUpdate: (rating) async {
-                                                final movieId = widget.serieId;
-                                                final openbox = Hive.box('sessionBox');
+                          right: 24,
+                          child: _buildM3FloatingActionButton(
+                            context: context,
+                            onTap: () {
+                              showModalBottomSheet(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const SizedBox(
+                                        height: 20,
+                                      ),
+                                      RatingBar.builder(
+                                        initialRating: 5,
+                                        minRating: 1,
+                                        maxRating: 10,
+                                        itemSize: 35,
+                                        unratedColor: Colors.grey,
+                                        direction: Axis.horizontal,
+                                        allowHalfRating: true,
+                                        itemCount: 10,
+                                        itemPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 0),
+                                        itemBuilder: (context, _) =>
+                                            const Icon(
+                                          Icons.star,
+                                          color: Colors.amber,
+                                        ),
+                                        onRatingUpdate: (rating) async {
+                                          final movieId = widget.serieId;
+                                          final openbox = Hive.box('sessionBox');
 
-                                                final String sessionData =
-                                                    openbox.get('sessionData');
-                                                state.updateState(() {
-                                                  state.isSerieRated = '"value":$rating';
-                                                  state.userRating = rating;
-                                                });
-                                                await addRating(sessionData, movieId,
-                                                    rating, context);
-                                                profileRefreshNotifier.value++;
-                                              },
-                                            ),
-                                            const SizedBox(
-                                              height: 40,
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    );
-                                  },
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Icon(
-                                      Icons.add_reaction,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ),
+                                          final String sessionData =
+                                              openbox.get('sessionData');
+                                          state.updateState(() {
+                                            state.isSerieRated = '"value":$rating';
+                                            state.userRating = rating;
+                                          });
+                                          await addRating(sessionData, movieId,
+                                              rating, context);
+                                          profileRefreshNotifier.value++;
+                                        },
+                                      ),
+                                      const SizedBox(
+                                        height: 40,
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                            child: const Icon(
+                              Icons.star_outline_rounded,
+                              color: Colors.white,
+                              size: 22,
                             ),
+                          ),
+                        ),
 
 
                         Positioned(
@@ -567,148 +546,151 @@ class _SerieDetailPageMobile extends StatelessWidget {
                   ),
                   Center(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
                         child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children:
-                              (genres as List<dynamic>).map<Widget>((genre) {
-                            return Text(
-                              genre['name'] + ' | ',
-                              style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w200),
+                          children: (genres as List<dynamic>).map<Widget>((genre) {
+                            return Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Text(
+                                genre['name'].toString(),
+                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             );
                           }).toList(),
                         ),
                       ),
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(20, 0, 20, 0),
-                    child: Divider(color: Colors.white60, thickness: 1),
-                  ),
+                  const SizedBox(height: 12),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Container(
-                        alignment: Alignment.center,
-                        child: Text(
-                          about!,
-                          style:
-                              getSeriesAboutTextStyle(context, widget.serieId),
-                          textAlign: TextAlign.left,
-                        )),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.15),
+                        ),
+                      ),
+                      child: Text(
+                        about ?? '',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          height: 1.5,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(20, 0, 20, 0),
-                    child: Divider(color: Colors.white60, thickness: 1),
-                  ),
+                  const SizedBox(height: 16),
                   Padding(
-                    padding: const EdgeInsets.all(15.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        SizedBox(
-                          width: 110,
+                        Expanded(
                           child: Container(
-                            padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                             decoration: BoxDecoration(
-                              color: getSeriesBackgroundColor(
-                                  context, widget.serieId),
-                              borderRadius: BorderRadius.circular(10),
+                              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                              ),
                             ),
                             child: Column(
                               children: [
-                                const Text(
+                                Text(
                                   'Seasons',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w200,
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    '$seasons',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '$seasons',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        SizedBox(
-                          width: 110,
+                        const SizedBox(width: 10),
+                        Expanded(
                           child: Container(
-                            padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                             decoration: BoxDecoration(
-                              color: getSeriesBackgroundColor(
-                                  context, widget.serieId),
-                              borderRadius: BorderRadius.circular(10),
+                              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                              ),
                             ),
                             child: Column(
                               children: [
-                                const Text(
+                                Text(
                                   'Episodes',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w200,
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    '$episodes',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '$episodes',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        SizedBox(
-                          width: 110,
+                        const SizedBox(width: 10),
+                        Expanded(
                           child: Container(
-                            padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
                             decoration: BoxDecoration(
-                              color: getSeriesBackgroundColor(
-                                  context, widget.serieId),
-                              borderRadius: BorderRadius.circular(10),
+                              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                              ),
                             ),
                             child: Column(
                               children: [
-                                const Text(
+                                Text(
                                   'Language',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w200,
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    language != null
-                                        ? language.toUpperCase()
-                                        : 'N/A',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  language != null ? language.toUpperCase() : 'N/A',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ],
@@ -718,36 +700,39 @@ class _SerieDetailPageMobile extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 20),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(25, 10, 25, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                            child: SizedBox(
-                          width: double.maxFinite,
-                          child: FloatingActionButton(
-                            heroTag: null,
-                            backgroundColor:
-                                getSeriesColor(context, widget.serieId),
-                            onPressed: () => seasonsAndEpisodes(context,
-                                widget.serieId, widget.serieName, imdbId!,
-                                imagePath: backdrops,
-                                onWatchStatusChanged: state._refreshShowWatchStatus),
-                            child: Text(
-                              'Details',
-                              style: getSeriesButtonTextStyle(widget.serieId),
-                            ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: FilledButton.icon(
+                        icon: const Icon(Icons.video_library_rounded, size: 24),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: getSeriesColor(context, widget.serieId),
+                          foregroundColor: Colors.white,
+                          elevation: 2,
+                          shadowColor: getSeriesColor(context, widget.serieId).withValues(alpha: 0.4),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
                           ),
-                        ))
-                      ],
+                        ),
+                        onPressed: () => seasonsAndEpisodes(context,
+                            widget.serieId, widget.serieName, imdbId!,
+                            imagePath: backdrops,
+                            onWatchStatusChanged: state._refreshShowWatchStatus),
+                        label: Text(
+                          'Details',
+                          style: getSeriesButtonTextStyle(widget.serieId).copyWith(fontSize: 16),
+                        ),
+                      ),
                     ),
                   ),
                   FutureBuilder(
                     future: creditsFuture,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
+                        return const M3ExpressiveSpinner();
                       } else if (snapshot.hasError) {
                         return const Text(
                             'Error loading cast and crew details');
@@ -1077,6 +1062,76 @@ class _SerieDetailPageMobile extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildM3FloatingActionButton({
+    required BuildContext context,
+    required Widget child,
+    required VoidCallback onTap,
+    Color? backgroundColor,
+    Color? borderColor,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final defaultBg = colorScheme.surfaceContainerHigh.withValues(alpha: 0.85);
+    final defaultBorder = colorScheme.outlineVariant.withValues(alpha: 0.3);
+
+    return Container(
+      width: 46,
+      height: 46,
+      decoration: BoxDecoration(
+        color: backgroundColor ?? defaultBg,
+        shape: BoxShape.circle,
+        border: Border.all(color: borderColor ?? defaultBorder, width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TvFocusWrapper(
+        borderRadius: 23.0,
+        onTap: onTap,
+        child: Center(child: child),
+      ),
+    );
+  }
+
+  Widget _buildM3FloatingPillButton({
+    required BuildContext context,
+    required Widget child,
+    required VoidCallback onTap,
+    Color? backgroundColor,
+    Color? borderColor,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final defaultBg = colorScheme.surfaceContainerHigh.withValues(alpha: 0.85);
+    final defaultBorder = colorScheme.outlineVariant.withValues(alpha: 0.3);
+
+    return Container(
+      height: 42,
+      decoration: BoxDecoration(
+        color: backgroundColor ?? defaultBg,
+        borderRadius: BorderRadius.circular(24.0),
+        border: Border.all(color: borderColor ?? defaultBorder, width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TvFocusWrapper(
+        borderRadius: 24.0,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
+          child: Center(child: child),
+        ),
       ),
     );
   }
