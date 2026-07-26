@@ -73,7 +73,11 @@ Widget buildM3FloatingPillButton({
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
-        child: Center(child: child),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [child],
+        ),
       ),
     ),
   );

@@ -13,8 +13,11 @@ import 'package:Mirarr/seriesPage/checkers/custom_tmdb_ids_effects_series.dart';
 import 'package:Mirarr/seriesPage/function/get_imdb_rating_series.dart';
 import 'package:Mirarr/seriesPage/function/series_tmdb_actions.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 import 'package:flutter/material.dart';
+import 'package:skeletonizer/skeletonizer.dart';
+import 'package:Mirarr/moviesPage/functions/f2m_parser.dart';
+import 'package:Mirarr/seriesPage/UI/iran_series_f2m_page.dart';
+import 'package:Mirarr/widgets/expressive_page_route.dart';
 import 'package:Mirarr/widgets/m3_expressive_rating_bar.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
@@ -80,6 +83,11 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
   String? imdbRating;
   String rottenTomatoesRating = 'N/A';
   
+  // F2M Iran background check variables
+  List<F2MSeasonGroup> f2mGroups = [];
+  bool hasF2MResults = false;
+  bool isCheckingF2M = false;
+
   // Key to force refresh of ShowWatchToggle
   final GlobalKey<_ShowWatchToggleState> _showWatchToggleKey = GlobalKey<_ShowWatchToggleState>();
 
@@ -95,6 +103,32 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     _creditsFuture = fetchCredits(widget.serieId, region);
     fetchExternalId();
+  }
+
+  Future<void> _checkF2M(String id) async {
+    if (isCheckingF2M) return;
+    setState(() {
+      isCheckingF2M = true;
+    });
+
+    try {
+      final groups = await fetchF2MDownloadLinks(id);
+      if (mounted) {
+        setState(() {
+          f2mGroups = groups;
+          hasF2MResults = groups.isNotEmpty;
+          isCheckingF2M = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          f2mGroups = [];
+          hasF2MResults = false;
+          isCheckingF2M = false;
+        });
+      }
+    }
   }
 
   Future<void> checkUserLogin() async {
@@ -137,7 +171,6 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
 
   Future<void> _fetchSerieDetails() async {
     try {
-      // Make an HTTP GET request to fetch movie details from the first API
       final region =
           Provider.of<RegionProvider>(context, listen: false).currentRegion;
       final responseData = await fetchSerieDetails(widget.serieId, region);
@@ -181,7 +214,6 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
 
   Future<void> fetchExternalId() async {
     try {
-      // Make an HTTP GET request to fetch movie details from the first API
       final region =
           Provider.of<RegionProvider>(context, listen: false).currentRegion;
       final baseUrl = getBaseUrl(region);
@@ -199,6 +231,9 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
           });
         }
         if (imdbId != null) {
+          if (region == 'iran') {
+            _checkF2M(imdbId!);
+          }
           await getSerieRatings(
               imdbId, updateImdbRating, updateRottenTomatoesRating);
         }

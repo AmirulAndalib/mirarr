@@ -698,29 +698,103 @@ class _SerieDetailPageMobile extends StatelessWidget {
                   const SizedBox(height: 20),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: FilledButton.icon(
-                        icon: const Icon(Icons.video_library_rounded, size: 24),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: getSeriesColor(context, widget.serieId),
-                          foregroundColor: Colors.white,
-                          elevation: 2,
-                          shadowColor: getSeriesColor(context, widget.serieId).withValues(alpha: 0.4),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(28),
+                    child: Builder(
+                      builder: (context) {
+                        final region =
+                            Provider.of<RegionProvider>(context).currentRegion;
+                        final showF2MDownload =
+                            region == 'iran' && state.hasF2MResults;
+
+                        final detailsBtn = FilledButton.icon(
+                          icon:
+                              const Icon(Icons.video_library_rounded, size: 24),
+                          style: FilledButton.styleFrom(
+                            backgroundColor:
+                                getSeriesColor(context, widget.serieId),
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            shadowColor: getSeriesColor(context, widget.serieId)
+                                .withValues(alpha: 0.4),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(28),
+                            ),
                           ),
-                        ),
-                        onPressed: () => seasonsAndEpisodes(context,
-                            widget.serieId, widget.serieName, imdbId!,
-                            imagePath: backdrops,
-                            onWatchStatusChanged: state._refreshShowWatchStatus),
-                        label: Text(
-                          'Details',
-                          style: getSeriesButtonTextStyle(widget.serieId).copyWith(fontSize: 16),
-                        ),
-                      ),
+                          onPressed: () => seasonsAndEpisodes(context,
+                              widget.serieId, widget.serieName, imdbId!,
+                              imagePath: backdrops,
+                              onWatchStatusChanged:
+                                  state._refreshShowWatchStatus),
+                          label: Text(
+                            'Details',
+                            style: getSeriesButtonTextStyle(widget.serieId)
+                                .copyWith(fontSize: 16),
+                          ),
+                        );
+
+                        if (!showF2MDownload) {
+                          return SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: detailsBtn,
+                          );
+                        }
+
+                        final downloadBtn = FilledButton.icon(
+                          icon: const Icon(Icons.download_rounded, size: 24),
+                          style: FilledButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primaryContainer,
+                            foregroundColor: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(28),
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              ExpressivePageRoute(
+                                page: IranSeriesF2MPage(
+                                  serieId: widget.serieId,
+                                  serieName: widget.serieName,
+                                  imdbId: imdbId!,
+                                  f2mGroups: state.f2mGroups,
+                                ),
+                              ),
+                            );
+                          },
+                          label: Text(
+                            'Download',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onPrimaryContainer,
+                            ),
+                          ),
+                        );
+
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 56,
+                                child: detailsBtn,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: SizedBox(
+                                height: 56,
+                                child: downloadBtn,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                   FutureBuilder(

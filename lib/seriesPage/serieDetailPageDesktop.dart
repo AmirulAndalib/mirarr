@@ -341,19 +341,67 @@ class _SerieDetailPageDesktop extends StatelessWidget {
                                         ),
                                         const SizedBox(height: 20),
                                       ],
-                                      _buildPrimaryButton(
-                                        text: 'Details',
-                                        backgroundColor: getSeriesColor(context, widget.serieId),
-                                        textStyle: getSeriesButtonTextStyle(widget.serieId),
-                                        icon: Icons.info_outline_rounded,
-                                        onPressed: () => seasonsAndEpisodes(
-                                          context,
-                                          widget.serieId,
-                                          widget.serieName,
-                                          imdbId!,
-                                          imagePath: backdrops,
-                                          onWatchStatusChanged: state._refreshShowWatchStatus,
-                                        ),
+                                      Builder(
+                                        builder: (context) {
+                                          final region =
+                                              Provider.of<RegionProvider>(context).currentRegion;
+                                          final showF2MDownload =
+                                              region == 'iran' && state.hasF2MResults;
+
+                                          final detailsBtn = _buildPrimaryButton(
+                                            text: 'Details',
+                                            backgroundColor:
+                                                getSeriesColor(context, widget.serieId),
+                                            textStyle:
+                                                getSeriesButtonTextStyle(widget.serieId),
+                                            icon: Icons.info_outline_rounded,
+                                            onPressed: () => seasonsAndEpisodes(
+                                              context,
+                                              widget.serieId,
+                                              widget.serieName,
+                                              imdbId!,
+                                              imagePath: backdrops,
+                                              onWatchStatusChanged:
+                                                  state._refreshShowWatchStatus,
+                                            ),
+                                          );
+
+                                          if (!showF2MDownload) return detailsBtn;
+
+                                          final downloadBtn = _buildPrimaryButton(
+                                            text: 'Download',
+                                            backgroundColor:
+                                                Theme.of(context).colorScheme.primaryContainer,
+                                            textStyle: TextStyle(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onPrimaryContainer,
+                                            ),
+                                            icon: Icons.download_rounded,
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                ExpressivePageRoute(
+                                                  page: IranSeriesF2MPage(
+                                                    serieId: widget.serieId,
+                                                    serieName: widget.serieName,
+                                                    imdbId: imdbId!,
+                                                    f2mGroups: state.f2mGroups,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          );
+
+                                          return Wrap(
+                                            spacing: 16,
+                                            runSpacing: 16,
+                                            children: [
+                                              detailsBtn,
+                                              downloadBtn,
+                                            ],
+                                          );
+                                        },
                                       ),
                                       if (about != null && about.isNotEmpty) ...[
                                         const SizedBox(height: 24),
