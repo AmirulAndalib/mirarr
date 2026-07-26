@@ -15,7 +15,7 @@ import 'package:Mirarr/seriesPage/function/series_tmdb_actions.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:Mirarr/widgets/m3_expressive_rating_bar.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -82,9 +82,6 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
   
   // Key to force refresh of ShowWatchToggle
   final GlobalKey<_ShowWatchToggleState> _showWatchToggleKey = GlobalKey<_ShowWatchToggleState>();
-  
-  // Counter to force refresh of ShowWatchToggle on desktop
-  int _showWatchToggleRefreshCounter = 0;
 
   @override
   void initState() {
@@ -215,9 +212,6 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
 
   void _refreshShowWatchStatus() {
     _showWatchToggleKey.currentState?.refresh();
-    setState(() {
-      _showWatchToggleRefreshCounter++;
-    });
   }
 
   void onTapSerie(String serieName, int serieId) {
@@ -232,7 +226,7 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isMobileLayout = MediaQuery.of(context).size.width < 800;
+    final isMobileLayout = MediaQuery.sizeOf(context).width < 800;
     if (isMobileLayout) {
       return _SerieDetailPageMobile(this);
     } else {
@@ -246,6 +240,7 @@ class ShowWatchToggle extends StatefulWidget {
   final int serieId;
   final String serieName;
   final String? posterPath;
+  final int? numberOfEpisodes;
   final VoidCallback? onToggle;
 
   const ShowWatchToggle({
@@ -253,6 +248,7 @@ class ShowWatchToggle extends StatefulWidget {
     required this.serieId,
     required this.serieName,
     required this.posterPath,
+    this.numberOfEpisodes,
     this.onToggle,
   }) : super(key: key);
 
@@ -273,47 +269,31 @@ class _ShowWatchToggleState extends State<ShowWatchToggle> {
 
   Future<void> _loadWatchStatus() async {
     try {
-      final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
-      final baseUrl = getBaseUrl(region);
-      final apiKey = dotenv.env['TMDB_API_KEY'];
-      
-      // Get total episode count for the show
-      final seasonsResponse = await http.get(
-        Uri.parse('${baseUrl}tv/${widget.serieId}?api_key=$apiKey'),
-      );
-      
-      if (seasonsResponse.statusCode == 200) {
-        final data = json.decode(seasonsResponse.body);
-        final seasonsList = data['seasons'] as List<dynamic>;
-        
-        int totalEpisodes = 0;
-        for (final season in seasonsList) {
-          final seasonNumber = season['season_number'];
-          if (seasonNumber == 0) continue; // Skip specials
-          
-          final episodesResponse = await http.get(
-            Uri.parse('${baseUrl}tv/${widget.serieId}/season/$seasonNumber?api_key=$apiKey'),
-          );
-          
-          if (episodesResponse.statusCode == 200) {
-            final episodeData = json.decode(episodesResponse.body);
-            final episodesList = episodeData['episodes'] as List<dynamic>;
-            totalEpisodes += episodesList.length;
-          }
-        }
-        
-        // Check how many episodes are watched
-        final watchHistory = await _watchHistoryDb.getWatchHistoryByTmdbId(widget.serieId, 'tv');
-        final watchedEpisodes = watchHistory.where((item) => item.seasonNumber != 0).length; // Exclude specials
-        
-        if (mounted) {
-          setState(() {
-            _isWatched = totalEpisodes > 0 && watchedEpisodes == totalEpisodes;
-          });
+      int totalEpisodes = widget.numberOfEpisodes ?? 0;
+
+      if (totalEpisodes == 0) {
+        final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
+        final baseUrl = getBaseUrl(region);
+        final apiKey = dotenv.env['TMDB_API_KEY'];
+        final response = await http.get(
+          Uri.parse('${baseUrl}tv/${widget.serieId}?api_key=$apiKey'),
+        );
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          totalEpisodes = data['number_of_episodes'] ?? 0;
         }
       }
+
+      final watchHistory = await _watchHistoryDb.getWatchHistoryByTmdbId(widget.serieId, 'tv');
+      final watchedEpisodes = watchHistory.where((item) => item.seasonNumber != null && item.seasonNumber != 0).length;
+
+      if (mounted) {
+        setState(() {
+          _isWatched = totalEpisodes > 0 && watchedEpisodes == totalEpisodes;
+        });
+      }
     } catch (e) {
-      // Fallback to old logic if API calls fail
       final watchHistory = await _watchHistoryDb.getWatchHistoryByTmdbId(widget.serieId, 'tv');
       if (mounted) {
         setState(() {

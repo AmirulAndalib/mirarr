@@ -26,7 +26,7 @@ class _SerieDetailPageDesktop extends StatelessWidget {
     final language = state.language;
     final imdbId = state.imdbId;
     final creditsFuture = state._creditsFuture;
-    final showWatchToggleRefreshCounter = state._showWatchToggleRefreshCounter;
+    final showWatchToggleKey = state._showWatchToggleKey;
 
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
@@ -34,9 +34,7 @@ class _SerieDetailPageDesktop extends StatelessWidget {
     final bool isTv = TvFocusModeManager.isTvDevice;
 
     final Widget bodyContent = serieDetails == null
-        ? const Center(
-            child: CircularProgressIndicator(),
-          )
+        ? const M3ExpressiveSpinner()
         : ScrollConfiguration(
               behavior: const ScrollBehavior().copyWith(
                 physics: const BouncingScrollPhysics(),
@@ -54,27 +52,29 @@ class _SerieDetailPageDesktop extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        image: DecorationImage(
-                            image: CachedNetworkImageProvider(
-                              '${getImageBaseUrl(region)}/t/p/original$backdrops',
-                            ),
-                            fit: BoxFit.fitWidth,
-                            opacity: 0.5),
-                      ),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              CachedNetworkImage(
-                                imageUrl:
-                                    '${getImageBaseUrl(region)}/t/p/original$posterPath',
+                    RepaintBoundary(
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          image: DecorationImage(
+                              image: CachedNetworkImageProvider(
+                                '${getImageBaseUrl(region)}/t/p/w1280$backdrops',
+                              ),
+                              fit: BoxFit.fitWidth,
+                              opacity: 0.5),
+                        ),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                CachedNetworkImage(
+                                  imageUrl:
+                                      '${getImageBaseUrl(region)}/t/p/w500$posterPath',
+                                  memCacheWidth: 500,
                                 placeholder: (context, url) => Skeletonizer(
                                   enabled: true,
                                   containersColor: Colors.white.withOpacity(0.05),
@@ -173,20 +173,13 @@ class _SerieDetailPageDesktop extends StatelessWidget {
                                                       const SizedBox(height: 20),
                                                       Padding(
                                                         padding: const EdgeInsets.all(8.0),
-                                                        child: RatingBar.builder(
+                                                        child: ExpressiveRatingBar(
                                                           initialRating: userRating,
                                                           minRating: 1,
                                                           maxRating: 10,
                                                           itemSize: 35,
-                                                          unratedColor: Colors.grey,
-                                                          direction: Axis.horizontal,
                                                           allowHalfRating: true,
                                                           itemCount: 10,
-                                                          itemPadding: const EdgeInsets.symmetric(horizontal: 0),
-                                                          itemBuilder: (context, _) => const Icon(
-                                                            Icons.star,
-                                                            color: Colors.amber,
-                                                          ),
                                                           onRatingUpdate: (rating) async {
                                                             final serieId = widget.serieId;
                                                             final openbox = Hive.box('sessionBox');
@@ -234,10 +227,11 @@ class _SerieDetailPageDesktop extends StatelessWidget {
                                               ),
                                             ),
                                           ShowWatchToggle(
-                                            key: ValueKey('show_watch_toggle_$showWatchToggleRefreshCounter'),
+                                            key: showWatchToggleKey,
                                             serieId: widget.serieId,
                                             serieName: widget.serieName,
                                             posterPath: posterPath,
+                                            numberOfEpisodes: episodes,
                                             onToggle: () {
                                               // The widget handles its own state
                                             },
@@ -312,30 +306,29 @@ class _SerieDetailPageDesktop extends StatelessWidget {
                                                         mainAxisSize: MainAxisSize.min,
                                                         children: [
                                                           const SizedBox(height: 20),
-                                                          RatingBar.builder(
-                                                            initialRating: 5,
-                                                            minRating: 1,
-                                                            maxRating: 10,
-                                                            itemSize: 35,
-                                                            unratedColor: Colors.grey,
-                                                            direction: Axis.horizontal,
-                                                            allowHalfRating: true,
-                                                            itemCount: 10,
-                                                            itemPadding: const EdgeInsets.symmetric(horizontal: 0),
-                                                            itemBuilder: (context, _) => const Icon(
-                                                              Icons.star,
-                                                              color: Colors.amber,
+                                                          Padding(
+                                                            padding: const EdgeInsets.all(8.0),
+                                                            child: ExpressiveRatingBar(
+                                                              initialRating: userRating ?? 5.0,
+                                                              minRating: 1.0,
+                                                              maxRating: 10.0,
+                                                              itemCount: 10,
+                                                              itemSize: 32.0,
+                                                              allowHalfRating: true,
+                                                              onRatingUpdate: (rating) {
+                                                                state.updateState(() {
+                                                                  state.isSerieRated = {'value': rating};
+                                                                  state.userRating = rating;
+                                                                });
+                                                              },
+                                                              onRatingEnd: (rating) async {
+                                                                final serieId = widget.serieId;
+                                                                final openbox = Hive.box('sessionBox');
+                                                                final String sessionData = openbox.get('sessionData');
+                                                                await addRating(sessionData, serieId, rating, context);
+                                                                profileRefreshNotifier.value++;
+                                                              },
                                                             ),
-                                                            onRatingUpdate: (rating) async {
-                                                              final serieId = widget.serieId;
-                                                              final openbox = await Hive.openBox('sessionBox');
-                                                              final String sessionData = openbox.get('sessionData');
-                                                              addRating(sessionData, serieId, rating, context);
-                                                              state.updateState(() {
-                                                                state.isSerieRated = '"value":$rating';
-                                                                state.userRating = rating;
-                                                              });
-                                                            },
                                                           ),
                                                           const SizedBox(height: 40),
                                                         ],
@@ -416,13 +409,43 @@ class _SerieDetailPageDesktop extends StatelessWidget {
                         ),
                       ),
                     ),
-                    FutureBuilder(
+                  ),
+                  FutureBuilder(
                       future: creditsFuture,
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
-                          return const Center(
-                              child: CircularProgressIndicator());
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(25, 10, 0, 0),
+                                child: Text(
+                                  'Cast',
+                                  style: TextStyle(
+                                    color: Theme.of(context).primaryColor,
+                                    fontSize: AppPlatform.isAndroid || AppPlatform.isIOS ? 18 : 30,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const CustomDivider(),
+                              buildCastCrewSkeletonRow(isDesktop: true),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(25, 10, 0, 0),
+                                child: Text(
+                                  'Crew',
+                                  style: TextStyle(
+                                    color: Theme.of(context).primaryColor,
+                                    fontSize: AppPlatform.isAndroid || AppPlatform.isIOS ? 18 : 30,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const CustomDivider(),
+                              buildCastCrewSkeletonRow(isDesktop: true),
+                            ],
+                          );
                         } else if (snapshot.hasError) {
                           return const Text(
                               'Error loading cast and crew details');

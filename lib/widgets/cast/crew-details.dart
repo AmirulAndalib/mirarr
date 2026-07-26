@@ -11,6 +11,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:Mirarr/widgets/custom_divider.dart';
 import 'package:Mirarr/widgets/image_gallery_page.dart';
 import 'package:Mirarr/widgets/m3_expressive_spinner.dart';
+import 'package:Mirarr/widgets/expressive_page_route.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:provider/provider.dart';
 
@@ -108,8 +109,8 @@ class _CrewDetailPageState extends State<CrewDetailPage> {
   void _openImageGallery(List<String> imageUrls) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => ImageGalleryPage(imageUrls: imageUrls),
+      ExpressivePageRoute(
+        page: ImageGalleryPage(imageUrls: imageUrls),
       ),
     );
   }

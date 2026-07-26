@@ -20,6 +20,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:provider/provider.dart';
 import 'package:Mirarr/database/watch_history_database.dart';
+import 'package:Mirarr/models/watch_history_model.dart';
 
 final apiKey = dotenv.env['TMDB_API_KEY'];
 final apiOmdbKey = dotenv.env['OMDB_API_KEY_FOR_EPISODES'];
@@ -223,8 +224,8 @@ void seasonsAndEpisodes(
           return FutureBuilder<List<dynamic>>(
             future: fetchSeasons(serieId, context),
             builder: (context, snapshot) {
-              final isLargeScreen = MediaQuery.of(context).size.width >= 800;
-              final double sheetHeight = MediaQuery.of(context).size.height * (isLargeScreen ? 0.75 : 0.60);
+              final isLargeScreen = MediaQuery.sizeOf(context).width >= 800;
+              final double sheetHeight = MediaQuery.sizeOf(context).height * (isLargeScreen ? 0.75 : 0.60);
 
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return Container(
@@ -393,6 +394,7 @@ void seasonsAndEpisodes(
                                                 serieName: serieName,
                                                 seasonNumber: season['season_number'],
                                                 posterPath: season['poster_path'],
+                                                episodeCount: season['episode_count'],
                                                 onToggle: () {
                                                   onWatchStatusChanged?.call();
                                                 },
@@ -488,11 +490,14 @@ void episodesGuide(int seasonNumber, BuildContext context, int serieId,
       return StatefulBuilder(
         builder: (BuildContext context, StateSetter setModalState) {
           return FutureBuilder<List<dynamic>>(
-            future: fetchEpisodesGuide(
-                context, seasonNumber, serieId, serieName, imdbId),
+            future: Future.wait([
+              fetchEpisodesGuide(
+                  context, seasonNumber, serieId, serieName, imdbId),
+              _watchHistoryDb.getWatchHistoryByTmdbId(serieId, 'tv'),
+            ]),
             builder: (context, snapshot) {
-              final isLargeScreen = MediaQuery.of(context).size.width >= 800;
-              final double sheetHeight = MediaQuery.of(context).size.height * (isLargeScreen ? 0.75 : 0.60);
+              final isLargeScreen = MediaQuery.sizeOf(context).width >= 800;
+              final double sheetHeight = MediaQuery.sizeOf(context).height * (isLargeScreen ? 0.75 : 0.60);
 
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return Container(
@@ -513,7 +518,12 @@ void episodesGuide(int seasonNumber, BuildContext context, int serieId,
                   child: const Text('No episodes found.'),
                 );
               } else {
-                final episodes = snapshot.data!;
+                final episodes = snapshot.data![0] as List<dynamic>;
+                final watchHistory = snapshot.data![1] as List<WatchHistoryItem>;
+                final watchedSet = watchHistory
+                    .where((item) => item.seasonNumber == seasonNumber && item.episodeNumber != null)
+                    .map((item) => item.episodeNumber!)
+                    .toSet();
                 
                 return Container(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -686,6 +696,7 @@ void episodesGuide(int seasonNumber, BuildContext context, int serieId,
                                                 episodeNumber: episode['episode_number'],
                                                 episodeTitle: episode['name'],
                                                 posterPath: seasonPosterPath,
+                                                initialIsWatched: watchedSet.contains(episode['episode_number']),
                                                 onToggle: () {
                                                   onWatchStatusChanged?.call();
                                                 },
@@ -790,7 +801,7 @@ void episodeDetails(int seasonNumber, int episodeNumber, BuildContext context,
                     episodeDetails['overview'] ?? 'No overview available.';
                 final episodeName = episodeDetails['name'];
                 
-                final isLargeScreen = MediaQuery.of(context).size.width >= 800;
+                final isLargeScreen = MediaQuery.sizeOf(context).width >= 800;
 
                 final watchButton = FloatingActionButton(
                   heroTag: null,
@@ -969,28 +980,30 @@ void episodeDetails(int seasonNumber, int episodeNumber, BuildContext context,
 // Watch history helper functions
 final WatchHistoryDatabase _watchHistoryDb = WatchHistoryDatabase();
 
-Future<bool> isSeasonWatched(int serieId, int seasonNumber, BuildContext context) async {
+Future<bool> isSeasonWatched(int serieId, int seasonNumber, BuildContext context, {int? episodeCount}) async {
   try {
-    // Get all episodes for this season from API
-    final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final baseUrl = getBaseUrl(region);
-    final episodesResponse = await http.get(
-      Uri.parse('${baseUrl}tv/$serieId/season/$seasonNumber?api_key=$apiKey'),
-    );
-    
-    if (episodesResponse.statusCode == 200) {
-      final episodeData = json.decode(episodesResponse.body);
-      final episodesList = episodeData['episodes'] as List<dynamic>;
-      final totalEpisodes = episodesList.length;
+    int totalEpisodes = episodeCount ?? 0;
+    if (totalEpisodes == 0) {
+      final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
+      final baseUrl = getBaseUrl(region);
+      final episodesResponse = await http.get(
+        Uri.parse('${baseUrl}tv/$serieId/season/$seasonNumber?api_key=$apiKey'),
+      );
       
-      if (totalEpisodes == 0) return false;
-      
-      // Get watched episodes for this season
-      final watchHistory = await _watchHistoryDb.getWatchHistoryByTmdbId(serieId, 'tv');
-      final watchedEpisodesInSeason = watchHistory.where((item) => item.seasonNumber == seasonNumber).length;
-      
-      return watchedEpisodesInSeason == totalEpisodes;
+      if (episodesResponse.statusCode == 200) {
+        final episodeData = json.decode(episodesResponse.body);
+        final episodesList = episodeData['episodes'] as List<dynamic>;
+        totalEpisodes = episodesList.length;
+      }
     }
+    
+    if (totalEpisodes == 0) return false;
+    
+    // Get watched episodes for this season
+    final watchHistory = await _watchHistoryDb.getWatchHistoryByTmdbId(serieId, 'tv');
+    final watchedEpisodesInSeason = watchHistory.where((item) => item.seasonNumber == seasonNumber).length;
+    
+    return watchedEpisodesInSeason == totalEpisodes;
   } catch (e) {
     // Fallback to old logic if API call fails
     final watchHistory = await _watchHistoryDb.getWatchHistoryByTmdbId(serieId, 'tv');
@@ -1081,6 +1094,8 @@ class SeasonWatchToggle extends StatefulWidget {
   final String serieName;
   final int seasonNumber;
   final String? posterPath;
+  final int? episodeCount;
+  final bool? initialIsWatched;
   final VoidCallback? onToggle;
 
   const SeasonWatchToggle({
@@ -1089,6 +1104,8 @@ class SeasonWatchToggle extends StatefulWidget {
     required this.serieName,
     required this.seasonNumber,
     required this.posterPath,
+    this.episodeCount,
+    this.initialIsWatched,
     this.onToggle,
   }) : super(key: key);
 
@@ -1103,11 +1120,15 @@ class _SeasonWatchToggleState extends State<SeasonWatchToggle> {
   @override
   void initState() {
     super.initState();
-    _loadWatchStatus();
+    if (widget.initialIsWatched != null) {
+      _isWatched = widget.initialIsWatched;
+    } else {
+      _loadWatchStatus();
+    }
   }
 
   Future<void> _loadWatchStatus() async {
-    final isWatched = await isSeasonWatched(widget.serieId, widget.seasonNumber, context);
+    final isWatched = await isSeasonWatched(widget.serieId, widget.seasonNumber, context, episodeCount: widget.episodeCount);
     if (mounted) {
       setState(() {
         _isWatched = isWatched;
@@ -1189,6 +1210,7 @@ class EpisodeWatchToggle extends StatefulWidget {
   final int episodeNumber;
   final String? episodeTitle;
   final String? posterPath;
+  final bool? initialIsWatched;
   final VoidCallback? onToggle;
 
   const EpisodeWatchToggle({
@@ -1199,6 +1221,7 @@ class EpisodeWatchToggle extends StatefulWidget {
     required this.episodeNumber,
     required this.episodeTitle,
     required this.posterPath,
+    this.initialIsWatched,
     this.onToggle,
   }) : super(key: key);
 
@@ -1213,7 +1236,11 @@ class _EpisodeWatchToggleState extends State<EpisodeWatchToggle> {
   @override
   void initState() {
     super.initState();
-    _loadWatchStatus();
+    if (widget.initialIsWatched != null) {
+      _isWatched = widget.initialIsWatched;
+    } else {
+      _loadWatchStatus();
+    }
   }
 
   Future<void> _loadWatchStatus() async {
@@ -1300,6 +1327,7 @@ class EpisodeWatchToggleButton extends StatefulWidget {
   final int episodeNumber;
   final String? episodeTitle;
   final String? posterPath;
+  final bool? initialIsWatched;
   final VoidCallback? onToggle;
 
   const EpisodeWatchToggleButton({
@@ -1310,6 +1338,7 @@ class EpisodeWatchToggleButton extends StatefulWidget {
     required this.episodeNumber,
     required this.episodeTitle,
     required this.posterPath,
+    this.initialIsWatched,
     this.onToggle,
   }) : super(key: key);
 
@@ -1324,7 +1353,11 @@ class _EpisodeWatchToggleButtonState extends State<EpisodeWatchToggleButton> {
   @override
   void initState() {
     super.initState();
-    _loadWatchStatus();
+    if (widget.initialIsWatched != null) {
+      _isWatched = widget.initialIsWatched;
+    } else {
+      _loadWatchStatus();
+    }
   }
 
   Future<void> _loadWatchStatus() async {

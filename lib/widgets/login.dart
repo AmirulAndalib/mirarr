@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:Mirarr/functions/show_error_dialog.dart';
 import 'package:Mirarr/widgets/settings_screen.dart';
+import 'package:Mirarr/widgets/expressive_page_route.dart';
 import 'package:flutter/material.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
@@ -142,7 +143,7 @@ class _LoginPageState extends State<LoginPage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const SettingsPage()),
+                ExpressivePageRoute(page: const SettingsPage()),
               );
             },
           ),

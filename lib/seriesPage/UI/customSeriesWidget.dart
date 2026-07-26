@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:flutter/material.dart';
@@ -38,7 +37,8 @@ class CustomSeriesWidget extends StatelessWidget {
             if (serie.posterPath.isNotEmpty)
               Positioned.fill(
                 child: CachedNetworkImage(
-                  imageUrl: '${getImageBaseUrl(region)}/t/p/w500${serie.posterPath}',
+                  imageUrl: '${getImageBaseUrl(region)}/t/p/w342${serie.posterPath}',
+                  memCacheWidth: 350,
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(color: colorScheme.surfaceContainerHigh),
                   errorWidget: (context, url, error) => Container(
@@ -68,34 +68,28 @@ class CustomSeriesWidget extends StatelessWidget {
               Positioned(
                 top: 12,
                 left: 12,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surface.withValues(alpha: 0.65),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface.withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
+                      const SizedBox(width: 4),
+                      Text(
+                        serie.score!.toStringAsFixed(1),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
-                          const SizedBox(width: 4),
-                          Text(
-                            serie.score!.toStringAsFixed(1),
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -126,4 +120,3 @@ class CustomSeriesWidget extends StatelessWidget {
     );
   }
 }
-

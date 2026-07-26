@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:Mirarr/widgets/m3_expressive_spinner.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
+import 'package:Mirarr/widgets/expressive_page_route.dart';
 import 'package:Mirarr/database/watch_history_database.dart';
 import 'package:Mirarr/models/watch_history_model.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -37,8 +38,8 @@ class _ShelfPageState extends State<ShelfPage> {
   Future<void> _navigateToMovie(String title, int id) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => MovieDetailPage(movieTitle: title, movieId: id),
+      ExpressivePageRoute(
+        page: MovieDetailPage(movieTitle: title, movieId: id),
       ),
     );
     if (mounted) {
@@ -49,8 +50,8 @@ class _ShelfPageState extends State<ShelfPage> {
   Future<void> _navigateToSerie(String title, int id) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => SerieDetailPage(serieName: title, serieId: id),
+      ExpressivePageRoute(
+        page: SerieDetailPage(serieName: title, serieId: id),
       ),
     );
     if (mounted) {

@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'package:Mirarr/functions/navigation_provider.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
+import 'package:Mirarr/utils/expressive_motion.dart';
+import 'package:Mirarr/widgets/expressive_interactive_container.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -131,61 +133,59 @@ class BottomBar extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final bool isSelected = navProvider.currentIndex == index;
 
-    return InkWell(
+    return ExpressiveInteractiveContainer(
       onTap: () {
         navProvider.setIndex(index);
         Navigator.popUntil(context, (route) => route.isFirst);
       },
-      borderRadius: BorderRadius.circular(24),
-      splashColor: colorScheme.primary.withValues(alpha: 0.12),
-      highlightColor: Colors.transparent,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOutBack,
-              width: isSelected ? 52 : 38,
-              height: 32,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? colorScheme.primaryContainer
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Center(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
-                  child: Icon(
-                    isSelected ? itemData.activeIcon : itemData.inactiveIcon,
-                    key: ValueKey(isSelected),
-                    color: isSelected
-                        ? colorScheme.onPrimaryContainer
-                        : colorScheme.onSurfaceVariant,
-                    size: 22,
-                  ),
+      borderRadius: 24,
+      pressedBorderRadius: 28,
+      speed: ExpressiveSpeed.fast,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedContainer(
+            duration: ExpressiveSpeed.fast.duration,
+            curve: ExpressiveMotion.spatialFast,
+            width: isSelected ? 52 : 38,
+            height: 32,
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? colorScheme.primaryContainer
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Center(
+              child: AnimatedSwitcher(
+                duration: ExpressiveSpeed.fast.duration,
+                transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                child: Icon(
+                  isSelected ? itemData.activeIcon : itemData.inactiveIcon,
+                  key: ValueKey(isSelected),
+                  color: isSelected
+                      ? colorScheme.onPrimaryContainer
+                      : colorScheme.onSurfaceVariant,
+                  size: 22,
                 ),
               ),
             ),
-            const SizedBox(height: 2),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 200),
-              style: TextStyle(
-                color: isSelected
-                    ? colorScheme.primary
-                    : colorScheme.onSurfaceVariant,
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                letterSpacing: 0.2,
-              ),
-              child: Text(itemData.label),
+          ),
+          const SizedBox(height: 2),
+          AnimatedDefaultTextStyle(
+            duration: ExpressiveSpeed.fast.duration,
+            style: TextStyle(
+              color: isSelected
+                  ? colorScheme.primary
+                  : colorScheme.onSurfaceVariant,
+              fontSize: 10,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              letterSpacing: 0.2,
             ),
-          ],
-        ),
+            child: Text(itemData.label),
+          ),
+        ],
       ),
     );
   }

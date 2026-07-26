@@ -47,31 +47,34 @@ class _SerieDetailPageMobile extends StatelessWidget {
                 children: [
                   Stack(
                     children: [
-                      CachedNetworkImage(
-                        imageUrl:
-                            '${getImageBaseUrl(region)}/t/p/original$backdrops',
-                        placeholder: (context, url) => Skeletonizer(
-                          enabled: true,
-                          containersColor: Colors.white.withOpacity(0.05),
-                          effect: ShimmerEffect(
-                            baseColor: Colors.white.withOpacity(0.05),
-                            highlightColor: Colors.white.withOpacity(0.15),
+                      RepaintBoundary(
+                        child: CachedNetworkImage(
+                          imageUrl:
+                              '${getImageBaseUrl(region)}/t/p/w780$backdrops',
+                          memCacheWidth: 780,
+                          placeholder: (context, url) => Skeletonizer(
+                            enabled: true,
+                            containersColor: Colors.white.withOpacity(0.05),
+                            effect: ShimmerEffect(
+                              baseColor: Colors.white.withOpacity(0.05),
+                              highlightColor: Colors.white.withOpacity(0.15),
+                            ),
+                            child: Container(
+                              height: 300,
+                              width: double.infinity,
+                              color: Colors.grey[900],
+                            ),
                           ),
-                          child: Container(
+                          errorWidget: (context, url, error) => const Icon(Icons
+                              .error), // Widget to display when there's an error loading the image.
+                          imageBuilder: (context, imageProvider) => Container(
                             height: 300,
                             width: double.infinity,
-                            color: Colors.grey[900],
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => const Icon(Icons
-                            .error), // Widget to display when there's an error loading the image.
-                        imageBuilder: (context, imageProvider) => Container(
-                          height: 300,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            image: DecorationImage(
-                              fit: BoxFit.cover,
-                              image: imageProvider,
+                            decoration: BoxDecoration(
+                              image: DecorationImage(
+                                fit: BoxFit.cover,
+                                image: imageProvider,
+                              ),
                             ),
                           ),
                         ),
@@ -379,35 +382,27 @@ class _SerieDetailPageMobile extends StatelessWidget {
                                     ),
                                     Padding(
                                       padding: const EdgeInsets.all(8.0),
-                                      child: RatingBar.builder(
+                                      child: ExpressiveRatingBar(
                                         initialRating: userRating,
-                                        minRating: 1,
-                                        maxRating: 10,
-                                        itemSize: 35,
-                                        unratedColor: Colors.grey,
-                                        direction: Axis.horizontal,
-                                        allowHalfRating: true,
+                                        minRating: 1.0,
+                                        maxRating: 10.0,
                                         itemCount: 10,
-                                        itemPadding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 0),
-                                        itemBuilder: (context, _) =>
-                                            const Icon(
-                                          Icons.star,
-                                          color: Colors.amber,
-                                        ),
-                                        onRatingUpdate: (rating) async {
+                                        itemSize: 32.0,
+                                        allowHalfRating: true,
+                                        onRatingUpdate: (rating) {
+                                          state.updateState(() {
+                                            state.isSerieRated = {'value': rating};
+                                            state.userRating = rating;
+                                          });
+                                        },
+                                        onRatingEnd: (rating) async {
                                           final movieId = widget.serieId;
                                           final openbox = Hive.box('sessionBox');
                                           final String sessionData =
                                               openbox.get('sessionData');
-                                          addRating(sessionData, movieId,
+                                          await addRating(sessionData, movieId,
                                               rating, context);
-                                          state.updateState(() {
-                                            state.isSerieRated = {'value': rating};
-                                            state.userRating = rating;
-                                            profileRefreshNotifier.value++;
-                                          });
+                                          profileRefreshNotifier.value++;
                                         },
                                       ),
                                     ),
@@ -480,23 +475,13 @@ class _SerieDetailPageMobile extends StatelessWidget {
                                       const SizedBox(
                                         height: 20,
                                       ),
-                                      RatingBar.builder(
-                                        initialRating: 5,
-                                        minRating: 1,
-                                        maxRating: 10,
-                                        itemSize: 35,
-                                        unratedColor: Colors.grey,
-                                        direction: Axis.horizontal,
-                                        allowHalfRating: true,
+                                      ExpressiveRatingBar(
+                                        initialRating: 5.0,
+                                        minRating: 1.0,
+                                        maxRating: 10.0,
                                         itemCount: 10,
-                                        itemPadding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 0),
-                                        itemBuilder: (context, _) =>
-                                            const Icon(
-                                          Icons.star,
-                                          color: Colors.amber,
-                                        ),
+                                        itemSize: 32.0,
+                                        allowHalfRating: true,
                                         onRatingUpdate: (rating) async {
                                           final movieId = widget.serieId;
                                           final openbox = Hive.box('sessionBox');
@@ -537,6 +522,7 @@ class _SerieDetailPageMobile extends StatelessWidget {
                             serieId: widget.serieId,
                             serieName: widget.serieName,
                             posterPath: posterPath,
+                            numberOfEpisodes: episodes,
                             onToggle: () {
                               // The widget handles its own state, no need to call _checkShowWatchedStatus
                             },
@@ -732,7 +718,39 @@ class _SerieDetailPageMobile extends StatelessWidget {
                     future: creditsFuture,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const M3ExpressiveSpinner();
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(25, 10, 0, 0),
+                                  child: Text(
+                                    'Cast',
+                                    textAlign: TextAlign.justify,
+                                    style: getSeriesTitleTextStyle(widget.serieId),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const CustomDivider(),
+                            buildCastCrewSkeletonRow(isDesktop: false),
+                            Row(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(25, 10, 0, 0),
+                                  child: Text(
+                                    'Crew',
+                                    textAlign: TextAlign.justify,
+                                    style: getSeriesTitleTextStyle(widget.serieId),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const CustomDivider(),
+                            buildCastCrewSkeletonRow(isDesktop: false),
+                          ],
+                        );
                       } else if (snapshot.hasError) {
                         return const Text(
                             'Error loading cast and crew details');
@@ -849,29 +867,32 @@ class _SerieDetailPageMobile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Stack(children: [
-            CachedNetworkImage(
-              imageUrl: '${getImageBaseUrl(region)}/t/p/original$backdrops',
-              placeholder: (context, url) => Skeletonizer(
-                enabled: true,
-                containersColor: Colors.white.withOpacity(0.05),
-                effect: ShimmerEffect(
-                  baseColor: Colors.white.withOpacity(0.05),
-                  highlightColor: Colors.white.withOpacity(0.15),
+            RepaintBoundary(
+              child: CachedNetworkImage(
+                imageUrl: '${getImageBaseUrl(region)}/t/p/w780$backdrops',
+                memCacheWidth: 780,
+                placeholder: (context, url) => Skeletonizer(
+                  enabled: true,
+                  containersColor: Colors.white.withOpacity(0.05),
+                  effect: ShimmerEffect(
+                    baseColor: Colors.white.withOpacity(0.05),
+                    highlightColor: Colors.white.withOpacity(0.15),
+                  ),
+                  child: Container(
+                    height: 300,
+                    width: double.infinity,
+                    color: Colors.grey[900],
+                  ),
                 ),
-                child: Container(
+                errorWidget: (context, url, error) => const Icon(Icons.error),
+                imageBuilder: (context, imageProvider) => Container(
                   height: 300,
                   width: double.infinity,
-                  color: Colors.grey[900],
-                ),
-              ),
-              errorWidget: (context, url, error) => const Icon(Icons.error),
-              imageBuilder: (context, imageProvider) => Container(
-                height: 300,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    fit: BoxFit.cover,
-                    image: imageProvider,
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      fit: BoxFit.cover,
+                      image: imageProvider,
+                    ),
                   ),
                 ),
               ),

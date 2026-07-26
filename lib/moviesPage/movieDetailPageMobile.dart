@@ -7,8 +7,6 @@ class _MovieDetailPageMobile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final widget = state.widget;
     final moviedetails = state.moviedetails;
     final duration = state.duration;
@@ -34,7 +32,6 @@ class _MovieDetailPageMobile extends StatelessWidget {
     final availabilityFuture = state._availabilityFuture;
     final creditsFuture = state._creditsFuture;
     final directorMoviesFuture = state._directorMoviesFuture;
-    final castImagesFuture = state._castImagesFuture;
     final screenshotController = state.screenshotController;
     final language = state.language;
 
@@ -61,15 +58,14 @@ class _MovieDetailPageMobile extends StatelessWidget {
                       children: [
                         TvFocusWrapper(
                           onTap: () {
-                            castImagesFuture.then((imageUrls) {
-                              state._openImageGallery(imageUrls);
-                            });
+                            state._openGalleryOnDemand();
                           },
                           child: Stack(
                             children: [
                               CachedNetworkImage(
                                 imageUrl:
-                                    '${getImageBaseUrl(region)}/t/p/original$backdrops',
+                                    '${getImageBaseUrl(region)}/t/p/w780$backdrops',
+                                memCacheWidth: 780,
                                 placeholder: (context, url) => Skeletonizer(
                                   enabled: true,
                                   containersColor: Colors.white.withOpacity(0.05),
@@ -292,45 +288,11 @@ class _MovieDetailPageMobile extends StatelessWidget {
                           Positioned(
                             top: 140,
                             right: 24,
-                            child: _buildM3FloatingActionButton(
-                              context: context,
-                              backgroundColor: isMovieWatchlist == true
-                                  ? colorScheme.primaryContainer
-                                  : null,
-                              borderColor: isMovieWatchlist == true
-                                  ? colorScheme.primary.withValues(alpha: 0.6)
-                                  : null,
-                              onTap: () async {
-                                if (isMovieWatchlist == null) return;
-                                final movieId = widget.movieId;
-                                final openbox = Hive.box('sessionBox');
-                                final String accountId = openbox.get('accountId');
-                                final String sessionData = openbox.get('sessionData');
-                                if (isMovieWatchlist) {
-                                  state.updateState(() {
-                                    state.isMovieWatchlist = false;
-                                  });
-                                  await removeFromWatchList(
-                                      accountId, sessionData, movieId, context);
-                                  profileRefreshNotifier.value++;
-                                } else {
-                                  state.updateState(() {
-                                    state.isMovieWatchlist = true;
-                                  });
-                                  await addWatchList(
-                                      accountId, sessionData, movieId, context);
-                                  profileRefreshNotifier.value++;
-                                }
-                              },
-                              child: Icon(
-                                isMovieWatchlist == true
-                                    ? Icons.bookmark_rounded
-                                    : Icons.bookmark_border_rounded,
-                                color: isMovieWatchlist == true
-                                    ? colorScheme.primary
-                                    : Colors.white,
-                                size: 22,
-                              ),
+                            child: MovieWatchlistButton(
+                              movieId: widget.movieId,
+                              initialIsWatchlist: isMovieWatchlist,
+                              isUserLoggedIn: isUserLoggedIn,
+                              isDesktop: false,
                             ),
                           ),
 
@@ -338,253 +300,37 @@ class _MovieDetailPageMobile extends StatelessWidget {
                           Positioned(
                             top: 90,
                             right: 24,
-                            child: _buildM3FloatingActionButton(
-                              context: context,
-                              backgroundColor: isMovieFavorite == true
-                                  ? Colors.redAccent.withValues(alpha: 0.25)
-                                  : null,
-                              borderColor: isMovieFavorite == true
-                                  ? Colors.redAccent.withValues(alpha: 0.6)
-                                  : null,
-                              onTap: () async {
-                                if (isMovieFavorite == null) return;
-                                final movieId = widget.movieId;
-                                final openbox = Hive.box('sessionBox');
-                                final String accountId = openbox.get('accountId');
-                                final String sessionData = openbox.get('sessionData');
-                                if (isMovieFavorite) {
-                                  state.updateState(() {
-                                    state.isMovieFavorite = false;
-                                  });
-                                  await removeFromFavorite(
-                                      accountId, sessionData, movieId, context);
-                                  profileRefreshNotifier.value++;
-                                } else {
-                                  state.updateState(() {
-                                    state.isMovieFavorite = true;
-                                  });
-                                  await addFavorite(
-                                      accountId, sessionData, movieId, context);
-                                  profileRefreshNotifier.value++;
-                                }
-                              },
-                              child: Icon(
-                                isMovieFavorite == true
-                                    ? Icons.favorite_rounded
-                                    : Icons.favorite_border_rounded,
-                                color: isMovieFavorite == true
-                                    ? Colors.redAccent
-                                    : Colors.white,
-                                size: 22,
-                              ),
-                            ),
-                          ),
-                        // logged in and rated
-                        if (isUserLoggedIn == true &&
-                            isMovieRated != false &&
-                            userRating != null)
-                          Positioned(
-                            top: 40,
-                            right: 24,
-                            child: _buildM3FloatingPillButton(
-                              context: context,
-                              backgroundColor: Colors.amber.withValues(alpha: 0.25),
-                              borderColor: Colors.amber.withValues(alpha: 0.6),
-                              onTap: () => showModalBottomSheet(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const SizedBox(
-                                        height: 20,
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: RatingBar.builder(
-                                          initialRating: userRating,
-                                          minRating: 1,
-                                          maxRating: 10,
-                                          itemSize: 35,
-                                          unratedColor: Colors.grey,
-                                          direction: Axis.horizontal,
-                                          allowHalfRating: true,
-                                          itemCount: 10,
-                                          itemPadding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 0),
-                                          itemBuilder: (context, _) =>
-                                              const Icon(
-                                            Icons.star,
-                                            color: Colors.amber,
-                                          ),
-                                          onRatingUpdate: (rating) async {
-                                            final movieId = widget.movieId;
-                                            final openbox =
-                                                Hive.box('sessionBox');
-
-                                            final String sessionData =
-                                                openbox.get('sessionData');
-                                            addRating(sessionData, movieId,
-                                                rating, context);
-                                            state.updateState(() {
-                                              state.isMovieRated = {'value': rating};
-                                              state.userRating = rating;
-                                              profileRefreshNotifier.value++;
-                                            });
-                                          },
-                                        ),
-                                      ),
-                                      const CustomDivider(),
-                                      const SizedBox(
-                                        height: 10,
-                                      ),
-                                      GestureDetector(
-                                        onTap: () async {
-                                          final openbox = Hive.box('sessionBox');
-
-                                          final String sessionData =
-                                              openbox.get('sessionData');
-                                          removeRating(sessionData,
-                                              widget.movieId, context);
-                                          Navigator.of(context).pop();
-                                          state.updateState(() {
-                                            state.isMovieRated = false;
-                                            state.userRating = null;
-                                            profileRefreshNotifier.value++;
-                                          });
-                                        },
-                                        child: const Text(
-                                          ' 🗑️ Delete Rating',
-                                          style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 18),
-                                        ),
-                                      ),
-                                      const SizedBox(
-                                        height: 20,
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    userRating.toStringAsFixed(1),
-                                    style: theme.textTheme.labelLarge?.copyWith(
-                                      color: Colors.amber,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            child: MovieFavoriteButton(
+                              movieId: widget.movieId,
+                              initialIsFavorite: isMovieFavorite,
+                              isUserLoggedIn: isUserLoggedIn,
+                              isDesktop: false,
                             ),
                           ),
 
                         Positioned(
                           top: 40,
                           left: 20,
-                          child: _buildM3FloatingPillButton(
-                            context: context,
-                            backgroundColor: isWatched
-                                ? Colors.green.withValues(alpha: 0.25)
-                                : null,
-                            borderColor: isWatched
-                                ? Colors.green.withValues(alpha: 0.6)
-                                : null,
-                            onTap: isWatched ? state._removeFromWatched : state._markAsWatched,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  isWatched ? Icons.check_circle_rounded : Icons.visibility_outlined,
-                                  color: isWatched ? Colors.greenAccent : Colors.white,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  isWatched ? 'Watched' : 'Mark as Watched',
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    color: isWatched ? Colors.greenAccent : Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          child: MovieWatchedButton(
+                            movieId: widget.movieId,
+                            movieTitle: widget.movieTitle,
+                            posterPath: state.posterPath,
+                            userRating: userRating,
+                            initialIsWatched: isWatched,
+                            isDesktop: false,
                           ),
                         ),
-                        //logged in not rated
-                        if (isUserLoggedIn == true &&
-                            isMovieRated == false &&
-                            userRating == null)
+
+                        if (isUserLoggedIn == true)
                           Positioned(
                             top: 40,
                             right: 24,
-                            child: _buildM3FloatingActionButton(
-                              context: context,
-                              onTap: () {
-                                showModalBottomSheet(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const SizedBox(
-                                          height: 20,
-                                        ),
-                                        RatingBar.builder(
-                                          initialRating: 5,
-                                          minRating: 1,
-                                          maxRating: 10,
-                                          itemSize: 35,
-                                          unratedColor: Colors.grey,
-                                          direction: Axis.horizontal,
-                                          allowHalfRating: true,
-                                          itemCount: 10,
-                                          itemPadding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 0),
-                                          itemBuilder: (context, _) =>
-                                              const Icon(
-                                            Icons.star,
-                                            color: Colors.amber,
-                                          ),
-                                          onRatingUpdate: (rating) async {
-                                            final movieId =
-                                                widget.movieId;
-                                            final openbox =
-                                                Hive.box('sessionBox');
-
-                                            final String sessionData =
-                                                openbox
-                                                    .get('sessionData');
-                                            addRating(sessionData,
-                                                movieId, rating, context);
-                                            state.updateState(() {
-                                              state.isMovieRated = '"value":$rating';
-                                              state.userRating = rating;
-                                              profileRefreshNotifier.value++;
-                                            });
-                                          },
-                                        ),
-                                        const SizedBox(
-                                          height: 40,
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              },
-                              child: const Icon(
-                                Icons.star_outline_rounded,
-                                color: Colors.white,
-                                size: 22,
-                              ),
+                            child: MovieRatingButton(
+                              movieId: widget.movieId,
+                              isUserLoggedIn: isUserLoggedIn,
+                              initialIsRated: isMovieRated,
+                              initialUserRating: userRating,
+                              isDesktop: false,
                             ),
                           ),
                       ],
@@ -827,7 +573,7 @@ class _MovieDetailPageMobile extends StatelessWidget {
                     future: creditsFuture,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const M3ExpressiveSpinner();
+                        return buildCastCrewSkeletonRow(isDesktop: false);
                       } else if (snapshot.hasError) {
                         return const Text(
                             'Error loading cast and crew details');
@@ -1498,42 +1244,6 @@ class _MovieDetailPageMobile extends StatelessWidget {
         borderRadius: 23.0,
         onTap: onTap,
         child: Center(child: child),
-      ),
-    );
-  }
-
-  Widget _buildM3FloatingPillButton({
-    required BuildContext context,
-    required Widget child,
-    required VoidCallback onTap,
-    Color? backgroundColor,
-    Color? borderColor,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final defaultBg = colorScheme.surfaceContainerHigh.withValues(alpha: 0.85);
-    final defaultBorder = colorScheme.outlineVariant.withValues(alpha: 0.3);
-
-    return Container(
-      height: 42,
-      decoration: BoxDecoration(
-        color: backgroundColor ?? defaultBg,
-        borderRadius: BorderRadius.circular(24.0),
-        border: Border.all(color: borderColor ?? defaultBorder, width: 1.2),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: TvFocusWrapper(
-        borderRadius: 24.0,
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
-          child: Center(child: child),
-        ),
       ),
     );
   }

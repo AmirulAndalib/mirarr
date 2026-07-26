@@ -7,6 +7,8 @@ import 'package:Mirarr/moviesPage/functions/on_tap_gridview_movie.dart';
 import 'package:Mirarr/moviesPage/functions/on_tap_movie.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
+import 'package:Mirarr/utils/expressive_motion.dart';
+import 'package:Mirarr/widgets/expressive_interactive_container.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -17,6 +19,19 @@ import 'dart:async';
 import 'package:Mirarr/database/watch_history_database.dart';
 import 'package:provider/provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+
+class _TouchMouseScrollBehavior extends MaterialScrollBehavior {
+  const _TouchMouseScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+      };
+}
+
+const _movieScrollBehavior = _TouchMouseScrollBehavior();
 
 class MovieSearchScreen extends StatefulWidget {
   static final GlobalKey<_MovieSearchScreenState> movieSearchKey =
@@ -100,52 +115,28 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
     ),
   };
 
-  Future<void> _fetchTrendingMovies() async {
-    try {
-      final region =
-          Provider.of<RegionProvider>(context, listen: false).currentRegion;
-      final movies = await fetchTrendingMovies(region);
-      setState(() {
-        trendingMovies = movies;
-      });
-    } catch (e) {
-      throw Exception('Failed to load trending movies');
-    }
+  Future<List<Movie>> _fetchTrendingMovies() async {
+    final region =
+        Provider.of<RegionProvider>(context, listen: false).currentRegion;
+    return await fetchTrendingMovies(region);
   }
 
-  Future<void> _fetchPopularMovies() async {
-    try {
-      final region =
-          Provider.of<RegionProvider>(context, listen: false).currentRegion;
-      final movies = await fetchPopularMovies(region);
-      setState(() {
-        popularMovies = movies;
-      });
-    } catch (e) {
-      throw Exception('Failed to load popular movies');
-    }
+  Future<List<Movie>> _fetchPopularMovies() async {
+    final region =
+        Provider.of<RegionProvider>(context, listen: false).currentRegion;
+    return await fetchPopularMovies(region);
   }
 
-  Future<void> _fetchGenresAndMovies() async {
-    try {
-      final region =
-          Provider.of<RegionProvider>(context, listen: false).currentRegion;
-      final fetchedGenres = await fetchGenres(region);
-      final tasks = fetchedGenres.map((genre) async {
-        final movies = await fetchMoviesByGenre(genre.id, region);
-        return MapEntry(genre.id, movies);
-      });
-      final results = await Future.wait(tasks);
-
-      if (mounted) {
-        setState(() {
-          genres = fetchedGenres;
-          moviesByGenre = Map.fromEntries(results);
-        });
-      }
-    } catch (e) {
-      throw Exception('Failed to load movies by genre');
-    }
+  Future<({List<Genre> genres, Map<int, List<Movie>> moviesByGenre})> _fetchGenresAndMovies() async {
+    final region =
+        Provider.of<RegionProvider>(context, listen: false).currentRegion;
+    final fetchedGenres = await fetchGenres(region);
+    final tasks = fetchedGenres.map((genre) async {
+      final movies = await fetchMoviesByGenre(genre.id, region);
+      return MapEntry(genre.id, movies);
+    });
+    final results = await Future.wait(tasks);
+    return (genres: fetchedGenres, moviesByGenre: Map.fromEntries(results));
   }
 
   void handleNetworkError(ClientException e) {
@@ -272,22 +263,46 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
   }
 
   Future<void> checkInternetAndFetchData() async {
-    setState(() {
-      trendingMovies = [];
-      popularMovies = [];
-      genres = [];
-      moviesByGenre = {};
-    });
+    if (mounted) {
+      setState(() {
+        trendingMovies = [];
+        popularMovies = [];
+        genres = [];
+        moviesByGenre = {};
+      });
+    }
     _loadWatchedMovies();
-    _fetchTrendingMovies();
-    _fetchPopularMovies();
-    await _fetchGenresAndMovies();
+
+    try {
+      final results = await Future.wait([
+        _fetchTrendingMovies(),
+        _fetchPopularMovies(),
+        _fetchGenresAndMovies(),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          trendingMovies = results[0] as List<Movie>;
+          popularMovies = results[1] as List<Movie>;
+          final genreData = results[2] as ({List<Genre> genres, Map<int, List<Movie>> moviesByGenre});
+          genres = genreData.genres;
+          moviesByGenre = genreData.moviesByGenre;
+        });
+      }
+    } catch (e) {
+      if (e is ClientException) {
+        handleNetworkError(e);
+      } else {
+        debugPrint('Error fetching movie data: $e');
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final currentGenres = genres.isEmpty ? _dummyGenres : genres;
 
     return Scaffold(
       extendBody: true,
@@ -305,178 +320,159 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
+      body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
-        padding: EdgeInsets.only(
-          bottom: TvFocusModeManager.isTvDevice ? 16.0 : BottomBar.getHeight(context),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            _buildSectionHeader('Trending Movies', null),
-
-                          const SizedBox(
-                            height: 10,
-                          ),
-                          SizedBox(
-                            height: 320, // Set the height for the movie cards
-                            child: ScrollConfiguration(
-                              behavior:
-                                  ScrollConfiguration.of(context).copyWith(
-                                dragDevices: {
-                                  PointerDeviceKind.touch,
-                                  PointerDeviceKind.mouse,
-                                  PointerDeviceKind.trackpad,
-                                },
-                              ),
-                              child: Skeletonizer(
-                                enabled: trendingMovies.isEmpty,
-                                containersColor: Colors.white.withOpacity(0.05),
-                                effect: ShimmerEffect(
-                                  baseColor: Colors.white.withOpacity(0.05),
-                                  highlightColor: Colors.white.withOpacity(0.15),
-                                ),
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  physics: const BouncingScrollPhysics(),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  itemCount: trendingMovies.isEmpty
-                                      ? _dummyMovies.length
-                                      : trendingMovies.length,
-                                  itemBuilder: (context, index) {
-                                    final movie = trendingMovies.isEmpty
-                                        ? _dummyMovies[index]
-                                        : trendingMovies[index];
-                                    final widget = Padding(
-                                      padding: const EdgeInsets.only(right: 12),
-                                      child: TvFocusWrapper(
-                                        autoFocus: index == 0 && trendingMovies.isNotEmpty,
-                                        onTap: trendingMovies.isEmpty
-                                            ? () {}
-                                            : () => _onMovieTapped(movie),
-                                        child: CustomMovieWidget(
-                                          movie: movie,
-                                          showAvailability: false,
-                                          isWatched: _watchedMovieIds.contains(movie.id),
-                                        ),
-                                      ),
-                                    );
-                                    if (trendingMovies.isEmpty) {
-                                      final double opacity = (1.0 - (index * 0.18)).clamp(0.1, 1.0);
-                                      return Opacity(
-                                        opacity: opacity,
-                                        child: widget,
-                                      );
-                                    }
-                                    return widget;
-                                  },
-                                ),
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                _buildSectionHeader('Trending Movies', null),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 320,
+                  child: ScrollConfiguration(
+                    behavior: _movieScrollBehavior,
+                    child: Skeletonizer(
+                      enabled: trendingMovies.isEmpty,
+                      containersColor: Colors.white.withValues(alpha: 0.05),
+                      effect: ShimmerEffect(
+                        baseColor: Colors.white.withValues(alpha: 0.05),
+                        highlightColor: Colors.white.withValues(alpha: 0.15),
+                      ),
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: trendingMovies.isEmpty
+                            ? _dummyMovies.length
+                            : trendingMovies.length,
+                        itemBuilder: (context, index) {
+                          final movie = trendingMovies.isEmpty
+                              ? _dummyMovies[index]
+                              : trendingMovies[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: TvFocusWrapper(
+                              autoFocus: index == 0 && trendingMovies.isNotEmpty,
+                              onTap: trendingMovies.isEmpty
+                                  ? () {}
+                                  : () => _onMovieTapped(movie),
+                              child: CustomMovieWidget(
+                                movie: movie,
+                                showAvailability: false,
+                                isWatched: _watchedMovieIds.contains(movie.id),
                               ),
                             ),
-                          ),
-            const SizedBox(height: 12),
-            _buildSectionHeader('Popular Movies', null),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 320,
-              child: ScrollConfiguration(
-                behavior: ScrollConfiguration.of(context).copyWith(
-                  dragDevices: {
-                    PointerDeviceKind.touch,
-                    PointerDeviceKind.mouse,
-                    PointerDeviceKind.trackpad,
-                  },
-                ),
-                child: Skeletonizer(
-                  enabled: popularMovies.isEmpty,
-                  containersColor: colorScheme.surfaceContainerHigh,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: popularMovies.isEmpty ? _dummyMovies.length : popularMovies.length,
-                    itemBuilder: (context, index) {
-                      final movie = popularMovies.isEmpty ? _dummyMovies[index] : popularMovies[index];
-                      final widget = Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: TvFocusWrapper(
-                          onTap: popularMovies.isEmpty ? () {} : () => _onMovieTapped(movie),
-                          child: CustomMovieWidget(
-                            movie: movie,
-                            showAvailability: false,
-                            isWatched: _watchedMovieIds.contains(movie.id),
-                          ),
-                        ),
-                      );
-                      if (popularMovies.isEmpty) {
-                        final double opacity = (1.0 - (index * 0.18)).clamp(0.1, 1.0);
-                        return Opacity(opacity: opacity, child: widget);
-                      }
-                      return widget;
-                    },
-                  ),
-                ),
-              ),
-            ),
-            for (var genre in (genres.isEmpty ? _dummyGenres : genres))
-              Skeletonizer(
-                enabled: genres.isEmpty,
-                containersColor: colorScheme.surfaceContainerHigh,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    _buildSectionHeader(
-                      genre.name,
-                      genres.isEmpty ? null : () => onTapGridMovie(moviesByGenre[genre.id]!, context),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 320,
-                      child: ScrollConfiguration(
-                        behavior: ScrollConfiguration.of(context).copyWith(
-                          dragDevices: {
-                            PointerDeviceKind.touch,
-                            PointerDeviceKind.mouse,
-                            PointerDeviceKind.trackpad,
-                          },
-                        ),
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: genres.isEmpty
-                              ? (_dummyMoviesByGenre[genre.id]?.length ?? 0)
-                              : (moviesByGenre[genre.id]?.length ?? 0),
-                          itemBuilder: (context, index) {
-                            final movie = genres.isEmpty
-                                ? _dummyMoviesByGenre[genre.id]![index]
-                                : moviesByGenre[genre.id]![index];
-                            final widget = Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: TvFocusWrapper(
-                                onTap: genres.isEmpty ? () {} : () => _onMovieTapped(movie),
-                                child: CustomMovieWidget(
-                                  movie: movie,
-                                  showAvailability: false,
-                                  isWatched: _watchedMovieIds.contains(movie.id),
-                                ),
-                              ),
-                            );
-                            if (genres.isEmpty) {
-                              final double opacity = (1.0 - (index * 0.18)).clamp(0.1, 1.0);
-                              return Opacity(opacity: opacity, child: widget);
-                            }
-                            return widget;
-                          },
-                        ),
+                          );
+                        },
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-          ],
-        ),
+                const SizedBox(height: 12),
+                _buildSectionHeader('Popular Movies', null),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 320,
+                  child: ScrollConfiguration(
+                    behavior: _movieScrollBehavior,
+                    child: Skeletonizer(
+                      enabled: popularMovies.isEmpty,
+                      containersColor: Colors.white.withValues(alpha: 0.05),
+                      effect: ShimmerEffect(
+                        baseColor: Colors.white.withValues(alpha: 0.05),
+                        highlightColor: Colors.white.withValues(alpha: 0.15),
+                      ),
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: popularMovies.isEmpty ? _dummyMovies.length : popularMovies.length,
+                        itemBuilder: (context, index) {
+                          final movie = popularMovies.isEmpty ? _dummyMovies[index] : popularMovies[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: TvFocusWrapper(
+                              onTap: popularMovies.isEmpty ? () {} : () => _onMovieTapped(movie),
+                              child: CustomMovieWidget(
+                                movie: movie,
+                                showAvailability: false,
+                                isWatched: _watchedMovieIds.contains(movie.id),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final genre = currentGenres[index];
+                final moviesList = genres.isEmpty
+                    ? _dummyMoviesByGenre[genre.id]
+                    : moviesByGenre[genre.id];
+
+                return Skeletonizer(
+                  enabled: genres.isEmpty,
+                  containersColor: Colors.white.withValues(alpha: 0.05),
+                  effect: ShimmerEffect(
+                    baseColor: Colors.white.withValues(alpha: 0.05),
+                    highlightColor: Colors.white.withValues(alpha: 0.15),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 16),
+                      _buildSectionHeader(
+                        genre.name,
+                        genres.isEmpty ? null : () => onTapGridMovie(moviesByGenre[genre.id]!, context),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 320,
+                        child: ScrollConfiguration(
+                          behavior: _movieScrollBehavior,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: moviesList?.length ?? 0,
+                            itemBuilder: (context, itemIndex) {
+                              final movie = moviesList![itemIndex];
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 12),
+                                child: TvFocusWrapper(
+                                  onTap: genres.isEmpty ? () {} : () => _onMovieTapped(movie),
+                                  child: CustomMovieWidget(
+                                    movie: movie,
+                                    showAvailability: false,
+                                    isWatched: _watchedMovieIds.contains(movie.id),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              childCount: currentGenres.length,
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: TvFocusModeManager.isTvDevice ? 16.0 : BottomBar.getHeight(context),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -498,33 +494,33 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
             ),
           ),
           if (onTap != null)
-            InkWell(
+            ExpressiveInteractiveContainer(
               onTap: onTap,
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'See All',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.arrow_forward_rounded,
-                      size: 14,
+              borderRadius: 20,
+              pressedBorderRadius: 28,
+              speed: ExpressiveSpeed.fast,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'See All',
+                    style: theme.textTheme.labelMedium?.copyWith(
                       color: colorScheme.primary,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 14,
+                    color: colorScheme.primary,
+                  ),
+                ],
               ),
             ),
         ],
@@ -532,4 +528,5 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
     );
   }
 }
+
 

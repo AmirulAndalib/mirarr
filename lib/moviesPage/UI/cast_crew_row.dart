@@ -123,6 +123,7 @@ class _CastCrewCardState extends State<CastCrewCard> {
                       child: profilePath != null
                           ? CachedNetworkImage(
                               imageUrl: '${getImageBaseUrl(widget.region)}/t/p/${widget.isDesktop ? 'w185' : 'w185'}$profilePath',
+                              memCacheWidth: widget.isDesktop ? 185 : 135,
                               fit: BoxFit.cover,
                               placeholder: (context, url) => Skeletonizer(
                                 enabled: true,
@@ -184,74 +185,117 @@ class _CastCrewCardState extends State<CastCrewCard> {
   }
 }
 
+Widget buildCastCrewSkeletonRow({required bool isDesktop}) {
+  final double height = isDesktop ? 215.0 : 165.0;
+  final double cardWidth = isDesktop ? 120.0 : 90.0;
+  final double cardHeight = isDesktop ? 190.0 : 145.0;
+  final double borderRadius = isDesktop ? 16.0 : 14.0;
+  final outerPadding = isDesktop
+      ? const EdgeInsets.fromLTRB(16, 12, 0, 12)
+      : const EdgeInsets.fromLTRB(10, 8, 0, 8);
+
+  return SizedBox(
+    height: height,
+    child: Skeletonizer(
+      enabled: true,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: 6,
+        physics: const NeverScrollableScrollPhysics(),
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: outerPadding,
+            child: Container(
+              width: cardWidth,
+              height: cardHeight,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(borderRadius),
+              ),
+            ),
+          );
+        },
+      ),
+    ),
+  );
+}
+
 Widget buildCastRow(List<Map<String, dynamic>> castList, BuildContext context) {
   final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
-  return SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    physics: const BouncingScrollPhysics(),
-    child: Row(
-      children: castList.map<Widget>((cast) {
+  return SizedBox(
+    height: 165.0,
+    child: ListView.builder(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      itemCount: castList.length,
+      itemBuilder: (context, index) {
         return CastCrewCard(
-          item: cast,
+          item: castList[index],
           isDesktop: false,
           isCast: true,
           region: region,
         );
-      }).toList(),
+      },
     ),
   );
 }
 
 Widget buildCrewRow(List<Map<String, dynamic>> crewList, BuildContext context) {
   final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
-  return SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    physics: const BouncingScrollPhysics(),
-    child: Row(
-      children: crewList.map<Widget>((crew) {
+  return SizedBox(
+    height: 165.0,
+    child: ListView.builder(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      itemCount: crewList.length,
+      itemBuilder: (context, index) {
         return CastCrewCard(
-          item: crew,
+          item: crewList[index],
           isDesktop: false,
           isCast: false,
           region: region,
         );
-      }).toList(),
+      },
     ),
   );
 }
 
 Widget buildCrewRowDesktop(List<Map<String, dynamic>> crewList, BuildContext context) {
   final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
-  return SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    physics: const BouncingScrollPhysics(),
-    child: Row(
-      children: crewList.map<Widget>((crew) {
+  return SizedBox(
+    height: 215.0,
+    child: ListView.builder(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      itemCount: crewList.length,
+      itemBuilder: (context, index) {
         return CastCrewCard(
-          item: crew,
+          item: crewList[index],
           isDesktop: true,
           isCast: false,
           region: region,
         );
-      }).toList(),
+      },
     ),
   );
 }
 
 Widget buildCastRowDesktop(List<Map<String, dynamic>> castList, BuildContext context) {
   final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
-  return SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    physics: const BouncingScrollPhysics(),
-    child: Row(
-      children: castList.map<Widget>((cast) {
+  return SizedBox(
+    height: 215.0,
+    child: ListView.builder(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      itemCount: castList.length,
+      itemBuilder: (context, index) {
         return CastCrewCard(
-          item: cast,
+          item: castList[index],
           isDesktop: true,
           isCast: true,
           region: region,
         );
-      }).toList(),
+      },
     ),
   );
 }

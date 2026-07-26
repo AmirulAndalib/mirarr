@@ -9,6 +9,9 @@ import 'package:Mirarr/seriesPage/function/on_tap_gridview_serie.dart';
 import 'package:Mirarr/widgets/rss_screen.dart';
 import 'package:Mirarr/widgets/settings_screen.dart';
 import 'package:Mirarr/widgets/watchlist_calendar_screen.dart';
+import 'package:Mirarr/utils/expressive_motion.dart';
+import 'package:Mirarr/widgets/expressive_interactive_container.dart';
+import 'package:Mirarr/widgets/expressive_page_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive/hive.dart';
@@ -59,8 +62,8 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _navigateToMovie(String title, int id) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => MovieDetailPage(movieTitle: title, movieId: id),
+      ExpressivePageRoute(
+        page: MovieDetailPage(movieTitle: title, movieId: id),
       ),
     );
     checkInternetAndFetchData();
@@ -69,8 +72,8 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _navigateToSerie(String title, int id) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => SerieDetailPage(serieName: title, serieId: id),
+      ExpressivePageRoute(
+        page: SerieDetailPage(serieName: title, serieId: id),
       ),
     );
     checkInternetAndFetchData();
@@ -872,7 +875,12 @@ class _ProfilePageState extends State<ProfilePage> {
     final colorScheme = theme.colorScheme;
 
     return Expanded(
-      child: Container(
+      child: ExpressiveInteractiveContainer(
+        onTap: onTap,
+        borderRadius: 20,
+        pressedBorderRadius: 26,
+        speed: ExpressiveSpeed.fast,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(20),
@@ -880,40 +888,31 @@ class _ProfilePageState extends State<ProfilePage> {
             color: colorScheme.outlineVariant.withValues(alpha: 0.2),
           ),
         ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: (iconColor ?? colorScheme.primary).withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    icon,
-                    color: iconColor ?? colorScheme.primary,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  label,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: colorScheme.onSurface,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: (iconColor ?? colorScheme.primary).withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: iconColor ?? colorScheme.primary,
+                size: 22,
+              ),
             ),
-          ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );
@@ -971,7 +970,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const WatchlistCalendarScreen()),
+                    ExpressivePageRoute(page: const WatchlistCalendarScreen()),
                   );
                 },
               ),
@@ -982,7 +981,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const RssScreen()),
+                    ExpressivePageRoute(page: const RssScreen()),
                   );
                 },
               ),
@@ -993,7 +992,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const SettingsPage()),
+                    ExpressivePageRoute(page: const SettingsPage()),
                   );
                 },
               ),

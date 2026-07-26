@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:isolate';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:Mirarr/seriesPage/models/serie.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -15,24 +13,17 @@ class Genre {
   Genre({required this.id, required this.name});
 }
 
-List<Genre> _parseGenresInIsolate(String responseBody) {
+List<Genre> _parseGenres(String responseBody) {
   final List<Genre> genres = [];
   final List<dynamic> results = json.decode(responseBody)['genres'];
   for (var result in results) {
     final genre = Genre(
-      name: result['name'],
+      name: result['name'] ?? '',
       id: result['id'],
     );
     genres.add(genre);
   }
   return genres;
-}
-
-void _genreIsolateFunction(Map<String, dynamic> message) {
-  final SendPort sendPort = message['sendPort'];
-  final String responseBody = message['responseBody'];
-  final List<Genre> genres = _parseGenresInIsolate(responseBody);
-  sendPort.send(genres);
 }
 
 Future<List<Genre>> fetchGenres(String region) async {
@@ -42,51 +33,26 @@ Future<List<Genre>> fetchGenres(String region) async {
   );
 
   if (response.statusCode == 200) {
-    if (kIsWeb) {
-      return _parseGenresInIsolate(response.body);
-    }
-    final receivePort = ReceivePort();
-
-    try {
-      await Isolate.spawn(
-        _genreIsolateFunction,
-        {
-          'sendPort': receivePort.sendPort,
-          'responseBody': response.body,
-        },
-      );
-
-      final genres = await receivePort.first as List<Genre>;
-      return genres;
-    } finally {
-      receivePort.close();
-    }
+    return _parseGenres(response.body);
   } else {
     throw Exception('Failed to load genres');
   }
 }
 
-List<Serie> _parseSeriesInIsolate(String responseBody) {
+List<Serie> _parseSeries(String responseBody) {
   final List<Serie> series = [];
   final List<dynamic> results = json.decode(responseBody)['results'];
   for (var result in results) {
     final serie = Serie(
-      name: result['name'],
+      name: result['name'] ?? '',
       posterPath: result['poster_path'] ?? '',
       overView: result['overview'] ?? '',
       id: result['id'],
-      score: result['vote_average'] ?? 0.0,
+      score: (result['vote_average'] as num?)?.toDouble(),
     );
     series.add(serie);
   }
   return series;
-}
-
-void _seriesIsolateFunction(Map<String, dynamic> message) {
-  final SendPort sendPort = message['sendPort'];
-  final String responseBody = message['responseBody'];
-  final List<Serie> series = _parseSeriesInIsolate(responseBody);
-  sendPort.send(series);
 }
 
 Future<List<Serie>> fetchSeriesByGenre(int genreId, String region) async {
@@ -96,25 +62,7 @@ Future<List<Serie>> fetchSeriesByGenre(int genreId, String region) async {
   );
 
   if (response.statusCode == 200) {
-    if (kIsWeb) {
-      return _parseSeriesInIsolate(response.body);
-    }
-    final receivePort = ReceivePort();
-
-    try {
-      await Isolate.spawn(
-        _seriesIsolateFunction,
-        {
-          'sendPort': receivePort.sendPort,
-          'responseBody': response.body,
-        },
-      );
-
-      final series = await receivePort.first as List<Serie>;
-      return series;
-    } finally {
-      receivePort.close();
-    }
+    return _parseSeries(response.body);
   } else {
     throw Exception('Failed to load movies by genre');
   }

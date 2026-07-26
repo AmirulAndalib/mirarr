@@ -15,6 +15,7 @@ import 'package:Mirarr/seriesPage/serieDetailPage.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
 import 'package:Mirarr/widgets/m3_expressive_spinner.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
+import 'package:Mirarr/widgets/expressive_page_route.dart';
 
 class WatchlistCalendarScreen extends StatefulWidget {
   const WatchlistCalendarScreen({Key? key}) : super(key: key);
@@ -380,8 +381,8 @@ class _WatchlistCalendarScreenState extends State<WatchlistCalendarScreen> {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => SerieDetailPage(serieName: serie.name, serieId: serie.id),
+            ExpressivePageRoute(
+              page: SerieDetailPage(serieName: serie.name, serieId: serie.id),
             ),
           );
         },
