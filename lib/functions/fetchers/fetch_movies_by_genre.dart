@@ -28,15 +28,15 @@ List<Genre> _parseGenres(String responseBody) {
 
 List<Movie> _parseMovies(String responseBody) {
   final List<Movie> movies = [];
-  final List<dynamic> results = json.decode(responseBody)['results'];
+  final List<dynamic> results = json.decode(responseBody)['results'] ?? [];
   for (var result in results) {
     final movie = Movie(
-      title: result['title'],
-      releaseDate: result['release_date'],
+      title: result['title'] ?? '',
+      releaseDate: result['release_date'] ?? '',
       posterPath: result['poster_path'] ?? '',
       overView: result['overview'] ?? '',
-      id: result['id'],
-      score: result['vote_average'] ?? 0.0,
+      id: (result['id'] as num?)?.toInt() ?? 0,
+      score: (result['vote_average'] as num?)?.toDouble() ?? 0.0,
     );
     movies.add(movie);
   }

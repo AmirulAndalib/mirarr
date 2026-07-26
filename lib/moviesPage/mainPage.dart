@@ -131,12 +131,24 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final fetchedGenres = await fetchGenres(region);
-    final tasks = fetchedGenres.map((genre) async {
-      final movies = await fetchMoviesByGenre(genre.id, region);
-      return MapEntry(genre.id, movies);
-    });
-    final results = await Future.wait(tasks);
-    return (genres: fetchedGenres, moviesByGenre: Map.fromEntries(results));
+    final Map<int, List<Movie>> genreMap = {};
+
+    // Process requests in small batches to prevent Web connection exhaustion
+    const batchSize = 4;
+    for (var i = 0; i < fetchedGenres.length; i += batchSize) {
+      final end = (i + batchSize < fetchedGenres.length) ? i + batchSize : fetchedGenres.length;
+      final chunk = fetchedGenres.sublist(i, end);
+      await Future.wait(chunk.map((genre) async {
+        try {
+          final movies = await fetchMoviesByGenre(genre.id, region);
+          genreMap[genre.id] = movies;
+        } catch (e) {
+          debugPrint('Failed to fetch movies for genre ${genre.name}: $e');
+          genreMap[genre.id] = [];
+        }
+      }));
+    }
+    return (genres: fetchedGenres, moviesByGenre: genreMap);
   }
 
   void handleNetworkError(ClientException e) {
@@ -222,7 +234,6 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
               FilledButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  checkInternetAndFetchData();
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: colorScheme.primary,
@@ -273,28 +284,38 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
     }
     _loadWatchedMovies();
 
+    // 1. Progressive load of Trending & Popular
     try {
-      final results = await Future.wait([
+      final primaryResults = await Future.wait([
         _fetchTrendingMovies(),
         _fetchPopularMovies(),
-        _fetchGenresAndMovies(),
       ]);
 
       if (mounted) {
         setState(() {
-          trendingMovies = results[0] as List<Movie>;
-          popularMovies = results[1] as List<Movie>;
-          final genreData = results[2] as ({List<Genre> genres, Map<int, List<Movie>> moviesByGenre});
+          trendingMovies = primaryResults[0];
+          popularMovies = primaryResults[1];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching primary movie data: $e');
+      if (mounted && (e is ClientException || e is Exception)) {
+        handleNetworkError(e is ClientException ? e : ClientException(e.toString()));
+        return;
+      }
+    }
+
+    // 2. Progressive load of Genre lists (batched into chunks of 4)
+    try {
+      final genreData = await _fetchGenresAndMovies();
+      if (mounted) {
+        setState(() {
           genres = genreData.genres;
           moviesByGenre = genreData.moviesByGenre;
         });
       }
     } catch (e) {
-      if (e is ClientException) {
-        handleNetworkError(e);
-      } else {
-        debugPrint('Error fetching movie data: $e');
-      }
+      debugPrint('Error fetching genres: $e');
     }
   }
 

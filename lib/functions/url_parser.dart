@@ -9,13 +9,15 @@ import 'package:provider/provider.dart';
 
 class TMDBUrlParser {
   static bool isTMDBMovieUrl(String url) {
-    return url.startsWith('https://www.themoviedb.org/movie/') ||
-        url.startsWith('themoviedb://movie/');
+    return url.contains('/movie/') ||
+        url.startsWith('themoviedb://movie/') ||
+        url.startsWith('mirarr://movie/');
   }
 
   static bool isTMDBTVUrl(String url) {
-    return url.startsWith('https://www.themoviedb.org/tv/') ||
-        url.startsWith('themoviedb://tv/');
+    return url.contains('/tv/') ||
+        url.startsWith('themoviedb://tv/') ||
+        url.startsWith('mirarr://tv/');
   }
 
   static Future<String> _getMovieTitle(
@@ -28,17 +30,12 @@ class TMDBUrlParser {
 
   static int? parseMovieId(String url) {
     try {
-      // Remove the base URL part
-      String path = url.replaceAll('https://www.themoviedb.org/movie/', '');
-      path = path.replaceAll('themoviedb://movie/', '');
-
-      // Split by dash to separate ID and title
-      List<String> parts = path.split('-');
-
-      // First part is the ID
-      return int.parse(parts[0]);
+      if (!url.contains('/movie/')) return null;
+      String path = url.substring(url.indexOf('/movie/') + '/movie/'.length);
+      String firstSegment = path.split(RegExp(r'[-/?#]')).first;
+      return int.tryParse(firstSegment);
     } catch (e) {
-      debugPrint('Error parsing TMDB movie ID: $e');
+      debugPrint('Error parsing movie ID: $e');
       return null;
     }
   }
@@ -53,19 +50,12 @@ class TMDBUrlParser {
 
   static int? parseSerieId(String url) {
     try {
-      // Remove the base URL part
-      String path = url.replaceAll('https://www.themoviedb.org/tv/', '');
-      path = path.replaceAll('themoviedb://tv/', '');
-
-      // Split by dash to separate ID and title
-      List<String> parts = path.split('-');
-
-      // First part is the ID
-      int serieId = int.parse(parts[0]);
-
-      return serieId;
+      if (!url.contains('/tv/')) return null;
+      String path = url.substring(url.indexOf('/tv/') + '/tv/'.length);
+      String firstSegment = path.split(RegExp(r'[-/?#]')).first;
+      return int.tryParse(firstSegment);
     } catch (e) {
-      debugPrint('Error parsing TMDB TV URL: $e');
+      debugPrint('Error parsing TV URL: $e');
       return null;
     }
   }
@@ -84,14 +74,24 @@ class TMDBUrlParser {
           }
         } catch (e) {
           debugPrint('Error fetching movie title: $e');
+          if (context.mounted) {
+            onTapMovie('', movieId, context);
+          }
         }
       }
     } else if (isTMDBTVUrl(url)) {
       final serieId = parseSerieId(url);
       if (serieId != null) {
-        final serieTitle = await _getSerieTitle(serieId, context);
-        if (context.mounted) {
-          onTapSerie(serieTitle, serieId, context);
+        try {
+          final serieTitle = await _getSerieTitle(serieId, context);
+          if (context.mounted) {
+            onTapSerie(serieTitle, serieId, context);
+          }
+        } catch (e) {
+          debugPrint('Error fetching TV title: $e');
+          if (context.mounted) {
+            onTapSerie('', serieId, context);
+          }
         }
       }
     }

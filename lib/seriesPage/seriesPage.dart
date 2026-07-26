@@ -104,12 +104,24 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final fetchedGenres = await fetchGenres(region);
-    final tasks = fetchedGenres.map((genre) async {
-      final series = await fetchSeriesByGenre(genre.id, region);
-      return MapEntry(genre.id, series);
-    });
-    final results = await Future.wait(tasks);
-    return (genres: fetchedGenres, seriesByGenre: Map.fromEntries(results));
+    final Map<int, List<Serie>> seriesMap = {};
+
+    // Process requests in small batches to prevent Web connection exhaustion
+    const batchSize = 4;
+    for (var i = 0; i < fetchedGenres.length; i += batchSize) {
+      final end = (i + batchSize < fetchedGenres.length) ? i + batchSize : fetchedGenres.length;
+      final chunk = fetchedGenres.sublist(i, end);
+      await Future.wait(chunk.map((genre) async {
+        try {
+          final series = await fetchSeriesByGenre(genre.id, region);
+          seriesMap[genre.id] = series;
+        } catch (e) {
+          debugPrint('Failed to fetch series for genre ${genre.name}: $e');
+          seriesMap[genre.id] = [];
+        }
+      }));
+    }
+    return (genres: fetchedGenres, seriesByGenre: seriesMap);
   }
 
   void handleNetworkError(ClientException e) {
@@ -195,7 +207,6 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
               FilledButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  checkInternetAndFetchData();
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: colorScheme.primary,
@@ -244,28 +255,38 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
       });
     }
 
+    // 1. Progressive load of Trending & Popular
     try {
-      final results = await Future.wait([
+      final primaryResults = await Future.wait([
         _fetchTrendingSeries(),
         _fetchPopularSeries(),
-        _fetchGenresAndSeries(),
       ]);
 
       if (mounted) {
         setState(() {
-          trendingSeries = results[0] as List<Serie>;
-          popularSeries = results[1] as List<Serie>;
-          final genreData = results[2] as ({List<Genre> genres, Map<int, List<Serie>> seriesByGenre});
+          trendingSeries = primaryResults[0];
+          popularSeries = primaryResults[1];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching primary series data: $e');
+      if (mounted && (e is ClientException || e is Exception)) {
+        handleNetworkError(e is ClientException ? e : ClientException(e.toString()));
+        return;
+      }
+    }
+
+    // 2. Progressive load of Genre lists (batched into chunks of 4)
+    try {
+      final genreData = await _fetchGenresAndSeries();
+      if (mounted) {
+        setState(() {
           genres = genreData.genres;
           seriesByGenre = genreData.seriesByGenre;
         });
       }
     } catch (e) {
-      if (e is ClientException) {
-        handleNetworkError(e);
-      } else {
-        debugPrint('Error fetching series data: $e');
-      }
+      debugPrint('Error fetching genres: $e');
     }
   }
 

@@ -200,87 +200,99 @@ class _MovieDetailPageMobile extends StatelessWidget {
                           Positioned(
                             top: 190,
                             right: 24,
-                            child: _buildM3FloatingActionButton(
-                              context: context,
-                              onTap: () {
-                                showGeneralDialog(
+                            child: Builder(
+                              builder: (buttonContext) {
+                                return _buildM3FloatingActionButton(
                                   context: context,
-                                  barrierDismissible: true,
-                                  barrierLabel: '',
-                                  transitionDuration:
-                                      const Duration(milliseconds: 300),
-                                  pageBuilder:
-                                      (context, animation1, animation2) =>
-                                          Container(),
-                                  transitionBuilder:
-                                      (context, animation1, animation2, child) {
-                                    final curvedValue = Curves.easeInOut
-                                            .transform(animation1.value) -
-                                        1.0;
-                                    return Transform(
-                                      transform: Matrix4.translationValues(
-                                          curvedValue * 300, 0, 0),
-                                      child: Align(
-                                        alignment: Alignment.centerRight,
-                                        child: Container(
-                                          height: 200,
-                                          width: 60,
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .scaffoldBackgroundColor,
-                                            borderRadius:
-                                                const BorderRadius.only(
-                                              topLeft: Radius.circular(20),
-                                              bottomLeft: Radius.circular(20),
-                                            ),
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 20),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                IconButton(
-                                                  onPressed: () {
-                                                    ShareContent.shareMovie(
-                                                        widget.movieId);
-                                                  },
-                                                  icon: const Icon(
-                                                    Icons.share_rounded,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 20),
-                                                IconButton(
-                                                  onPressed: () {
-                                                    ShareContent
-                                                        .sharePartialScreenshot(
-                                                      screenshotController,
-                                                      _buildScreenShotImage(context),
-                                                      widget.movieId,
-                                                    );
-                                                  },
-                                                  icon: const Icon(
-                                                    Icons.image_rounded,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                  onTap: () {
+                                    final RenderBox button = buttonContext
+                                        .findRenderObject() as RenderBox;
+                                    final RenderBox overlay =
+                                        Overlay.of(context)
+                                            .context
+                                            .findRenderObject() as RenderBox;
+                                    final RelativeRect position =
+                                        RelativeRect.fromRect(
+                                      Rect.fromPoints(
+                                        button.localToGlobal(Offset.zero,
+                                            ancestor: overlay),
+                                        button.localToGlobal(
+                                            button.size
+                                                .bottomRight(Offset.zero),
+                                            ancestor: overlay),
+                                      ),
+                                      Offset.zero & overlay.size,
+                                    );
+
+                                    showMenu<String>(
+                                      context: context,
+                                      position: position,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainerHigh,
+                                      elevation: 8,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      items: [
+                                        PopupMenuItem<String>(
+                                          value: 'cover',
+                                          onTap: () {
+                                            ShareContent.sharePartialScreenshot(
+                                              screenshotController,
+                                              _buildScreenShotImage(context),
+                                              widget.movieId,
+                                            );
+                                          },
+                                          child: const Row(
+                                            children: [
+                                              Icon(Icons.image_rounded,
+                                                  size: 20),
+                                              SizedBox(width: 12),
+                                              Text('Cover Art'),
+                                            ],
                                           ),
                                         ),
-                                      ),
+                                        PopupMenuItem<String>(
+                                          value: 'tmdb',
+                                          onTap: () {
+                                            ShareContent.shareMovie(
+                                                widget.movieId);
+                                          },
+                                          child: const Row(
+                                            children: [
+                                              Icon(Icons.movie_outlined,
+                                                  size: 20),
+                                              SizedBox(width: 12),
+                                              Text('TMDB Link'),
+                                            ],
+                                          ),
+                                        ),
+                                        PopupMenuItem<String>(
+                                          value: 'mirarr',
+                                          onTap: () {
+                                            ShareContent.shareMirarrWebMovie(
+                                                widget.movieId);
+                                          },
+                                          child: const Row(
+                                            children: [
+                                              Icon(Icons.language_rounded,
+                                                  size: 20),
+                                              SizedBox(width: 12),
+                                              Text('Mirarr WebApp Link'),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     );
                                   },
+                                  child: const Icon(
+                                    Icons.share_rounded,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
                                 );
                               },
-                              child: const Icon(
-                                Icons.share_rounded,
-                                color: Colors.white,
-                                size: 22,
-                              ),
                             ),
                           ),
 

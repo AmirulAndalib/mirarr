@@ -77,11 +77,13 @@ class _MyAppState extends State<MyApp> {
       // Handle initial URI if the app was launched from a link
       try {
         final uri = await _appLinks.getInitialAppLink();
-        if (uri != null) {
+        final initialUrl =
+            uri?.toString() ?? (kIsWeb ? Uri.base.toString() : null);
+        if (initialUrl != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             if (navigatorKey.currentContext != null) {
               await TMDBUrlParser.handleUrl(
-                  uri.toString(), navigatorKey.currentContext!);
+                  initialUrl, navigatorKey.currentContext!);
             }
           });
         }
