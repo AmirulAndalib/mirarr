@@ -1,6 +1,7 @@
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:Mirarr/moviesPage/functions/check_availability.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:Mirarr/moviesPage/models/movie.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -10,12 +11,14 @@ class CustomMovieWidget extends StatefulWidget {
   final Movie movie;
   final bool showAvailability;
   final bool isWatched;
+  final ValueListenable<Set<int>>? watchedMovieIds;
 
   const CustomMovieWidget({
     super.key,
     required this.movie,
     this.showAvailability = true,
     this.isWatched = false,
+    this.watchedMovieIds,
   });
 
   @override
@@ -57,6 +60,19 @@ class _CustomMovieWidgetState extends State<CustomMovieWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final watchedIds = widget.watchedMovieIds;
+    if (watchedIds != null) {
+      return ValueListenableBuilder<Set<int>>(
+        valueListenable: watchedIds,
+        builder: (context, ids, _) {
+          return _buildCard(context, ids.contains(widget.movie.id));
+        },
+      );
+    }
+    return _buildCard(context, widget.isWatched);
+  }
+
+  Widget _buildCard(BuildContext context, bool isWatched) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final region = _region ??
@@ -87,11 +103,10 @@ class _CustomMovieWidgetState extends State<CustomMovieWidget> {
                       '${getImageBaseUrl(region)}/t/p/w342${widget.movie.posterPath}',
                   memCacheWidth: 350,
                   fit: BoxFit.cover,
-                  color: widget.isWatched
+                  color: isWatched
                       ? Colors.black.withValues(alpha: 0.4)
                       : null,
-                  colorBlendMode:
-                      widget.isWatched ? BlendMode.darken : null,
+                  colorBlendMode: isWatched ? BlendMode.darken : null,
                   placeholder: (context, url) =>
                       Container(color: colorScheme.surfaceContainerHigh),
                   errorWidget: (context, url, error) => Container(
@@ -151,7 +166,7 @@ class _CustomMovieWidgetState extends State<CustomMovieWidget> {
                 ),
               ),
             // Watched Badge
-            if (widget.isWatched)
+            if (isWatched)
               Positioned(
                 top: 12,
                 right: widget.showAvailability ? 54 : 12,

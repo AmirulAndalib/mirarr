@@ -51,16 +51,16 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
   Map<int, List<Movie>> moviesByGenre = {};
   late RegionProvider _regionProvider;
   final WatchHistoryDatabase _watchHistoryDb = WatchHistoryDatabase();
-  Set<int> _watchedMovieIds = {};
+  final ValueNotifier<Set<int>> _watchedMovieIds = ValueNotifier({});
 
   Future<void> _loadWatchedMovies() async {
     try {
       final watched = await _watchHistoryDb.getWatchedMovies();
-      if (mounted) {
-        setState(() {
-          _watchedMovieIds = watched.map((e) => e.tmdbId).toSet();
-        });
-      }
+      if (!mounted) return;
+      final next = watched.map((e) => e.tmdbId).toSet();
+      final current = _watchedMovieIds.value;
+      if (next.length == current.length && next.containsAll(current)) return;
+      _watchedMovieIds.value = next;
     } catch (e) {
       debugPrint('Error loading watched movies: $e');
     }
@@ -323,6 +323,7 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
   void dispose() {
     // Remove listener when disposing
     _regionProvider.removeListener(_onRegionChanged);
+    _watchedMovieIds.dispose();
     super.dispose();
   }
 
@@ -393,8 +394,7 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
                         final card = CustomMovieWidget(
                           movie: movie,
                           showAvailability: false,
-                          isWatched:
-                              !loading && _watchedMovieIds.contains(movie.id),
+                          watchedMovieIds: loading ? null : _watchedMovieIds,
                         );
                         return Padding(
                           padding: const EdgeInsets.only(right: 12),
@@ -431,8 +431,7 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
                         final card = CustomMovieWidget(
                           movie: movie,
                           showAvailability: false,
-                          isWatched:
-                              !loading && _watchedMovieIds.contains(movie.id),
+                          watchedMovieIds: loading ? null : _watchedMovieIds,
                         );
                         return Padding(
                           padding: const EdgeInsets.only(right: 12),
@@ -489,8 +488,7 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
                             final card = CustomMovieWidget(
                               movie: movie,
                               showAvailability: false,
-                              isWatched: !loading &&
-                                  _watchedMovieIds.contains(movie.id),
+                              watchedMovieIds: loading ? null : _watchedMovieIds,
                             );
                             return Padding(
                               padding: const EdgeInsets.only(right: 12),
