@@ -994,30 +994,35 @@ Future<void> toggleSeasonWatched(int serieId, String serieName, int seasonNumber
   
   if (seasonEpisodes.isNotEmpty) {
     // Remove all episodes of this season
-    for (final episode in seasonEpisodes) {
-      await _watchHistoryDb.deleteWatchHistoryItem(episode.id!);
-    }
+    await _watchHistoryDb.deleteWatchHistoryItemsBatch([
+      for (final episode in seasonEpisodes)
+        if (episode.id != null) episode.id!,
+    ]);
   } else {
     // Mark all episodes of this season as watched
     try {
       final episodesResponse = await apiClient.get(
         Uri.parse('${baseUrl}tv/$serieId/season/$seasonNumber?api_key=$apiKey'),
       );
-      
+
       if (episodesResponse.statusCode == 200) {
         final episodeData = json.decode(episodesResponse.body);
         final episodesList = episodeData['episodes'] as List<dynamic>;
-        
-        for (final episode in episodesList) {
-          await _watchHistoryDb.addShowToHistory(
-            tmdbId: serieId,
-            title: serieName,
-            posterPath: posterPath,
-            seasonNumber: seasonNumber,
-            episodeNumber: episode['episode_number'],
-            episodeTitle: episode['name'],
-          );
-        }
+        final watchedAt = DateTime.now();
+
+        await _watchHistoryDb.addShowEpisodesBatch([
+          for (final episode in episodesList)
+            WatchHistoryItem(
+              tmdbId: serieId,
+              title: serieName,
+              type: 'tv',
+              posterPath: posterPath,
+              watchedAt: watchedAt,
+              seasonNumber: seasonNumber,
+              episodeNumber: episode['episode_number'] as int?,
+              episodeTitle: episode['name'] as String?,
+            ),
+        ]);
       }
     } catch (e) {
       throw Exception('Failed to toggle season watch status: $e');

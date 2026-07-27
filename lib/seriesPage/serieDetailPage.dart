@@ -3,6 +3,7 @@ import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:Mirarr/functions/platform_helper.dart';
 
 import 'package:Mirarr/database/watch_history_database.dart';
+import 'package:Mirarr/models/watch_history_model.dart';
 import 'package:Mirarr/functions/fetchers/fetch_serie_details.dart';
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:Mirarr/functions/regionprovider_class.dart';
@@ -327,10 +328,11 @@ class _ShowWatchToggleState extends State<ShowWatchToggle> {
       if (_isWatched ?? false) {
         // Remove all episodes of this show from watch history
         final watchHistory = await _watchHistoryDb.getWatchHistoryByTmdbId(widget.serieId, 'tv');
-        for (final item in watchHistory) {
-          await _watchHistoryDb.deleteWatchHistoryItem(item.id!);
-        }
-        
+        await _watchHistoryDb.deleteWatchHistoryItemsBatch([
+          for (final item in watchHistory)
+            if (item.id != null) item.id!,
+        ]);
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -343,7 +345,7 @@ class _ShowWatchToggleState extends State<ShowWatchToggle> {
       } else {
         // Mark entire show as watched by adding all episodes
         await _markEntireShowAsWatched();
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -384,34 +386,54 @@ class _ShowWatchToggleState extends State<ShowWatchToggle> {
     final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
     final apiKey = dotenv.env['TMDB_API_KEY'];
-    final seasonsList = widget.seasons ?? const [];
-    
+    final seasonNumbers = <int>[
+      for (final season in widget.seasons ?? const [])
+        if (season['season_number'] is int && season['season_number'] != 0)
+          season['season_number'] as int,
+    ];
+
     try {
-      for (final season in seasonsList) {
-        final seasonNumber = season['season_number'];
-        if (seasonNumber == 0) continue; // Skip specials
-        
-        // Fetch episodes for this season
-        final episodesResponse = await apiClient.get(
-          Uri.parse('${baseUrl}tv/${widget.serieId}/season/$seasonNumber?api_key=$apiKey'),
-        );
-        
-        if (episodesResponse.statusCode == 200) {
-          final episodeData = json.decode(episodesResponse.body);
+      // Cap concurrent season GETs so we don't exhaust the connection pool.
+      const maxConcurrent = 6;
+      final watchedAt = DateTime.now();
+      final rows = <WatchHistoryItem>[];
+
+      for (var i = 0; i < seasonNumbers.length; i += maxConcurrent) {
+        final end = (i + maxConcurrent < seasonNumbers.length)
+            ? i + maxConcurrent
+            : seasonNumbers.length;
+        final chunk = seasonNumbers.sublist(i, end);
+        final responses = await Future.wait(chunk.map((seasonNumber) {
+          return apiClient.get(
+            Uri.parse(
+                '${baseUrl}tv/${widget.serieId}/season/$seasonNumber?api_key=$apiKey'),
+          );
+        }));
+
+        for (var j = 0; j < chunk.length; j++) {
+          final response = responses[j];
+          if (response.statusCode != 200) continue;
+
+          final episodeData = json.decode(response.body);
           final episodesList = episodeData['episodes'] as List<dynamic>;
-          
+          final seasonNumber = chunk[j];
+
           for (final episode in episodesList) {
-            await _watchHistoryDb.addShowToHistory(
+            rows.add(WatchHistoryItem(
               tmdbId: widget.serieId,
               title: widget.serieName,
+              type: 'tv',
               posterPath: widget.posterPath,
+              watchedAt: watchedAt,
               seasonNumber: seasonNumber,
-              episodeNumber: episode['episode_number'],
-              episodeTitle: episode['name'],
-            );
+              episodeNumber: episode['episode_number'] as int?,
+              episodeTitle: episode['name'] as String?,
+            ));
           }
         }
       }
+
+      await _watchHistoryDb.addShowEpisodesBatch(rows);
     } catch (e) {
       throw Exception('Failed to mark entire show as watched: $e');
     }

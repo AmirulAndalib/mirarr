@@ -109,6 +109,17 @@ class WatchHistoryDatabase {
     await box.delete(id);
   }
 
+  Future<void> addShowEpisodesBatch(List<WatchHistoryItem> items) async {
+    if (items.isEmpty) return;
+    await importWatchHistory(items);
+  }
+
+  Future<void> deleteWatchHistoryItemsBatch(List<int> ids) async {
+    if (ids.isEmpty) return;
+    final box = await webBox;
+    await box.deleteAll(ids);
+  }
+
   Future<List<WatchHistoryItem>> getAllWatchHistory() async {
     final box = await webBox;
     final list = box.values

@@ -82,6 +82,21 @@ class WatchHistoryDatabase {
     await _request(_Operation.delete, [id]);
   }
 
+  /// Inserts (or updates) many show episodes in one isolate round-trip.
+  ///
+  /// Uses a single `BEGIN`/`COMMIT` and one prepared INSERT statement so marking
+  /// a long-running series does not pay per-episode IPC and prepare overhead.
+  Future<void> addShowEpisodesBatch(List<WatchHistoryItem> items) async {
+    if (items.isEmpty) return;
+    await _request(_Operation.insertBatch, [items]);
+  }
+
+  /// Deletes many watch-history rows in one isolate round-trip.
+  Future<void> deleteWatchHistoryItemsBatch(List<int> ids) async {
+    if (ids.isEmpty) return;
+    await _request(_Operation.deleteBatch, [ids]);
+  }
+
   Future<List<WatchHistoryItem>> getAllWatchHistory() async {
     return _items(await _request(_Operation.getAll));
   }
@@ -185,9 +200,11 @@ class WatchHistoryDatabase {
 
 enum _Operation {
   insert,
+  insertBatch,
   import,
   update,
   delete,
+  deleteBatch,
   getAll,
   getByType,
   getByTmdbId,
@@ -441,6 +458,10 @@ Object? _runRequest(Database db, _Request request) {
     case _Operation.insert:
       return _insertItem(db, arguments[0] as WatchHistoryItem);
 
+    case _Operation.insertBatch:
+      _insertItemsBatch(db, (arguments[0] as List).cast<WatchHistoryItem>());
+      return null;
+
     case _Operation.import:
       _importItems(db, (arguments[0] as List).cast<WatchHistoryItem>());
       return null;
@@ -451,6 +472,10 @@ Object? _runRequest(Database db, _Request request) {
 
     case _Operation.delete:
       db.execute('DELETE FROM $_tableName WHERE id = ?', [arguments[0]]);
+      return null;
+
+    case _Operation.deleteBatch:
+      _deleteItemsBatch(db, (arguments[0] as List).cast<int>());
       return null;
 
     case _Operation.getAll:
@@ -566,6 +591,66 @@ void _importItems(Database db, List<WatchHistoryItem> items) {
   } catch (_) {
     db.execute('ROLLBACK');
     rethrow;
+  }
+}
+
+void _insertItemsBatch(Database db, List<WatchHistoryItem> items) {
+  db.execute('BEGIN TRANSACTION');
+  final statement = db.prepare('''
+    INSERT INTO $_tableName (
+      tmdb_id, title, type, poster_path, watched_at,
+      season_number, episode_number, episode_title, user_rating, notes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ''');
+  try {
+    for (final item in items) {
+      final existing = _existingId(
+          db, item.tmdbId, item.type, item.seasonNumber, item.episodeNumber);
+      if (existing != null) {
+        _updateItem(db, item);
+        continue;
+      }
+
+      try {
+        statement.execute([
+          item.tmdbId,
+          item.title,
+          item.type,
+          item.posterPath,
+          item.watchedAt.millisecondsSinceEpoch,
+          item.seasonNumber,
+          item.episodeNumber,
+          item.episodeTitle,
+          item.userRating,
+          item.notes,
+        ]);
+      } on SqliteException catch (error) {
+        if (!error.toString().contains('UNIQUE constraint failed')) rethrow;
+        _updateItem(db, item);
+      }
+    }
+    db.execute('COMMIT');
+  } catch (_) {
+    db.execute('ROLLBACK');
+    rethrow;
+  } finally {
+    statement.dispose();
+  }
+}
+
+void _deleteItemsBatch(Database db, List<int> ids) {
+  db.execute('BEGIN TRANSACTION');
+  final statement = db.prepare('DELETE FROM $_tableName WHERE id = ?');
+  try {
+    for (final id in ids) {
+      statement.execute([id]);
+    }
+    db.execute('COMMIT');
+  } catch (_) {
+    db.execute('ROLLBACK');
+    rethrow;
+  } finally {
+    statement.dispose();
   }
 }
 

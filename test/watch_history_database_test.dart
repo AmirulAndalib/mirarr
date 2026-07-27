@@ -153,6 +153,72 @@ void main() {
     expect(await db.getAllWatchHistory(), hasLength(1));
   });
 
+  test('addShowEpisodesBatch inserts many episodes in one transaction', () async {
+    final db = WatchHistoryDatabase();
+    final watchedAt = DateTime(2024, 6, 1);
+
+    await db.addShowEpisodesBatch([
+      for (var episode = 1; episode <= 5; episode++)
+        WatchHistoryItem(
+          tmdbId: 42,
+          title: 'The Expanse',
+          type: 'tv',
+          watchedAt: watchedAt,
+          seasonNumber: 1,
+          episodeNumber: episode,
+          episodeTitle: 'Episode $episode',
+        ),
+    ]);
+
+    final history = await db.getWatchHistoryByTmdbId(42, 'tv');
+    expect(history, hasLength(5));
+    expect(
+      history.map((item) => item.episodeNumber),
+      unorderedEquals([1, 2, 3, 4, 5]),
+    );
+
+    // Re-batching the same episodes updates in place instead of duplicating.
+    await db.addShowEpisodesBatch([
+      WatchHistoryItem(
+        tmdbId: 42,
+        title: 'The Expanse',
+        type: 'tv',
+        watchedAt: watchedAt,
+        seasonNumber: 1,
+        episodeNumber: 1,
+        episodeTitle: 'Dulcinea',
+      ),
+    ]);
+    final updated = await db.getWatchHistoryByTmdbId(42, 'tv');
+    expect(updated, hasLength(5));
+    expect(
+      updated.firstWhere((item) => item.episodeNumber == 1).episodeTitle,
+      'Dulcinea',
+    );
+  });
+
+  test('deleteWatchHistoryItemsBatch removes many rows at once', () async {
+    final db = WatchHistoryDatabase();
+    await db.addShowEpisodesBatch([
+      for (var episode = 1; episode <= 3; episode++)
+        WatchHistoryItem(
+          tmdbId: 7,
+          title: 'Severance',
+          type: 'tv',
+          watchedAt: DateTime(2024),
+          seasonNumber: 1,
+          episodeNumber: episode,
+        ),
+    ]);
+
+    final ids = (await db.getWatchHistoryByTmdbId(7, 'tv'))
+        .map((item) => item.id!)
+        .toList();
+    await db.deleteWatchHistoryItemsBatch(ids);
+
+    expect(await db.getWatchHistoryByTmdbId(7, 'tv'), isEmpty);
+  });
+
   test('close releases the file so a backup can be restored over it', () async {
     final db = WatchHistoryDatabase();
     await db.addMovieToHistory(tmdbId: 1, title: 'Dune');

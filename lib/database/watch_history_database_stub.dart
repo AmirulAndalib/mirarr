@@ -5,6 +5,10 @@ class WatchHistoryDatabase {
   Future<void> importWatchHistory(List<WatchHistoryItem> items) => throw UnimplementedError();
   Future<void> updateWatchHistoryItem(WatchHistoryItem item) => throw UnimplementedError();
   Future<void> deleteWatchHistoryItem(int id) => throw UnimplementedError();
+  Future<void> addShowEpisodesBatch(List<WatchHistoryItem> items) =>
+      throw UnimplementedError();
+  Future<void> deleteWatchHistoryItemsBatch(List<int> ids) =>
+      throw UnimplementedError();
   Future<List<WatchHistoryItem>> getAllWatchHistory() => throw UnimplementedError();
   Future<List<WatchHistoryItem>> getWatchedMovies() => throw UnimplementedError();
   Future<List<WatchHistoryItem>> getWatchedShows() => throw UnimplementedError();
