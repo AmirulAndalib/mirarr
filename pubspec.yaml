@@ -52,55 +52,25 @@ flutter:
     - .env
     - assets/images/person.png
     - assets/images/duckie.png
+    # Secondary fonts: loaded at runtime on native via FontLoader.
+    # Kept out of the `fonts:` section so Flutter web does not preload them.
+    - assets/fonts/Poppins-Medium.ttf
+    - assets/fonts/RobotoMono-VariableFont_wght.ttf
+    - assets/fonts/Harry.ttf
+    - assets/fonts/matrix.ttf
+    - assets/fonts/Starjedi.ttf
+    - assets/fonts/Spiderman.ttf
+    - assets/fonts/avengers.ttf
+    - assets/fonts/batman.ttf
+    - assets/fonts/shrek.ttf
+    - assets/fonts/deadpool.ttf
+    - assets/fonts/dune.ttf
+    - assets/fonts/monsters.ttf
+    - assets/fonts/lotr.ttf
+    - assets/fonts/nothing.ttf
   fonts:
-    - family: Poppins
-      fonts:
-        - asset: assets/fonts/Poppins-Medium.ttf
-    - family: PlayfairDisplay
-      fonts:
-        - asset: assets/fonts/PlayfairDisplay-Italic-VariableFont_wght.ttf
-    - family: Ubuntu
-      fonts:
-        - asset: assets/fonts/Ubuntu-Light.ttf
-    - family: RobotoMono
-      fonts:
-        - asset: assets/fonts/RobotoMono-VariableFont_wght.ttf
+    # Only PlusJakartaSans is registered as a manifest font so web startup
+    # downloads this one font (plus MaterialIcons) instead of every face.
     - family: PlusJakartaSans
       fonts:
         - asset: assets/fonts/PlusJakartaSans-VariableFont_wght.ttf
-    - family: HarryPotter
-      fonts:
-        - asset: assets/fonts/Harry.ttf
-    - family: Matrix
-      fonts:
-        - asset: assets/fonts/matrix.ttf
-    - family: Starwars
-      fonts:
-        - asset: assets/fonts/Starjedi.ttf
-    - family: Spiderman
-      fonts:
-        - asset: assets/fonts/Spiderman.ttf
-    - family: Avengers
-      fonts:
-        - asset: assets/fonts/avengers.ttf
-    - family: Batman
-      fonts:
-        - asset: assets/fonts/batman.ttf
-    - family: Shrek
-      fonts:
-        - asset: assets/fonts/shrek.ttf
-    - family: Deadpool
-      fonts:
-        - asset: assets/fonts/deadpool.ttf
-    - family: Dune
-      fonts:
-        - asset: assets/fonts/dune.ttf
-    - family: Monsters
-      fonts:
-        - asset: assets/fonts/monsters.ttf
-    - family: Lotr
-      fonts:
-        - asset: assets/fonts/lotr.ttf
-    - family: Nothing
-      fonts:
-        - asset: assets/fonts/nothing.ttf

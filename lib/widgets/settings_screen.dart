@@ -19,7 +19,7 @@ import 'package:Mirarr/services/api_client.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:Mirarr/functions/file_saver.dart' as fs;
 
 class SettingsPage extends StatefulWidget {
@@ -1031,6 +1031,9 @@ class _SettingsPageState extends State<SettingsPage> {
         type: FileType.custom,
         allowedExtensions: ['csv'],
         withData: true,
+        // On web the default blur handling cancels the pick one second after
+        // the window regains focus, which races the browser's change event.
+        cancelUploadOnWindowBlur: false,
       );
       if (result == null || result.files.isEmpty) return;
 
@@ -1127,6 +1130,7 @@ class _SettingsPageState extends State<SettingsPage> {
         type: FileType.custom,
         allowedExtensions: ['json'],
         withData: true,
+        cancelUploadOnWindowBlur: false,
       );
       if (result == null || result.files.isEmpty) return;
 
@@ -1382,13 +1386,27 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  void _importMoviesJson() async {
+  void _importMoviesJson() => _importWatchHistoryJson(
+        kind: 'movies',
+        progressLabel: 'Importing movie watch history...',
+      );
+
+  void _importShowsJson() => _importWatchHistoryJson(
+        kind: 'TV shows',
+        progressLabel: 'Importing TV shows watch history...',
+      );
+
+  Future<void> _importWatchHistoryJson({
+    required String kind,
+    required String progressLabel,
+  }) async {
     bool isDialogOpen = false;
     try {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['json'],
         withData: true,
+        cancelUploadOnWindowBlur: false,
       );
       if (result == null || result.files.isEmpty) return;
 
@@ -1419,20 +1437,26 @@ class _SettingsPageState extends State<SettingsPage> {
       }
 
       final List<WatchHistoryItem> items = [];
-      for (var rawMap in decoded) {
-        if (rawMap is Map<String, dynamic>) {
-          final Map<String, dynamic> map = Map<String, dynamic>.from(rawMap);
-          if (map['user_rating'] is int) {
-            map['user_rating'] = (map['user_rating'] as int).toDouble();
-          }
-          items.add(WatchHistoryItem.fromMap(map));
+      var skipped = 0;
+      for (final rawMap in decoded) {
+        if (rawMap is! Map) {
+          skipped++;
+          continue;
+        }
+        try {
+          items.add(
+            WatchHistoryItem.fromMap(Map<String, dynamic>.from(rawMap)),
+          );
+        } catch (e) {
+          skipped++;
+          debugPrint('Skipping invalid $kind watch history item: $e');
         }
       }
 
       if (items.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No valid movie watch history items found.')),
+            SnackBar(content: Text('No valid $kind watch history items found.')),
           );
         }
         return;
@@ -1452,11 +1476,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
                 ),
               ),
-              content: const Row(
+              content: Row(
                 children: [
-                  M3ExpressiveSpinner(size: 28),
-                  SizedBox(width: 20),
-                  Expanded(child: Text('Importing movie watch history...')),
+                  const M3ExpressiveSpinner(size: 28),
+                  const SizedBox(width: 20),
+                  Expanded(child: Text(progressLabel)),
                 ],
               ),
             ),
@@ -1474,116 +1498,10 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Successfully imported ${items.length} watched movies!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted && isDialogOpen) {
-        Navigator.of(context).pop();
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error importing movies: $e')),
-        );
-      }
-    }
-  }
-
-  void _importShowsJson() async {
-    bool isDialogOpen = false;
-    try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-        withData: true,
-      );
-      if (result == null || result.files.isEmpty) return;
-
-      final file = result.files.first;
-      String content = '';
-      if (file.bytes != null) {
-        content = utf8.decode(file.bytes!);
-      } else if (!kIsWeb && file.path != null) {
-        final ioFile = File(file.path!);
-        content = await ioFile.readAsString();
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to read file content')),
-          );
-        }
-        return;
-      }
-
-      final dynamic decoded = json.decode(content);
-      if (decoded is! List) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid JSON format. Expected a JSON list.')),
-          );
-        }
-        return;
-      }
-
-      final List<WatchHistoryItem> items = [];
-      for (var rawMap in decoded) {
-        if (rawMap is Map<String, dynamic>) {
-          final Map<String, dynamic> map = Map<String, dynamic>.from(rawMap);
-          if (map['user_rating'] is int) {
-            map['user_rating'] = (map['user_rating'] as int).toDouble();
-          }
-          items.add(WatchHistoryItem.fromMap(map));
-        }
-      }
-
-      if (items.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No valid show watch history items found.')),
-          );
-        }
-        return;
-      }
-
-      if (mounted) {
-        isDialogOpen = true;
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => PopScope(
-            canPop: false,
-            child: AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
-                ),
-              ),
-              content: const Row(
-                children: [
-                  M3ExpressiveSpinner(size: 28),
-                  SizedBox(width: 20),
-                  Expanded(child: Text('Importing TV shows watch history...')),
-                ],
-              ),
+            content: Text(
+              'Successfully imported ${items.length} watched $kind!'
+              '${skipped > 0 ? ' Skipped $skipped unreadable entries.' : ''}',
             ),
-          ),
-        ).then((_) => isDialogOpen = false);
-      }
-
-      final db = WatchHistoryDatabase();
-      await db.importWatchHistory(items);
-
-      if (mounted && isDialogOpen) {
-        Navigator.of(context).pop();
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully imported ${items.length} watched TV shows!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -1594,7 +1512,7 @@ class _SettingsPageState extends State<SettingsPage> {
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error importing TV shows: $e')),
+          SnackBar(content: Text('Error importing $kind: $e')),
         );
       }
     }
@@ -1606,6 +1524,7 @@ class _SettingsPageState extends State<SettingsPage> {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['db'],
+        cancelUploadOnWindowBlur: false,
       );
       if (result == null || result.files.isEmpty) return;
 
