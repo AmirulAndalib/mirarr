@@ -54,7 +54,10 @@ class ImageGalleryPage extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
               child: CachedNetworkImage(
-                imageUrl: '${getImageBaseUrl(region)}/t/p/original${imageUrls[index]}',
+                imageUrl:
+                    '${getImageBaseUrl(region)}/t/p/w500${imageUrls[index]}',
+                memCacheWidth: 400,
+                maxWidthDiskCache: 500,
                 placeholder: (context, url) => Container(
                   color: colorScheme.surfaceContainerHigh,
                   child: const M3ExpressiveSpinner(),

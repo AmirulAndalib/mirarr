@@ -1030,7 +1030,9 @@ class _MovieDetailPageMobile extends StatelessWidget {
         children: [
           Stack(children: [
             CachedNetworkImage(
-              imageUrl: '${getImageBaseUrl(region)}/t/p/original$backdrops',
+              imageUrl: '${getImageBaseUrl(region)}/t/p/w780$backdrops',
+              memCacheWidth: 780,
+              maxWidthDiskCache: 780,
               placeholder: (context, url) => Skeletonizer(
                 enabled: true,
                 containersColor: Colors.white.withOpacity(0.05),

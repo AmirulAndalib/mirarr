@@ -203,7 +203,10 @@ class _CastDetailPageState extends State<CastDetailPage> {
                                   child: Icon(Icons.person_rounded, size: 80, color: colorScheme.onSurfaceVariant),
                                 )
                               : CachedNetworkImage(
-                                  imageUrl: '${getImageBaseUrl(region)}/t/p/original${castData['profile_path']}',
+                                  imageUrl:
+                                      '${getImageBaseUrl(region)}/t/p/w500${castData['profile_path']}',
+                                  memCacheWidth: 400,
+                                  maxWidthDiskCache: 500,
                                   placeholder: (context, url) => Container(
                                     height: 360,
                                     color: colorScheme.surfaceContainerHigh,
@@ -351,7 +354,10 @@ class _CastDetailPageState extends State<CastDetailPage> {
                                   child: Icon(Icons.person_rounded, size: 100, color: colorScheme.onSurfaceVariant),
                                 )
                               : CachedNetworkImage(
-                                  imageUrl: '${getImageBaseUrl(region)}/t/p/original${castData['profile_path']}',
+                                  imageUrl:
+                                      '${getImageBaseUrl(region)}/t/p/w500${castData['profile_path']}',
+                                  memCacheWidth: 400,
+                                  maxWidthDiskCache: 500,
                                   placeholder: (context, url) => const M3ExpressiveSpinner(),
                                   errorWidget: (context, url, error) => const Icon(Icons.error),
                                   imageBuilder: (context, imageProvider) => Container(
