@@ -48,37 +48,37 @@ class _M3ExpressiveSpinnerState extends State<M3ExpressiveSpinner>
     return Center(
       child: AnimatedBuilder(
         animation: _controller,
+        child: Container(
+          width: widget.size + 16,
+          height: widget.size + 16,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: trackColor.withValues(alpha: 0.5),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
+          child: SizedBox(
+            width: widget.size,
+            height: widget.size,
+            child: CustomPaint(
+              painter: _M3ExpressiveSpinnerPainter(
+                progressListenable: _controller,
+                primaryColor: primaryColor,
+                secondaryColor: secondaryColor,
+                trackColor: primaryColor.withValues(alpha: 0.12),
+              ),
+            ),
+          ),
+        ),
         builder: (context, child) {
           final value = _controller.value;
           final scale = 0.92 + (0.08 * math.sin(value * 2 * math.pi));
-
           return Transform.scale(
             scale: scale,
-            child: Container(
-              width: widget.size + 16,
-              height: widget.size + 16,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: trackColor.withValues(alpha: 0.5),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
-                  width: 1,
-                ),
-              ),
-              child: SizedBox(
-                width: widget.size,
-                height: widget.size,
-                child: CustomPaint(
-                  painter: _M3ExpressiveSpinnerPainter(
-                    progress: value,
-                    primaryColor: primaryColor,
-                    secondaryColor: secondaryColor,
-                    trackColor: primaryColor.withValues(alpha: 0.12),
-                  ),
-                ),
-              ),
-            ),
+            child: child,
           );
         },
       ),
@@ -87,37 +87,32 @@ class _M3ExpressiveSpinnerState extends State<M3ExpressiveSpinner>
 }
 
 class _M3ExpressiveSpinnerPainter extends CustomPainter {
-  final double progress;
+  final Animation<double> progressListenable;
   final Color primaryColor;
   final Color secondaryColor;
   final Color trackColor;
 
+  // Cached paints keyed on radius — avoid SweepGradient.createShader every frame.
+  double? _cachedRadius;
+  Paint? _cachedPrimaryPaint;
+  final Paint _trackPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 4.0;
+  final Paint _dotPaint = Paint()..style = PaintingStyle.fill;
+
   _M3ExpressiveSpinnerPainter({
-    required this.progress,
+    required this.progressListenable,
     required this.primaryColor,
     required this.secondaryColor,
     required this.trackColor,
-  });
+  }) : super(repaint: progressListenable);
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (math.min(size.width, size.height) / 2) - 4;
-    const strokeWidth = 4.0;
-
-    // 1. Draw Track
-    final trackPaint = Paint()
-      ..color = trackColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth;
-    canvas.drawCircle(center, radius, trackPaint);
-
-    // 2. Main Morphing Primary Arc
-    final rotationAngle = progress * 2 * math.pi;
-    final startAngle = rotationAngle;
-    final sweepAngle = (math.pi * 0.8) + (math.pi * 0.4 * math.sin(progress * 2 * math.pi));
-
-    final primaryPaint = Paint()
+  void _ensurePaints(Offset center, double radius) {
+    if (_cachedRadius == radius && _cachedPrimaryPaint != null) return;
+    _cachedRadius = radius;
+    _trackPaint.color = trackColor;
+    _dotPaint.color = secondaryColor;
+    _cachedPrimaryPaint = Paint()
       ..shader = SweepGradient(
         colors: [
           primaryColor.withValues(alpha: 0.2),
@@ -125,19 +120,41 @@ class _M3ExpressiveSpinnerPainter extends CustomPainter {
           secondaryColor,
         ],
         stops: const [0.0, 0.6, 1.0],
-        transform: GradientRotation(rotationAngle),
       ).createShader(Rect.fromCircle(center: center, radius: radius))
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = strokeWidth;
+      ..strokeWidth = 4.0;
+  }
 
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (math.min(size.width, size.height) / 2) - 4;
+    final progress = progressListenable.value;
+
+    _ensurePaints(center, radius);
+
+    // 1. Draw Track
+    canvas.drawCircle(center, radius, _trackPaint);
+
+    // 2. Main Morphing Primary Arc — rotate canvas instead of rebuilding shader
+    final rotationAngle = progress * 2 * math.pi;
+    const startAngle = 0.0;
+    final sweepAngle =
+        (math.pi * 0.8) + (math.pi * 0.4 * math.sin(progress * 2 * math.pi));
+
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(rotationAngle);
+    canvas.translate(-center.dx, -center.dy);
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       startAngle,
       sweepAngle,
       false,
-      primaryPaint,
+      _cachedPrimaryPaint!,
     );
+    canvas.restore();
 
     // 3. Counter-rotating Secondary Accent Dot
     final dotAngle = -rotationAngle * 1.5;
@@ -146,17 +163,13 @@ class _M3ExpressiveSpinnerPainter extends CustomPainter {
       center.dx + dotRadius * math.cos(dotAngle),
       center.dy + dotRadius * math.sin(dotAngle),
     );
-
-    final dotPaint = Paint()
-      ..color = secondaryColor
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(dotOffset, 3.0, dotPaint);
+    canvas.drawCircle(dotOffset, 3.0, _dotPaint);
   }
 
   @override
   bool shouldRepaint(covariant _M3ExpressiveSpinnerPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-        oldDelegate.primaryColor != primaryColor ||
-        oldDelegate.secondaryColor != secondaryColor;
+    return oldDelegate.primaryColor != primaryColor ||
+        oldDelegate.secondaryColor != secondaryColor ||
+        oldDelegate.trackColor != trackColor;
   }
 }
