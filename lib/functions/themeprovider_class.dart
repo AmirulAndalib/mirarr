@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io' as io;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeProvider extends ChangeNotifier {
@@ -305,15 +304,9 @@ class AppThemes {
     );
 
     final TextTheme baseTextTheme = ThemeData.dark().textTheme;
-
-    TextTheme expressiveTextTheme;
-    if (fontFamily == 'RobotoMono') {
-      expressiveTextTheme = GoogleFonts.robotoMonoTextTheme(baseTextTheme);
-    } else if (fontFamily == 'Nothing') {
-      expressiveTextTheme = baseTextTheme.apply(fontFamily: 'Nothing');
-    } else {
-      expressiveTextTheme = GoogleFonts.plusJakartaSansTextTheme(baseTextTheme);
-    }
+    final String resolvedFontFamily = fontFamily ?? 'PlusJakartaSans';
+    final TextTheme expressiveTextTheme =
+        baseTextTheme.apply(fontFamily: resolvedFontFamily);
 
     return ThemeData(
       useMaterial3: true,
@@ -321,7 +314,7 @@ class AppThemes {
       colorScheme: baseColorScheme,
       scaffoldBackgroundColor: const Color(0xFF0E0E12),
       textTheme: expressiveTextTheme,
-      fontFamily: fontFamily,
+      fontFamily: resolvedFontFamily,
       pageTransitionsTheme: PageTransitionsTheme(
         builders: Map<TargetPlatform, PageTransitionsBuilder>.fromIterable(
           TargetPlatform.values,
@@ -468,15 +461,9 @@ class AppThemes {
     final TextTheme baseTextTheme = brightness == Brightness.dark
         ? ThemeData.dark().textTheme
         : ThemeData.light().textTheme;
-
-    TextTheme expressiveTextTheme;
-    if (fontFamily == 'RobotoMono') {
-      expressiveTextTheme = GoogleFonts.robotoMonoTextTheme(baseTextTheme);
-    } else if (fontFamily == 'Nothing') {
-      expressiveTextTheme = baseTextTheme.apply(fontFamily: 'Nothing');
-    } else {
-      expressiveTextTheme = GoogleFonts.plusJakartaSansTextTheme(baseTextTheme);
-    }
+    final String resolvedFontFamily = fontFamily ?? 'PlusJakartaSans';
+    final TextTheme expressiveTextTheme =
+        baseTextTheme.apply(fontFamily: resolvedFontFamily);
 
     return ThemeData(
       useMaterial3: true,
@@ -484,7 +471,7 @@ class AppThemes {
       colorScheme: baseColorScheme,
       scaffoldBackgroundColor: const Color(0xFF0E0E12),
       textTheme: expressiveTextTheme,
-      fontFamily: fontFamily,
+      fontFamily: resolvedFontFamily,
       pageTransitionsTheme: PageTransitionsTheme(
         builders: Map<TargetPlatform, PageTransitionsBuilder>.fromIterable(
           TargetPlatform.values,
