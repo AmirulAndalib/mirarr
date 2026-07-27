@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:Mirarr/services/supabase_sync_service.dart';
 
 class SupabaseProvider extends ChangeNotifier {
   String? _supabaseUrl;
@@ -99,8 +98,9 @@ class SupabaseProvider extends ChangeNotifier {
 
   // Fire off a request to warm up the connection without waiting for results
   void prefetchRemoteData() {
-    if (_isConfigured && client != null) {
-      SupabaseSyncService(client).getSyncStatus();
+    final supabaseClient = client;
+    if (_isConfigured && supabaseClient != null) {
+      supabaseClient.from('watch_history').select('id').limit(1);
     }
   }
 } 

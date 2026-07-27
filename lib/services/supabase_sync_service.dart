@@ -421,24 +421,7 @@ class SupabaseSyncService {
       final client = _client;
       if (client != null) {
         try {
-          // Count items by fetching all IDs in batches (most reliable method)
-          int offset = 0;
-          const batchSize = 1000;
-          
-          while (true) {
-            final response = await client
-                .from(_tableName)
-                .select('id')
-                .range(offset, offset + batchSize - 1);
-            
-            final List<dynamic> batch = response as List<dynamic>;
-            if (batch.isEmpty) break;
-            
-            remoteCount += batch.length;
-            
-            if (batch.length < batchSize) break;
-            offset += batchSize;
-          }
+          remoteCount = await client.from(_tableName).count(CountOption.exact);
         } catch (e) {
           debugPrint('Error getting remote count: $e');
         }
