@@ -73,6 +73,8 @@ class _ShelfPageState extends State<ShelfPage> {
   List<WatchHistoryItem> watchedMovies = [];
   List<WatchHistoryItem> watchedShows = [];
   List<WatchHistoryItem> diaryItems = [];
+  List<Map<String, dynamic>> _groupedShows = [];
+  List<Map<String, dynamic>> _filteredGroupedShows = [];
 
   bool isLoading = true;
 
@@ -166,6 +168,7 @@ class _ShelfPageState extends State<ShelfPage> {
         watchedMovies = movies;
         watchedShows = shows;
         diaryItems = diary;
+        _rebuildGroupedShows();
         totalMovieMinutes = movieMins;
         totalTvMinutes = tvMins;
         needsCalculation = uncachedCount > 0;
@@ -196,6 +199,9 @@ class _ShelfPageState extends State<ShelfPage> {
       watchedMovies.removeWhere((entry) => entry.id == id);
       watchedShows.removeWhere((entry) => entry.id == id);
       diaryItems.removeWhere((entry) => entry.id == id);
+      if (item.type == 'tv') {
+        _rebuildGroupedShows();
+      }
 
       if (runtime == null) {
         uncachedItemsCount = uncachedItemsCount > 0 ? uncachedItemsCount - 1 : 0;
@@ -807,7 +813,10 @@ class _ShelfPageState extends State<ShelfPage> {
               cursorColor: Theme.of(context).primaryColor,
               onChanged: (value) => _debouncedSetState(() {
                 if (_activeSection == 'movies') _movieQuery = value;
-                if (_activeSection == 'shows') _showQuery = value;
+                if (_activeSection == 'shows') {
+                  _showQuery = value;
+                  _applyShowQueryFilter();
+                }
                 if (_activeSection == 'diary') _diaryQuery = value;
               }),
               decoration: InputDecoration(
@@ -949,7 +958,10 @@ class _ShelfPageState extends State<ShelfPage> {
               cursorColor: colorScheme.primary,
               onChanged: (value) => _debouncedSetState(() {
                 if (_activeSection == 'movies') _movieQuery = value;
-                if (_activeSection == 'shows') _showQuery = value;
+                if (_activeSection == 'shows') {
+                  _showQuery = value;
+                  _applyShowQueryFilter();
+                }
                 if (_activeSection == 'diary') _diaryQuery = value;
               }),
               decoration: InputDecoration(
@@ -1249,13 +1261,12 @@ class _ShelfPageState extends State<ShelfPage> {
       );
     }
 
-    if (filtered.isEmpty) {
-      return const Center(
-        child: Text('No results', style: TextStyle(color: Colors.grey)),
-      );
-    }
-
     if (_showViewMode == 'list') {
+      if (filtered.isEmpty) {
+        return const Center(
+          child: Text('No results', style: TextStyle(color: Colors.grey)),
+        );
+      }
       return ListView.builder(
         padding: EdgeInsets.only(
           left: 16.0,
@@ -1269,8 +1280,15 @@ class _ShelfPageState extends State<ShelfPage> {
           return _buildDetailedListRow(show, region);
         },
       );
-    } else if (_showViewMode == 'compact') {
-      final grouped = _getGroupedShowsList(filtered);
+    }
+
+    if (_filteredGroupedShows.isEmpty) {
+      return const Center(
+        child: Text('No results', style: TextStyle(color: Colors.grey)),
+      );
+    }
+
+    if (_showViewMode == 'compact') {
       return GridView.builder(
         padding: EdgeInsets.only(
           left: 16.0,
@@ -1284,35 +1302,34 @@ class _ShelfPageState extends State<ShelfPage> {
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
         ),
-        itemCount: grouped.length,
+        itemCount: _filteredGroupedShows.length,
         itemBuilder: (context, index) {
-          final showGroup = grouped[index];
+          final showGroup = _filteredGroupedShows[index];
           return _buildGroupedShowCompactCard(showGroup, region);
         },
       );
-    } else {
-      // Grid Grouped Shows
-      final grouped = _getGroupedShowsList(filtered);
-      return GridView.builder(
-        padding: EdgeInsets.only(
-          left: 16.0,
-          right: 16.0,
-          top: 16.0,
-          bottom: TvFocusModeManager.isTvDevice ? 16.0 : BottomBar.getHeight(context),
-        ),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: MediaQuery.sizeOf(context).width >= 800 ? 5 : 3,
-          childAspectRatio: 0.7,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-        ),
-        itemCount: grouped.length,
-        itemBuilder: (context, index) {
-          final showGroup = grouped[index];
-          return _buildGroupedShowDetailedCard(showGroup, region);
-        },
-      );
     }
+
+    // Grid Grouped Shows
+    return GridView.builder(
+      padding: EdgeInsets.only(
+        left: 16.0,
+        right: 16.0,
+        top: 16.0,
+        bottom: TvFocusModeManager.isTvDevice ? 16.0 : BottomBar.getHeight(context),
+      ),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: MediaQuery.sizeOf(context).width >= 800 ? 5 : 3,
+        childAspectRatio: 0.7,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: _filteredGroupedShows.length,
+      itemBuilder: (context, index) {
+        final showGroup = _filteredGroupedShows[index];
+        return _buildGroupedShowDetailedCard(showGroup, region);
+      },
+    );
   }
 
   List<Map<String, dynamic>> _getGroupedShowsList(List<WatchHistoryItem> sourceList) {
@@ -1332,7 +1349,25 @@ class _ShelfPageState extends State<ShelfPage> {
         'episodes': episodes,
         'latestWatchedAt': latest.watchedAt,
       };
-    }).toList()..sort((a, b) => (b['latestWatchedAt'] as DateTime).compareTo(a['latestWatchedAt'] as DateTime));
+    }).toList()
+      ..sort((a, b) => (b['latestWatchedAt'] as DateTime)
+          .compareTo(a['latestWatchedAt'] as DateTime));
+  }
+
+  void _rebuildGroupedShows() {
+    _groupedShows = _getGroupedShowsList(watchedShows);
+    _applyShowQueryFilter();
+  }
+
+  void _applyShowQueryFilter() {
+    final query = _showQuery.trim().toLowerCase();
+    if (query.isEmpty) {
+      _filteredGroupedShows = _groupedShows;
+    } else {
+      _filteredGroupedShows = _groupedShows
+          .where((g) => (g['title'] as String).toLowerCase().contains(query))
+          .toList();
+    }
   }
 
   // DIARY CONTENT LAYER
