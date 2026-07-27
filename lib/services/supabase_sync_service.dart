@@ -396,13 +396,15 @@ class SupabaseSyncService {
   
   Future<Map<String, dynamic>> getSyncStatus() async {
     try {
-      final localCount = (await _localDb.getAllWatchHistory()).length;
+      final localCount = await _localDb.getWatchHistoryCount();
       
       int remoteCount = 0;
       final client = _client;
       if (client != null) {
         try {
-          remoteCount = await client.from(_tableName).count(CountOption.exact);
+          remoteCount = await client
+              .from(_tableName)
+              .count(CountOption.exact);
         } catch (e) {
           debugPrint('Error getting remote count: $e');
         }

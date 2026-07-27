@@ -16,6 +16,7 @@ class WatchHistoryDatabase {
   Future<bool> isWatched(int tmdbId, String type, {int? seasonNumber, int? episodeNumber}) => throw UnimplementedError();
   Future<List<WatchHistoryItem>> getRecentWatchHistory({int limit = 20}) => throw UnimplementedError();
   Future<Map<String, int>> getWatchStats() => throw UnimplementedError();
+  Future<int> getWatchHistoryCount() => throw UnimplementedError();
   Future<void> close() => throw UnimplementedError();
   
   Future<int> addMovieToHistory({

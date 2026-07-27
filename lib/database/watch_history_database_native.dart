@@ -129,6 +129,10 @@ class WatchHistoryDatabase {
     return stats.cast<String, int>();
   }
 
+  Future<int> getWatchHistoryCount() async {
+    return await _request(_Operation.getCount) as int;
+  }
+
   Future<void> close() async {
     final connecting = _connecting;
     if (_isolate == null && connecting != null) {
@@ -211,6 +215,7 @@ enum _Operation {
   isWatched,
   getRecent,
   getStats,
+  getCount,
   close,
 }
 
@@ -529,6 +534,10 @@ Object? _runRequest(Database db, _Request request) {
         stats[key] = row['count'] as int;
       }
       return stats;
+
+    case _Operation.getCount:
+      final row = db.select('SELECT COUNT(*) as count FROM $_tableName').first;
+      return row['count'] as int;
 
     case _Operation.close:
       throw StateError('Handled by the isolate message loop');

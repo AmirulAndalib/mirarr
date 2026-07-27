@@ -174,6 +174,11 @@ class WatchHistoryDatabase {
     };
   }
 
+  Future<int> getWatchHistoryCount() async {
+    final box = await webBox;
+    return box.length;
+  }
+
   Future<void> close() async {
     if (_webBox != null) {
       await _webBox!.close();
