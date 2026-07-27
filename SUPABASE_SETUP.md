@@ -67,7 +67,6 @@ FOR ALL USING (true);
 
 - **Upload**: Compares your local database with Supabase and ensures they match exactly. Items deleted locally will be removed from Supabase, and new/updated items will be uploaded.
 - **Download**: Merges remote data with local data without removing anything locally.
-- **Sync All**: Combines both operations for complete synchronization.
 
 ## Security Notes
 

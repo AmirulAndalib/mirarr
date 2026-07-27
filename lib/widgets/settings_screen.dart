@@ -108,37 +108,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _syncWatchHistory() async {
-    final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
-    if (!supabaseProvider.isConfigured) return;
-
-    setState(() {
-      _isSyncing = true;
-    });
-
-    final syncService = SupabaseSyncService(supabaseProvider.client);
-    final success = await syncService.syncWatchHistory();
-
-    setState(() {
-      _isSyncing = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-            ? 'Watch history synced successfully!'
-            : 'Failed to sync watch history. Check your connection. Make sure you have configured Supabase correctly. Read the documentation for more information.',
-        ),
-        backgroundColor: success ? Colors.green : Colors.red,
-      ),
-    );
-
-    if (success) {
-      _loadSyncStatus();
-    }
-  }
-
   void _uploadWatchHistory() async {
     final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
     if (!supabaseProvider.isConfigured) return;
@@ -417,27 +386,6 @@ class _SettingsPageState extends State<SettingsPage> {
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              FilledButton.icon(
-                                onPressed: _isSyncing ? null : _syncWatchHistory,
-                                icon: _isSyncing
-                                    ? SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: colorScheme.onPrimary,
-                                        ),
-                                      )
-                                    : const Icon(Icons.sync_rounded, size: 18),
-                                label: Text(_isSyncing ? 'Syncing...' : 'Sync All'),
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: colorScheme.primary,
-                                  foregroundColor: colorScheme.onPrimary,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                ),
-                              ),
                               FilledButton.icon(
                                 onPressed: _isSyncing ? null : _uploadWatchHistory,
                                 icon: const Icon(Icons.cloud_upload_rounded, size: 18),

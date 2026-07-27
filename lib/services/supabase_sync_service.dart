@@ -277,25 +277,6 @@ class SupabaseSyncService {
   }
  
   
-  Future<bool> syncWatchHistory() async {
-    if (!isConfigured) return false;
- 
-    try {
-      
-      await downloadWatchHistory();
-      
-      
-      await uploadWatchHistory();
-      
-      debugPrint('Watch history sync completed successfully');
-      return true;
-    } catch (e) {
-      debugPrint('Error syncing watch history: $e');
-      return false;
-    }
-  }
- 
-  
   Future<bool> addWatchHistoryItem(WatchHistoryItem item) async {
     try {
       // Add to local database first
