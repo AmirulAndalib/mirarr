@@ -57,14 +57,24 @@ class _SerieDetailPageDesktop extends StatelessWidget {
                         width: double.infinity,
                         decoration: BoxDecoration(
                           image: DecorationImage(
-                              image: CachedNetworkImageProvider(
-                                '${getImageBaseUrl(region)}/t/p/w780$backdrops',
-                              ),
-                              fit: BoxFit.fitWidth,
-                              opacity: 0.5),
+                            image: CachedNetworkImageProvider(
+                              '${getImageBaseUrl(region)}/t/p/w1280$backdrops',
+                            ),
+                            fit: BoxFit.cover,
+                            opacity: 0.3,
+                          ),
                         ),
                         child: Container(
-                          color: Colors.black.withValues(alpha: 0.4),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.6),
+                                Colors.black.withValues(alpha: 0.95),
+                              ],
+                            ),
+                          ),
                           child: Padding(
                             padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
                             child: Row(

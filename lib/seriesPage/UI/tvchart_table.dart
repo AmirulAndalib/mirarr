@@ -273,7 +273,7 @@ class _TvChartTableState extends State<TvChartTable> {
   Widget build(BuildContext context) {
     final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final imageUrl = widget.imagePath != null && widget.imagePath!.isNotEmpty
-        ? '${getImageBaseUrl(region)}/t/p/w780${widget.imagePath}'
+        ? '${getImageBaseUrl(region)}/t/p/w1280${widget.imagePath}'
         : null;
 
     return Scaffold(
@@ -284,15 +284,25 @@ class _TvChartTableState extends State<TvChartTable> {
           // Dimmed background image
           if (imageUrl != null)
             Positioned.fill(
-              child: Container(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
                   image: DecorationImage(
                     image: CachedNetworkImageProvider(imageUrl),
                     fit: BoxFit.cover,
+                    alignment: Alignment.center,
                   ),
                 ),
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.7),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.55),
+                        Colors.black.withValues(alpha: 0.85),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
