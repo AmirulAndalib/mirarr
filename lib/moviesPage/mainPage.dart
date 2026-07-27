@@ -9,7 +9,6 @@ import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
 import 'package:Mirarr/utils/expressive_motion.dart';
 import 'package:Mirarr/widgets/expressive_interactive_container.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -161,10 +160,9 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
         genres = fetchedGenres;
       });
 
-      // Browsers limit ~6 connections/host; keep headroom for images.
-      // Native can safely fan out all genre requests at once.
-      final batchSize = kIsWeb ? 8 : fetchedGenres.length;
-      if (batchSize == 0) return;
+      // Cap concurrent genre discovers so posters keep connection-pool headroom.
+      const batchSize = 8;
+      if (fetchedGenres.isEmpty) return;
 
       for (var i = 0; i < fetchedGenres.length; i += batchSize) {
         final end = (i + batchSize < fetchedGenres.length)

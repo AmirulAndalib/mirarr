@@ -5,7 +5,6 @@ import 'package:Mirarr/functions/fetchers/fetch_series_by_genre.dart';
 import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:Mirarr/seriesPage/function/on_tap_gridview_serie.dart';
 import 'package:Mirarr/seriesPage/function/on_tap_serie.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
@@ -134,10 +133,9 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
         genres = fetchedGenres;
       });
 
-      // Browsers limit ~6 connections/host; keep headroom for images.
-      // Native can safely fan out all genre requests at once.
-      final batchSize = kIsWeb ? 8 : fetchedGenres.length;
-      if (batchSize == 0) return;
+      // Cap concurrent genre discovers so posters keep connection-pool headroom.
+      const batchSize = 8;
+      if (fetchedGenres.isEmpty) return;
 
       for (var i = 0; i < fetchedGenres.length; i += batchSize) {
         final end = (i + batchSize < fetchedGenres.length)

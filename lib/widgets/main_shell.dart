@@ -2,6 +2,7 @@ import 'package:Mirarr/functions/navigation_provider.dart';
 import 'package:Mirarr/moviesPage/mainPage.dart';
 import 'package:Mirarr/seriesPage/seriesPage.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
+import 'package:Mirarr/widgets/lazy_indexed_stack.dart';
 import 'package:Mirarr/widgets/login.dart';
 import 'package:Mirarr/widgets/profile.dart';
 import 'package:Mirarr/widgets/search_screen.dart';
@@ -33,7 +34,8 @@ class MainShellPage extends StatelessWidget {
         children: [
           if (isTv) const BottomBar(),
           Expanded(
-            child: IndexedStack(
+            // Build tabs on first visit so cold start only fetches the active page.
+            child: LazyIndexedStack(
               index: navigationProvider.currentIndex,
               children: pages,
             ),
