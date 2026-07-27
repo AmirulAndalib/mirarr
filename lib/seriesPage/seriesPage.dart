@@ -49,8 +49,9 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
   Map<int, List<Serie>> seriesByGenre = {};
   late RegionProvider _regionProvider;
 
+  // Only the 2–3 cards actually on-screen; avoid rebuilding extras per shimmer tick.
   final List<Serie> _dummySeries = List.generate(
-    5,
+    3,
     (index) => Serie(
       name: 'TV Show Title Placeholder',
       posterPath: '',
@@ -67,7 +68,7 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
 
   late final Map<int, List<Serie>> _dummySeriesByGenre = {
     -100: List.generate(
-      5,
+      3,
       (index) => Serie(
         name: 'TV Show Title Placeholder',
         posterPath: '',
@@ -77,7 +78,7 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
       ),
     ),
     -101: List.generate(
-      5,
+      3,
       (index) => Serie(
         name: 'TV Show Title Placeholder',
         posterPath: '',
@@ -87,6 +88,18 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
       ),
     ),
   };
+
+  /// Static bone fill — animated shimmer would setState the whole card subtree every frame.
+  Widget _skeletonCard({required Widget child}) {
+    final fill = Colors.white.withValues(alpha: 0.05);
+    return Skeletonizer(
+      enabled: true,
+      ignorePointers: true,
+      containersColor: fill,
+      effect: SolidColorEffect(color: fill),
+      child: child,
+    );
+  }
 
   Future<List<Serie>> _fetchTrendingSeries() async {
     final region =
@@ -338,30 +351,31 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
                   height: 320,
                   child: ScrollConfiguration(
                     behavior: _seriesScrollBehavior,
-                    child: Skeletonizer(
-                      enabled: trendingSeries.isEmpty,
-                      containersColor: Colors.white.withValues(alpha: 0.05),
-                      effect: ShimmerEffect(
-                        baseColor: Colors.white.withValues(alpha: 0.05),
-                        highlightColor: Colors.white.withValues(alpha: 0.15),
-                      ),
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: trendingSeries.isEmpty ? _dummySeries.length : trendingSeries.length,
-                        itemBuilder: (context, index) {
-                          final serie = trendingSeries.isEmpty ? _dummySeries[index] : trendingSeries[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: TvFocusWrapper(
-                              autoFocus: index == 0 && trendingSeries.isNotEmpty,
-                              onTap: trendingSeries.isEmpty ? () {} : () => onTapSerie(serie.name, serie.id, context),
-                              child: CustomSeriesWidget(serie: serie),
-                            ),
-                          );
-                        },
-                      ),
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: trendingSeries.isEmpty
+                          ? _dummySeries.length
+                          : trendingSeries.length,
+                      itemBuilder: (context, index) {
+                        final loading = trendingSeries.isEmpty;
+                        final serie = loading
+                            ? _dummySeries[index]
+                            : trendingSeries[index];
+                        final card = CustomSeriesWidget(serie: serie);
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: loading
+                              ? _skeletonCard(child: card)
+                              : TvFocusWrapper(
+                                  autoFocus: index == 0,
+                                  onTap: () => onTapSerie(
+                                      serie.name, serie.id, context),
+                                  child: card,
+                                ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -372,29 +386,30 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
                   height: 320,
                   child: ScrollConfiguration(
                     behavior: _seriesScrollBehavior,
-                    child: Skeletonizer(
-                      enabled: popularSeries.isEmpty,
-                      containersColor: Colors.white.withValues(alpha: 0.05),
-                      effect: ShimmerEffect(
-                        baseColor: Colors.white.withValues(alpha: 0.05),
-                        highlightColor: Colors.white.withValues(alpha: 0.15),
-                      ),
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: popularSeries.isEmpty ? _dummySeries.length : popularSeries.length,
-                        itemBuilder: (context, index) {
-                          final serie = popularSeries.isEmpty ? _dummySeries[index] : popularSeries[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: TvFocusWrapper(
-                              onTap: popularSeries.isEmpty ? () {} : () => onTapSerie(serie.name, serie.id, context),
-                              child: CustomSeriesWidget(serie: serie),
-                            ),
-                          );
-                        },
-                      ),
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: popularSeries.isEmpty
+                          ? _dummySeries.length
+                          : popularSeries.length,
+                      itemBuilder: (context, index) {
+                        final loading = popularSeries.isEmpty;
+                        final serie = loading
+                            ? _dummySeries[index]
+                            : popularSeries[index];
+                        final card = CustomSeriesWidget(serie: serie);
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: loading
+                              ? _skeletonCard(child: card)
+                              : TvFocusWrapper(
+                                  onTap: () => onTapSerie(
+                                      serie.name, serie.id, context),
+                                  child: card,
+                                ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -413,53 +428,47 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
                         ? _dummySeries
                         : seriesByGenre[genre.id];
 
-                return Skeletonizer(
-                  enabled: genres.isEmpty || genreLoading,
-                  containersColor: Colors.white.withValues(alpha: 0.05),
-                  effect: ShimmerEffect(
-                    baseColor: Colors.white.withValues(alpha: 0.05),
-                    highlightColor: Colors.white.withValues(alpha: 0.15),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      _buildSectionHeader(
-                        genre.name,
-                        genreLoading || seriesByGenre[genre.id] == null
-                            ? null
-                            : () => onTapGridSerie(
-                                seriesByGenre[genre.id] ?? [], context),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        height: 320,
-                        child: ScrollConfiguration(
-                          behavior: _seriesScrollBehavior,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            physics: const BouncingScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: seriesList?.length ?? 0,
-                            itemBuilder: (context, itemIndex) {
-                              final serie = seriesList?[itemIndex];
-                              if (serie == null) return const SizedBox.shrink();
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 12),
-                                child: TvFocusWrapper(
-                                  onTap: genres.isEmpty || genreLoading
-                                      ? () {}
-                                      : () => onTapSerie(
+                final loading = genres.isEmpty || genreLoading;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildSectionHeader(
+                      genre.name,
+                      loading || seriesByGenre[genre.id] == null
+                          ? null
+                          : () => onTapGridSerie(
+                              seriesByGenre[genre.id] ?? [], context),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 320,
+                      child: ScrollConfiguration(
+                        behavior: _seriesScrollBehavior,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: seriesList?.length ?? 0,
+                          itemBuilder: (context, itemIndex) {
+                            final serie = seriesList?[itemIndex];
+                            if (serie == null) return const SizedBox.shrink();
+                            final card = CustomSeriesWidget(serie: serie);
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: loading
+                                  ? _skeletonCard(child: card)
+                                  : TvFocusWrapper(
+                                      onTap: () => onTapSerie(
                                           serie.name, serie.id, context),
-                                  child: CustomSeriesWidget(serie: serie),
-                                ),
-                              );
-                            },
-                          ),
+                                      child: card,
+                                    ),
+                            );
+                          },
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 );
               },
               childCount: currentGenres.length,
