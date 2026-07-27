@@ -1,5 +1,5 @@
 name: Mirarr
-description: A new Flutter project.
+description: An open source movie app.
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 version: 3.3.2
@@ -56,17 +56,6 @@ flutter:
     # Kept out of the `fonts:` section so Flutter web does not preload them.
     - assets/fonts/Poppins-Medium.ttf
     - assets/fonts/RobotoMono-VariableFont_wght.ttf
-    - assets/fonts/Harry.ttf
-    - assets/fonts/matrix.ttf
-    - assets/fonts/Starjedi.ttf
-    - assets/fonts/Spiderman.ttf
-    - assets/fonts/avengers.ttf
-    - assets/fonts/batman.ttf
-    - assets/fonts/shrek.ttf
-    - assets/fonts/deadpool.ttf
-    - assets/fonts/dune.ttf
-    - assets/fonts/monsters.ttf
-    - assets/fonts/lotr.ttf
     - assets/fonts/nothing.ttf
   fonts:
     # Only PlusJakartaSans is registered as a manifest font so web startup
