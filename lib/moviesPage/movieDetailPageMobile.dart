@@ -656,152 +656,121 @@ class _MovieDetailPageMobile extends StatelessWidget {
                     },
                   ),
                   const CustomDivider(),
-                  FutureBuilder(
-                    future: creditsFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      } else if (snapshot.hasError) {
-                        return const Text(
-                            'Error loading cast and crew details');
-                      } else {
-                        final Map<String, List<Map<String, dynamic>>> data =
-                            snapshot.data
-                                as Map<String, List<Map<String, dynamic>>>;
+                  if (state.directorName != null)
+                    Column(
+                      children: [
+                        Align(
+                          alignment: Alignment.topLeft,
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.fromLTRB(25, 15, 10, 0),
+                            child: Text(
+                              "Movies by ${state.directorName}",
+                              style:
+                                  getMovieTitleTextStyle(widget.movieId),
+                            ),
+                          ),
+                        ),
+                        ValueListenableBuilder<Future<dynamic>?>(
+                          valueListenable: state.directorMoviesFuture,
+                          builder: (context, directorMoviesFuture, _) {
+                            if (directorMoviesFuture == null) {
+                              return const Center(
+                                  child: CircularProgressIndicator());
+                            }
+                            return FutureBuilder(
+                              future: directorMoviesFuture,
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Center(
+                                      child: CircularProgressIndicator());
+                                } else if (snapshot.hasError) {
+                                  return const Text(
+                                      'Error loading other movies');
+                                } else {
+                                  List<dynamic> movies =
+                                      snapshot.data as List<dynamic>;
 
-                        final List<Map<String, dynamic>> crewList =
-                            data['crew'] ?? [];
-
-                        Map<String, dynamic>? director;
-
-                        for (var crewMember in crewList) {
-                          if (crewMember['job'] == 'Director') {
-                            director = crewMember;
-                            break;
-                          }
-                        }
-
-                        if (director != null) {
-                          return Column(
-                            children: [
-                              Align(
-                                alignment: Alignment.topLeft,
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(25, 15, 10, 0),
-                                  child: Text(
-                                    "Movies by ${director['name']}",
-                                    style:
-                                        getMovieTitleTextStyle(widget.movieId),
-                                  ),
-                                ),
-                              ),
-                              ValueListenableBuilder<Future<dynamic>?>(
-                                valueListenable: state.directorMoviesFuture,
-                                builder: (context, directorMoviesFuture, _) {
-                                  if (directorMoviesFuture == null) {
-                                    return const Center(
-                                        child: CircularProgressIndicator());
-                                  }
-                                  return FutureBuilder(
-                                      future: directorMoviesFuture,
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const Center(
-                                        child: CircularProgressIndicator());
-                                  } else if (snapshot.hasError) {
-                                    return const Text(
-                                        'Error loading other movies');
-                                  } else {
-                                    List<dynamic> movies =
-                                        snapshot.data as List<dynamic>;
-
-                                    return SizedBox(
-                                      height: 250,
-                                      child: ListView.builder(
-                                        scrollDirection: Axis.horizontal,
-                                        physics: const BouncingScrollPhysics(),
-                                        itemExtent: 116,
-                                        itemCount: movies.length,
-                                        itemBuilder: (context, index) {
-                                          final movie = movies[index];
-                                          return Padding(
-                                              padding:
-                                                  const EdgeInsets.all(8.0),
-                                              child: Column(
-                                                children: [
-                                                  TvFocusWrapper(
-                                                     onTap: () => state.onTapMovie(
-                                                         movie['title'],
-                                                         movie['id']),
-                                                     child: Card(
-                                                       child: SizedBox(
-                                                          height: 200,
-                                                          width: 100,
-                                                          child: ClipRRect(
-                                                            borderRadius: BorderRadius.circular(20),
-                                                            child: movie['poster_path'].isNotEmpty
-                                                                ? CachedNetworkImage(
-                                                                    imageUrl: '${getImageBaseUrl(region)}/t/p/w200${movie['poster_path']}',
-                                                                    fit: BoxFit.cover,
-                                                                    placeholder: (context, url) => Skeletonizer(
-                                                                      enabled: true,
-                                                                      containersColor: Colors.white.withOpacity(0.05),
-                                                                      effect: ShimmerEffect(
-                                                                        baseColor: Colors.white.withOpacity(0.05),
-                                                                        highlightColor: Colors.white.withOpacity(0.15),
-                                                                      ),
-                                                                      child: Container(
-                                                                        color: Colors.grey[900],
-                                                                      ),
+                                  return SizedBox(
+                                    height: 250,
+                                    child: ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      physics: const BouncingScrollPhysics(),
+                                      itemExtent: 116,
+                                      itemCount: movies.length,
+                                      itemBuilder: (context, index) {
+                                        final movie = movies[index];
+                                        return Padding(
+                                            padding:
+                                                const EdgeInsets.all(8.0),
+                                            child: Column(
+                                              children: [
+                                                TvFocusWrapper(
+                                                   onTap: () => state.onTapMovie(
+                                                       movie['title'],
+                                                       movie['id']),
+                                                   child: Card(
+                                                     child: SizedBox(
+                                                        height: 200,
+                                                        width: 100,
+                                                        child: ClipRRect(
+                                                          borderRadius: BorderRadius.circular(20),
+                                                          child: movie['poster_path'].isNotEmpty
+                                                              ? CachedNetworkImage(
+                                                                  imageUrl: '${getImageBaseUrl(region)}/t/p/w200${movie['poster_path']}',
+                                                                  fit: BoxFit.cover,
+                                                                  placeholder: (context, url) => Skeletonizer(
+                                                                    enabled: true,
+                                                                    containersColor: Colors.white.withOpacity(0.05),
+                                                                    effect: ShimmerEffect(
+                                                                      baseColor: Colors.white.withOpacity(0.05),
+                                                                      highlightColor: Colors.white.withOpacity(0.15),
                                                                     ),
-                                                                    errorWidget: (context, url, error) => Container(
+                                                                    child: Container(
                                                                       color: Colors.grey[900],
-                                                                      child: const Icon(Icons.error),
                                                                     ),
-                                                                  )
-                                                                : Container(
-                                                                    color: Colors.grey[900],
                                                                   ),
-                                                          ),
+                                                                  errorWidget: (context, url, error) => Container(
+                                                                    color: Colors.grey[900],
+                                                                    child: const Icon(Icons.error),
+                                                                  ),
+                                                                )
+                                                              : Container(
+                                                                  color: Colors.grey[900],
+                                                                ),
                                                         ),
-                                                     ),
-                                                   ),
-                                                  SizedBox(
-                                                    width: 70,
-                                                    child: Text(
-                                                      movie['title'],
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      maxLines: 2,
-                                                      softWrap: true,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: const TextStyle(
-                                                        fontSize: 10,
-                                                        color: Colors.white,
                                                       ),
+                                                   ),
+                                                 ),
+                                                SizedBox(
+                                                  width: 70,
+                                                  child: Text(
+                                                    movie['title'],
+                                                    textAlign:
+                                                        TextAlign.center,
+                                                    maxLines: 2,
+                                                    softWrap: true,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      fontSize: 10,
+                                                      color: Colors.white,
                                                     ),
                                                   ),
-                                                ],
-                                              ));
-                                        },
-                                      ),
-                                    );
-                                  }
-                                },
-                              );
-                                },
-                              ),
-                            ],
-                          );
-                        } else {
-                          return const SizedBox();
-                        }
-                      }
-                    },
-                  ),
+                                                ),
+                                              ],
+                                            ));
+                                      },
+                                    ),
+                                  );
+                                }
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   const CustomDivider(),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),

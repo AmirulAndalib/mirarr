@@ -46,6 +46,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   Future<dynamic>? _creditsFuture;
   Future<dynamic>? _availabilityFuture;
   final directorMoviesFuture = ValueNotifier<Future<dynamic>?>(null);
+  String? directorName;
   final isMovieWatchlist = ValueNotifier<bool?>(null);
   final isMovieFavorite = ValueNotifier<bool?>(null);
   final isUserLoggedIn = ValueNotifier<bool>(false);
@@ -204,6 +205,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
       _creditsFuture = Future.value(credits);
       for (final crewMember in credits['crew'] ?? const []) {
         if (crewMember['job'] == 'Director') {
+          directorName = crewMember['name'] as String?;
           directorMoviesFuture.value =
               fetchOtherMoviesByDirector(crewMember['id'], region);
           break;
