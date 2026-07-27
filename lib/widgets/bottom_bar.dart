@@ -10,9 +10,8 @@ class BottomBar extends StatelessWidget {
   const BottomBar({Key? key}) : super(key: key);
 
   static double getHeight(BuildContext context) {
-    final bool isTv = TvFocusModeManager.isTvDevice;
-    if (isTv) return 0.0;
-    final double bottomPadding = MediaQuery.of(context).padding.bottom;
+    if (TvFocusModeManager.isTvDevice) return 0.0;
+    final double bottomPadding = MediaQuery.paddingOf(context).bottom;
     return 72.0 + (bottomPadding > 0 ? bottomPadding : 16.0);
   }
 
@@ -68,7 +67,7 @@ class BottomBar extends StatelessWidget {
       );
     }
 
-    final double bottomPadding = MediaQuery.of(context).padding.bottom;
+    final double bottomPadding = MediaQuery.paddingOf(context).bottom;
 
     final items = const [
       _NavItemData(activeIcon: Icons.movie, inactiveIcon: Icons.movie_outlined, label: 'Movies'),

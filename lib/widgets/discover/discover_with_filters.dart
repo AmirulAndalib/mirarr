@@ -825,7 +825,7 @@ class _DiscoverMoviesPageState extends State<DiscoverMoviesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width;
+    final double screenWidth = MediaQuery.sizeOf(context).width;
     final bool useSplitPane = screenWidth > 900;
 
     return Scaffold(

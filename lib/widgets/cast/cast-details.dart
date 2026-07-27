@@ -164,7 +164,7 @@ class _CastDetailPageState extends State<CastDetailPage> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final isMobileLayout = MediaQuery.of(context).size.width < 800;
+    final isMobileLayout = MediaQuery.sizeOf(context).width < 800;
 
     return isMobileLayout
         ? SingleChildScrollView(

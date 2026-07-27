@@ -276,7 +276,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isMobileLayout = MediaQuery.of(context).size.width < 800;
+    final isMobileLayout = MediaQuery.sizeOf(context).width < 800;
     if (isMobileLayout) {
       return _MovieDetailPageMobile(this);
     } else {

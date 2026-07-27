@@ -171,7 +171,7 @@ class _SerieDetailPageMobile extends StatelessWidget {
                                 borderRadius:
                                     BorderRadius.all(Radius.circular(20)),
                               ),
-                              width: MediaQuery.of(context).size.width - 20,
+                              width: MediaQuery.sizeOf(context).width - 20,
                               child: Text(
                                 widget.serieName,
                                 softWrap: true,
@@ -1002,7 +1002,7 @@ class _SerieDetailPageMobile extends StatelessWidget {
                     decoration: const BoxDecoration(
                       borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
-                    width: MediaQuery.of(context).size.width - 20,
+                    width: MediaQuery.sizeOf(context).width - 20,
                     child: Text(
                       widget.serieName,
                       softWrap: true,

@@ -184,7 +184,7 @@ class _MovieDetailPageMobile extends StatelessWidget {
                                   borderRadius:
                                       BorderRadius.all(Radius.circular(20)),
                                 ),
-                                width: MediaQuery.of(context).size.width - 20,
+                                width: MediaQuery.sizeOf(context).width - 20,
                                 child: Text(
                                   widget.movieTitle,
                                   softWrap: true,
@@ -1058,7 +1058,7 @@ class _MovieDetailPageMobile extends StatelessWidget {
                     decoration: const BoxDecoration(
                       borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
-                    width: MediaQuery.of(context).size.width - 20,
+                    width: MediaQuery.sizeOf(context).width - 20,
                     child: Text(
                       widget.movieTitle,
                       softWrap: true,

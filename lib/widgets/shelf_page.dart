@@ -410,7 +410,7 @@ class _ShelfPageState extends State<ShelfPage> {
     }
 
     final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final width = MediaQuery.of(context).size.width;
+    final width = MediaQuery.sizeOf(context).width;
     final bool isLargeScreen = width >= 800;
 
     return Scaffold(
@@ -1146,7 +1146,7 @@ class _ShelfPageState extends State<ShelfPage> {
   }
 
   Widget _buildMovieGrid(List<WatchHistoryItem> items, String region, {required bool isCompact}) {
-    final width = MediaQuery.of(context).size.width;
+    final width = MediaQuery.sizeOf(context).width;
     final isLarge = width >= 800;
     
     int crossAxisCount;
@@ -1245,7 +1245,7 @@ class _ShelfPageState extends State<ShelfPage> {
           bottom: TvFocusModeManager.isTvDevice ? 16.0 : BottomBar.getHeight(context),
         ),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: MediaQuery.of(context).size.width >= 800 ? 7 : 4,
+          crossAxisCount: MediaQuery.sizeOf(context).width >= 800 ? 7 : 4,
           childAspectRatio: 0.7,
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
@@ -1267,7 +1267,7 @@ class _ShelfPageState extends State<ShelfPage> {
           bottom: TvFocusModeManager.isTvDevice ? 16.0 : BottomBar.getHeight(context),
         ),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: MediaQuery.of(context).size.width >= 800 ? 5 : 3,
+          crossAxisCount: MediaQuery.sizeOf(context).width >= 800 ? 5 : 3,
           childAspectRatio: 0.7,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
@@ -2077,7 +2077,7 @@ class _ShelfPageState extends State<ShelfPage> {
       isScrollControlled: true,
       builder: (context) {
         return Container(
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.75),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
