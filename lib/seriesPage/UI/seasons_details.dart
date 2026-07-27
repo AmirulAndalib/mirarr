@@ -7,7 +7,6 @@ import 'package:Mirarr/functions/get_imdb_score.dart';
 import 'package:Mirarr/moviesPage/UI/cast_crew_row.dart';
 import 'package:Mirarr/seriesPage/UI/tvchart_table.dart';
 import 'package:Mirarr/seriesPage/checkers/custom_tmdb_ids_effects_series.dart';
-import 'package:Mirarr/seriesPage/function/fetch_episode_cast_crew.dart';
 import 'package:Mirarr/seriesPage/function/seasons_api_cache.dart';
 import 'package:Mirarr/seriesPage/function/torrent_links_series.dart';
 import 'package:Mirarr/seriesPage/function/watch_links_series.dart';
@@ -204,205 +203,210 @@ void seasonsAndEpisodes(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (BuildContext context) {
-      return StatefulBuilder(
-        builder: (BuildContext context, StateSetter setModalState) {
-          final isLargeScreen = MediaQuery.sizeOf(context).width >= 800;
-          final double sheetHeight =
-              MediaQuery.sizeOf(context).height * (isLargeScreen ? 0.75 : 0.60);
+      final isLargeScreen = MediaQuery.sizeOf(context).width >= 800;
+      final double sheetHeight =
+          MediaQuery.sizeOf(context).height * (isLargeScreen ? 0.75 : 0.60);
 
-          if (sortedSeasons.isEmpty) {
-            return Container(
-              height: sheetHeight,
-              alignment: Alignment.center,
-              child: const Text('No seasons found.'),
-            );
-          }
+      if (sortedSeasons.isEmpty) {
+        return Container(
+          height: sheetHeight,
+          alignment: Alignment.center,
+          child: const Text('No seasons found.'),
+        );
+      }
 
-          final seasons = sortedSeasons;
+      final seasons = sortedSeasons;
 
-                return Container(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                  height: sheetHeight,
-                  child: Column(
-                    children: [
-                      // Drag handle
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 5,
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(2.5),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: ScrollConfiguration(
-                          behavior: const ScrollBehavior().copyWith(
-                            physics: const BouncingScrollPhysics(),
-                            scrollbars: true,
-                            dragDevices: {
-                              PointerDeviceKind.touch,
-                              PointerDeviceKind.mouse,
-                              PointerDeviceKind.trackpad,
-                            },
-                          ),
-                          child: CustomScrollView(
-                            slivers: [
-                              SliverToBoxAdapter(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Center(
-                                      child: Container(
-                                        constraints: const BoxConstraints(maxWidth: 400),
-                                        width: double.infinity,
-                                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                        child: ElevatedButton(
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) => TvChartTable(
-                                                  imdbId: imdbId,
-                                                  imagePath: imagePath,
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                                getSeriesColor(context, serieId),
-                                            minimumSize: const Size(double.infinity, 50),
-                                          ),
-                                          child: Text('View Episode Ratings Table',
-                                              style: getSeriesButtonTextStyle(serieId)),
-                                        ),
+      return Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        height: sheetHeight,
+        child: Column(
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 5,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2.5),
+                ),
+              ),
+            ),
+            Expanded(
+              child: ScrollConfiguration(
+                behavior: const ScrollBehavior().copyWith(
+                  physics: const BouncingScrollPhysics(),
+                  scrollbars: true,
+                  dragDevices: {
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.trackpad,
+                  },
+                ),
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Container(
+                              constraints: const BoxConstraints(maxWidth: 400),
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => TvChartTable(
+                                        imdbId: imdbId,
+                                        imagePath: imagePath,
                                       ),
                                     ),
-                                    Padding(
-                                      padding: const EdgeInsets.fromLTRB(8, 8, 0, 16),
-                                      child: Text('Seasons',
-                                          style: getSeriesTitleTextStyle(serieId)),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      getSeriesColor(context, serieId),
+                                  minimumSize: const Size(double.infinity, 50),
+                                ),
+                                child: Text('View Episode Ratings Table',
+                                    style: getSeriesButtonTextStyle(serieId)),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 8, 0, 16),
+                            child: Text('Seasons',
+                                style: getSeriesTitleTextStyle(serieId)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final season = seasons[index];
+                          final region = Provider.of<RegionProvider>(context,
+                                  listen: false)
+                              .currentRegion;
+                          final coverUrl = season['poster_path'] != null
+                              ? '${getImageBaseUrl(region)}/t/p/w500${season['poster_path']}'
+                              : null;
+                          final isAirDateNull = season['air_date'] == null;
+                          final isEpisodeCountZero =
+                              season['episode_count'] == 0;
+
+                          return Column(
+                            children: [
+                              ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 8.0, vertical: 4.0),
+                                leading: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6.0),
+                                  child: Container(
+                                    width: 50,
+                                    height: 75,
+                                    color: Colors.black,
+                                    child: coverUrl != null
+                                        ? CachedNetworkImage(
+                                            imageUrl: coverUrl,
+                                            fit: BoxFit.cover,
+                                            placeholder: (context, url) =>
+                                                Skeletonizer(
+                                              enabled: true,
+                                              containersColor: Colors.white
+                                                  .withOpacity(0.05),
+                                              effect: ShimmerEffect(
+                                                baseColor: Colors.white
+                                                    .withOpacity(0.05),
+                                                highlightColor: Colors.white
+                                                    .withOpacity(0.15),
+                                              ),
+                                              child: Container(
+                                                color: Colors.grey[900],
+                                              ),
+                                            ),
+                                            errorWidget:
+                                                (context, url, error) =>
+                                                    const Icon(Icons.error,
+                                                        color: Colors.white54,
+                                                        size: 20),
+                                          )
+                                        : const Icon(Icons.movie,
+                                            color: Colors.white54, size: 20),
+                                  ),
+                                ),
+                                title: Text(
+                                  season['season_number'] == 0
+                                      ? 'Specials'
+                                      : 'Season ${season['season_number']}',
+                                  style: TextStyle(
+                                    color: isAirDateNull
+                                        ? Colors.grey
+                                        : Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  '${season['episode_count']} ${season['episode_count'] == 1 ? 'Episode' : 'Episodes'}'
+                                  '${season['air_date'] != null && season['air_date'].toString().isNotEmpty ? ' • ${season['air_date'].toString().split('-')[0]}' : ''}',
+                                  style: const TextStyle(
+                                      color: Colors.grey, fontSize: 13),
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SeasonWatchToggle(
+                                      serieId: serieId,
+                                      serieName: serieName,
+                                      seasonNumber: season['season_number'],
+                                      posterPath: season['poster_path'],
+                                      episodeCount: season['episode_count'],
+                                      onToggle: () {
+                                        onWatchStatusChanged?.call();
+                                      },
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 14,
+                                      color: isAirDateNull
+                                          ? Colors.grey
+                                          : getSeriesColor(context, serieId),
                                     ),
                                   ],
                                 ),
+                                onTap: isAirDateNull && isEpisodeCountZero
+                                    ? null
+                                    : () => episodesGuide(
+                                        season['season_number'],
+                                        context,
+                                        serieId,
+                                        serieName,
+                                        imdbId,
+                                        coverUrl,
+                                        onWatchStatusChanged:
+                                            onWatchStatusChanged),
                               ),
-                              SliverList(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    final season = seasons[index];
-                                    final region = Provider.of<RegionProvider>(context,
-                                            listen: false)
-                                        .currentRegion;
-                                    final coverUrl = season['poster_path'] != null
-                                        ? '${getImageBaseUrl(region)}/t/p/w500${season['poster_path']}'
-                                        : null;
-                                    final isAirDateNull = season['air_date'] == null;
-                                    final isEpisodeCountZero =
-                                        season['episode_count'] == 0;
-                                    
-                                    return Column(
-                                      children: [
-                                        ListTile(
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                                          leading: ClipRRect(
-                                            borderRadius: BorderRadius.circular(6.0),
-                                            child: Container(
-                                              width: 50,
-                                              height: 75,
-                                              color: Colors.black,
-                                              child: coverUrl != null
-                                                  ? CachedNetworkImage(
-                                                      imageUrl: coverUrl,
-                                                      fit: BoxFit.cover,
-                                                      placeholder: (context, url) => Skeletonizer(
-                                                         enabled: true,
-                                                         containersColor: Colors.white.withOpacity(0.05),
-                                                         effect: ShimmerEffect(
-                                                           baseColor: Colors.white.withOpacity(0.05),
-                                                           highlightColor: Colors.white.withOpacity(0.15),
-                                                         ),
-                                                         child: Container(
-                                                           color: Colors.grey[900],
-                                                         ),
-                                                       ),
-                                                      errorWidget:
-                                                          (context, url, error) =>
-                                                              const Icon(Icons.error, color: Colors.white54, size: 20),
-                                                    )
-                                                  : const Icon(Icons.movie, color: Colors.white54, size: 20),
-                                            ),
-                                          ),
-                                          title: Text(
-                                            season['season_number'] == 0
-                                                ? 'Specials'
-                                                : 'Season ${season['season_number']}',
-                                            style: TextStyle(
-                                              color: isAirDateNull
-                                                  ? Colors.grey
-                                                  : Colors.white,
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                          subtitle: Text(
-                                            '${season['episode_count']} ${season['episode_count'] == 1 ? 'Episode' : 'Episodes'}'
-                                            '${season['air_date'] != null && season['air_date'].toString().isNotEmpty ? ' • ${season['air_date'].toString().split('-')[0]}' : ''}',
-                                            style: const TextStyle(color: Colors.grey, fontSize: 13),
-                                          ),
-                                          trailing: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              SeasonWatchToggle(
-                                                serieId: serieId,
-                                                serieName: serieName,
-                                                seasonNumber: season['season_number'],
-                                                posterPath: season['poster_path'],
-                                                episodeCount: season['episode_count'],
-                                                onToggle: () {
-                                                  onWatchStatusChanged?.call();
-                                                },
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Icon(
-                                                Icons.arrow_forward_ios,
-                                                size: 14,
-                                                color: isAirDateNull
-                                                    ? Colors.grey
-                                                    : getSeriesColor(context, serieId),
-                                              ),
-                                            ],
-                                          ),
-                                          onTap: isAirDateNull && isEpisodeCountZero
-                                              ? null
-                                              : () => episodesGuide(
-                                                  season['season_number'],
-                                                  context,
-                                                  serieId,
-                                                  serieName,
-                                                  imdbId,
-                                                  coverUrl,
-                                                  onWatchStatusChanged: onWatchStatusChanged),
-                                        ),
-                                        const CustomDivider()
-                                      ],
-                                    );
-                                  },
-                                  childCount: seasons.length,
-                                ),
-                              ),
+                              const CustomDivider()
                             ],
-                          ),
-                        ),
+                          );
+                        },
+                        childCount: seasons.length,
                       ),
-                    ],
-                  ),
-                );
-
-        },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     },
   );
@@ -412,7 +416,8 @@ Future<List<dynamic>> fetchEpisodesGuide(BuildContext context, int seasonNumber,
     int serieId, String serieName, String imdbId) async {
   final region =
       Provider.of<RegionProvider>(context, listen: false).currentRegion;
-  return cachedSeasonsApiCall('episodes_guide_${region}_$serieId$seasonNumber', () async {
+  return cachedSeasonsApiCall(
+      'episodes_guide_${region}_${serieId}_$seasonNumber', () async {
     final baseUrl = getBaseUrl(region);
     final episodesResponse = await apiClient.get(
       Uri.parse('${baseUrl}tv/$serieId/season/$seasonNumber?api_key=$apiKey'),
@@ -452,248 +457,13 @@ void episodesGuide(int seasonNumber, BuildContext context, int serieId,
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (BuildContext context) {
-      return StatefulBuilder(
-        builder: (BuildContext context, StateSetter setModalState) {
-          return FutureBuilder<List<dynamic>>(
-            future: Future.wait([
-              fetchEpisodesGuide(
-                  context, seasonNumber, serieId, serieName, imdbId),
-              _watchHistoryDb.getWatchHistoryByTmdbId(serieId, 'tv'),
-            ]),
-            builder: (context, snapshot) {
-              final isLargeScreen = MediaQuery.sizeOf(context).width >= 800;
-              final double sheetHeight = MediaQuery.sizeOf(context).height * (isLargeScreen ? 0.75 : 0.60);
-
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Container(
-                  height: sheetHeight,
-                  alignment: Alignment.center,
-                  child: const M3ExpressiveSpinner(),
-                );
-              } else if (snapshot.hasError) {
-                return Container(
-                  height: sheetHeight,
-                  alignment: Alignment.center,
-                  child: Text('Error: ${snapshot.error}'),
-                );
-              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return Container(
-                  height: sheetHeight,
-                  alignment: Alignment.center,
-                  child: const Text('No episodes found.'),
-                );
-              } else {
-                final episodes = snapshot.data![0] as List<dynamic>;
-                final watchHistory = snapshot.data![1] as List<WatchHistoryItem>;
-                final watchedSet = watchHistory
-                    .where((item) => item.seasonNumber == seasonNumber && item.episodeNumber != null)
-                    .map((item) => item.episodeNumber!)
-                    .toSet();
-                
-                return Container(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                  height: sheetHeight,
-                  child: Column(
-                    children: [
-                      // Drag handle
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 5,
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(2.5),
-                          ),
-                        ),
-                      ),
-                      Text('Episodes', style: getSeriesTitleTextStyle(serieId)),
-                      const SizedBox(height: 10),
-                      Expanded(
-                        child: ScrollConfiguration(
-                          behavior: const ScrollBehavior().copyWith(
-                            scrollbars: true,
-                            physics: const BouncingScrollPhysics(),
-                            dragDevices: {
-                              PointerDeviceKind.touch,
-                              PointerDeviceKind.mouse,
-                              PointerDeviceKind.trackpad,
-                            },
-                          ),
-                          child: ListView.builder(
-                            itemCount: episodes.length,
-                            itemBuilder: (context, index) {
-                              final episode = episodes[index];
-                              final region = Provider.of<RegionProvider>(context,
-                                      listen: false)
-                                  .currentRegion;
-                              final coverUrl = episode['still_path'] != null
-                                  ? '${getImageBaseUrl(region)}/t/p/w500${episode['still_path']}'
-                                  : null;
-
-                              bool isReleased = true;
-                              int daysUntilRelease = 0;
-                              if (episode['air_date'] != null) {
-                                  try {
-                                    final airDate = DateTime.parse(episode['air_date']);
-                                    isReleased = airDate.isBefore(DateTime.now());
-                                    if (!isReleased) {
-                                      daysUntilRelease =
-                                          airDate.difference(DateTime.now()).inDays;
-                                    }
-                                  } catch (_) {}
-                              }
-                              return Column(
-                                children: [
-                                  InkWell(
-                                    onTap: () => episodeDetails(
-                                        seasonNumber,
-                                        episode['episode_number'],
-                                        context,
-                                        serieId,
-                                        serieName,
-                                        imdbId,
-                                        coverUrl,
-                                        onWatchStatusChanged: onWatchStatusChanged),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                                      child: Row(
-                                        children: [
-                                          // Horizontal still image (16:9 ratio)
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(6.0),
-                                            child: Container(
-                                              width: 110,
-                                              height: 62,
-                                              color: Colors.black,
-                                              child: coverUrl != null
-                                                  ? CachedNetworkImage(
-                                                      imageUrl: coverUrl,
-                                                      fit: BoxFit.cover,
-                                                      placeholder: (context, url) => Skeletonizer(
-                                                         enabled: true,
-                                                         containersColor: Colors.white.withOpacity(0.05),
-                                                         effect: ShimmerEffect(
-                                                           baseColor: Colors.white.withOpacity(0.05),
-                                                           highlightColor: Colors.white.withOpacity(0.15),
-                                                         ),
-                                                         child: Container(
-                                                           color: Colors.grey[900],
-                                                         ),
-                                                       ),
-                                                      errorWidget:
-                                                          (context, url, error) =>
-                                                              const Icon(Icons.error, color: Colors.white54, size: 20),
-                                                    )
-                                                  : const Icon(Icons.tv, color: Colors.white54, size: 20),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          // Metadata (number, name, release date)
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  episode['episode_number'] == 0
-                                                      ? 'Specials'
-                                                      : 'Episode ${episode['episode_number']}',
-                                                  style: TextStyle(
-                                                    color: isReleased ? Colors.white : Colors.grey,
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 15,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                if (episode['name'] != null && episode['name'].toString().isNotEmpty)
-                                                  Text(
-                                                    episode['name'],
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                    style: const TextStyle(
-                                                      color: Colors.grey,
-                                                      fontSize: 13,
-                                                    ),
-                                                  ),
-                                                const SizedBox(height: 2),
-                                                if (episode['air_date'] != null && episode['air_date'].toString().isNotEmpty)
-                                                  Text(
-                                                    episode['air_date'],
-                                                    style: const TextStyle(
-                                                      color: Colors.grey,
-                                                      fontSize: 11,
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          // Actions / Trailing info
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              if (!isReleased && daysUntilRelease >= 0)
-                                                Padding(
-                                                  padding: const EdgeInsets.only(right: 8.0),
-                                                  child: Text(
-                                                    '$daysUntilRelease days',
-                                                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                                                  ),
-                                                ),
-                                              if (episode['imdb_rating'] != null &&
-                                                  episode['imdb_rating'] != 'N/A' &&
-                                                  episode['imdb_rating'].toString().trim().isNotEmpty)
-                                                Padding(
-                                                  padding: const EdgeInsets.only(right: 8),
-                                                  child: Text(
-                                                    '⭐ ${episode['imdb_rating']}',
-                                                    style: const TextStyle(
-                                                      color: Colors.amber,
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-                                              EpisodeWatchToggle(
-                                                serieId: serieId,
-                                                serieName: serieName,
-                                                seasonNumber: seasonNumber,
-                                                episodeNumber: episode['episode_number'],
-                                                episodeTitle: episode['name'],
-                                                posterPath: seasonPosterPath,
-                                                initialIsWatched: watchedSet.contains(episode['episode_number']),
-                                                onToggle: () {
-                                                  onWatchStatusChanged?.call();
-                                                },
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Icon(
-                                                Icons.arrow_forward_ios,
-                                                size: 14,
-                                                color: isReleased
-                                                    ? getSeriesColor(context, serieId)
-                                                    : Colors.grey,
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  const CustomDivider()
-                                ],
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-            },
-          );
-        },
+      return _EpisodesGuideSheet(
+        seasonNumber: seasonNumber,
+        serieId: serieId,
+        serieName: serieName,
+        imdbId: imdbId,
+        seasonPosterPath: seasonPosterPath,
+        onWatchStatusChanged: onWatchStatusChanged,
       );
     },
   );
@@ -704,7 +474,7 @@ Future<Map<String, dynamic>> fetchEpisodesDetails(BuildContext context,
   final region =
       Provider.of<RegionProvider>(context, listen: false).currentRegion;
   return cachedSeasonsApiCall(
-      'episode_details_${region}_$serieId$seasonNumber$episodeNumber',
+      'episode_details_${region}_${serieId}_${seasonNumber}_$episodeNumber',
       () async {
     final baseUrl = getBaseUrl(region);
     final response = await apiClient.get(
@@ -722,8 +492,6 @@ Future<Map<String, dynamic>> fetchEpisodesDetails(BuildContext context,
 
 void episodeDetails(int seasonNumber, int episodeNumber, BuildContext context,
     int serieId, String serieName, String imdbId, String? seasonPosterPath, {VoidCallback? onWatchStatusChanged}) {
-  final region =
-      Provider.of<RegionProvider>(context, listen: false).currentRegion;
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -732,215 +500,561 @@ void episodeDetails(int seasonNumber, int episodeNumber, BuildContext context,
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (BuildContext context) {
-      return StatefulBuilder(
-        builder: (BuildContext context, StateSetter setModalState) {
-          return FutureBuilder<Map<String, dynamic>>(
-            future: Future.wait([
-              fetchEpisodesDetails(context, seasonNumber, episodeNumber, serieId),
-              fetchImdbRating(context, serieId, imdbId, seasonNumber, episodeNumber),
-            ]).then((results) =>
-                {'episodeDetails': results[0], 'imdbRating': results[1]}),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Container(
-                  height: 250,
-                  alignment: Alignment.center,
-                  child: const M3ExpressiveSpinner(),
-                );
-              } else if (snapshot.hasError) {
-                return Container(
-                  height: 200,
-                  alignment: Alignment.center,
-                  child: Text('Error: ${snapshot.error}'),
-                );
-              } else if (!snapshot.hasData) {
-                return Container(
-                  height: 200,
-                  alignment: Alignment.center,
-                  child: const Text('No data found.'),
-                );
-              } else {
-                final episodeDetails =
-                    snapshot.data!['episodeDetails'] as Map<String, dynamic>;
-                final imdbRating = snapshot.data!['imdbRating'];
-                final overview =
-                    episodeDetails['overview'] ?? 'No overview available.';
-                final episodeName = episodeDetails['name'];
-                
-                final isLargeScreen = MediaQuery.sizeOf(context).width >= 800;
-
-                final watchButton = FloatingActionButton(
-                  heroTag: null,
-                  backgroundColor: getSeriesColor(context, serieId),
-                  onPressed: () => showWatchOptions(context,
-                      serieId, seasonNumber, episodeNumber, imdbId),
-                  child: Text(
-                    'Watch',
-                    style: getSeriesButtonTextStyle(serieId),
-                  ),
-                );
-
-                final torrentButton = FloatingActionButton(
-                  heroTag: null,
-                  backgroundColor: getSeriesColor(context, serieId),
-                  onPressed: () => showTorrentOptions(
-                      context,
-                      serieName,
-                      serieId,
-                      seasonNumber,
-                      episodeNumber,
-                      imdbId),
-                  child: Text(
-                    'Torrent Search',
-                    style: getSeriesButtonTextStyle(serieId),
-                  ),
-                );
-
-                return SingleChildScrollView(
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Drag handle
-                        Center(
-                          child: Container(
-                            width: 40,
-                            height: 5,
-                            margin: const EdgeInsets.only(bottom: 16),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.3),
-                              borderRadius: BorderRadius.circular(2.5),
-                            ),
-                          ),
-                        ),
-                        episodeName.isNotEmpty
-                            ? Text(episodeName,
-                                style: getSeriesTitleTextStyle(serieId))
-                            : Text('Episode Overview',
-                                style: getSeriesTitleTextStyle(serieId)),
-                        const SizedBox(height: 10),
-                        if (imdbRating != null && imdbRating.isNotEmpty && imdbRating != 'N/A')
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: Text(
-                              'IMDB⭐ $imdbRating',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w300,
-                                fontSize: 13,
-                                color: Colors.amber,
-                              ),
-                            ),
-                          ),
-                        // Episode watch toggle button
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 12.0),
-                          child: EpisodeWatchToggleButton(
-                            serieId: serieId,
-                            serieName: serieName,
-                            seasonNumber: seasonNumber,
-                            episodeNumber: episodeNumber,
-                            episodeTitle: episodeName,
-                            posterPath: seasonPosterPath,
-                            onToggle: () {
-                              onWatchStatusChanged?.call();
-                            },
-                          ),
-                        ),
-                        Text(
-                          overview,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        // Responsive action buttons
-                        if (isLargeScreen)
-                          Row(
-                            children: [
-                              Expanded(child: watchButton),
-                              const SizedBox(width: 16),
-                              Expanded(child: torrentButton),
-                            ],
-                          )
-                        else
-                          Column(
-                            children: [
-                              SizedBox(
-                                width: double.infinity,
-                                child: watchButton,
-                              ),
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                width: double.infinity,
-                                child: torrentButton,
-                              ),
-                            ],
-                          ),
-                        const SizedBox(height: 8),
-                        FutureBuilder(
-                          future: fetchEpisodeCastAndCrew(
-                              serieId, seasonNumber, episodeNumber, region),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Center(
-                                  child: CircularProgressIndicator());
-                            } else if (snapshot.hasError) {
-                              return const Text(
-                                  'Error loading cast and crew details');
-                            } else {
-                              final Map<String, List<Map<String, dynamic>>> data =
-                                  snapshot.data
-                                      as Map<String, List<Map<String, dynamic>>>;
-                              final List<Map<String, dynamic>> castList =
-                                  data['guest_stars'] ?? [];
-                              final List<Map<String, dynamic>> crewList =
-                                  data['crew'] ?? [];
-
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (castList.isNotEmpty) ...[
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 16.0),
-                                      child: Text(
-                                        'Guest Stars',
-                                        style: getSeriesTitleTextStyle(serieId),
-                                      ),
-                                    ),
-                                    const CustomDivider(),
-                                    buildCastRow(castList, context),
-                                  ],
-                                  if (crewList.isNotEmpty) ...[
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 16.0),
-                                      child: Text(
-                                        'Crew',
-                                        style: getSeriesTitleTextStyle(serieId),
-                                      ),
-                                    ),
-                                    const CustomDivider(),
-                                    buildCrewRow(crewList, context)
-                                  ],
-                                ],
-                              );
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-            },
-          );
-        },
+      return _EpisodeDetailsSheet(
+        seasonNumber: seasonNumber,
+        episodeNumber: episodeNumber,
+        serieId: serieId,
+        serieName: serieName,
+        imdbId: imdbId,
+        seasonPosterPath: seasonPosterPath,
+        onWatchStatusChanged: onWatchStatusChanged,
       );
     },
   );
+}
+
+class _EpisodesGuideSheet extends StatefulWidget {
+  const _EpisodesGuideSheet({
+    required this.seasonNumber,
+    required this.serieId,
+    required this.serieName,
+    required this.imdbId,
+    required this.seasonPosterPath,
+    this.onWatchStatusChanged,
+  });
+
+  final int seasonNumber;
+  final int serieId;
+  final String serieName;
+  final String imdbId;
+  final String? seasonPosterPath;
+  final VoidCallback? onWatchStatusChanged;
+
+  @override
+  State<_EpisodesGuideSheet> createState() => _EpisodesGuideSheetState();
+}
+
+class _EpisodesGuideSheetState extends State<_EpisodesGuideSheet> {
+  Future<List<dynamic>>? _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= Future.wait([
+      fetchEpisodesGuide(
+        context,
+        widget.seasonNumber,
+        widget.serieId,
+        widget.serieName,
+        widget.imdbId,
+      ),
+      _watchHistoryDb.getWatchHistoryByTmdbId(widget.serieId, 'tv'),
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<dynamic>>(
+      future: _future,
+      builder: (context, snapshot) {
+        final isLargeScreen = MediaQuery.sizeOf(context).width >= 800;
+        final double sheetHeight =
+            MediaQuery.sizeOf(context).height * (isLargeScreen ? 0.75 : 0.60);
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            height: sheetHeight,
+            alignment: Alignment.center,
+            child: const M3ExpressiveSpinner(),
+          );
+        } else if (snapshot.hasError) {
+          return Container(
+            height: sheetHeight,
+            alignment: Alignment.center,
+            child: Text('Error: ${snapshot.error}'),
+          );
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Container(
+            height: sheetHeight,
+            alignment: Alignment.center,
+            child: const Text('No episodes found.'),
+          );
+        }
+
+        final episodes = snapshot.data![0] as List<dynamic>;
+        final watchHistory = snapshot.data![1] as List<WatchHistoryItem>;
+        final watchedSet = watchHistory
+            .where((item) =>
+                item.seasonNumber == widget.seasonNumber &&
+                item.episodeNumber != null)
+            .map((item) => item.episodeNumber!)
+            .toSet();
+
+        return Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          height: sheetHeight,
+          child: Column(
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2.5),
+                  ),
+                ),
+              ),
+              Text('Episodes', style: getSeriesTitleTextStyle(widget.serieId)),
+              const SizedBox(height: 10),
+              Expanded(
+                child: ScrollConfiguration(
+                  behavior: const ScrollBehavior().copyWith(
+                    scrollbars: true,
+                    physics: const BouncingScrollPhysics(),
+                    dragDevices: {
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.trackpad,
+                    },
+                  ),
+                  child: ListView.builder(
+                    itemCount: episodes.length,
+                    itemBuilder: (context, index) {
+                      final episode = episodes[index];
+                      final region = Provider.of<RegionProvider>(context,
+                              listen: false)
+                          .currentRegion;
+                      final coverUrl = episode['still_path'] != null
+                          ? '${getImageBaseUrl(region)}/t/p/w500${episode['still_path']}'
+                          : null;
+
+                      bool isReleased = true;
+                      int daysUntilRelease = 0;
+                      if (episode['air_date'] != null) {
+                        try {
+                          final airDate = DateTime.parse(episode['air_date']);
+                          isReleased = airDate.isBefore(DateTime.now());
+                          if (!isReleased) {
+                            daysUntilRelease =
+                                airDate.difference(DateTime.now()).inDays;
+                          }
+                        } catch (_) {}
+                      }
+                      return Column(
+                        children: [
+                          InkWell(
+                            onTap: () => episodeDetails(
+                              widget.seasonNumber,
+                              episode['episode_number'],
+                              context,
+                              widget.serieId,
+                              widget.serieName,
+                              widget.imdbId,
+                              coverUrl,
+                              onWatchStatusChanged: widget.onWatchStatusChanged,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0, horizontal: 4.0),
+                              child: Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(6.0),
+                                    child: Container(
+                                      width: 110,
+                                      height: 62,
+                                      color: Colors.black,
+                                      child: coverUrl != null
+                                          ? CachedNetworkImage(
+                                              imageUrl: coverUrl,
+                                              fit: BoxFit.cover,
+                                              placeholder: (context, url) =>
+                                                  Skeletonizer(
+                                                enabled: true,
+                                                containersColor: Colors.white
+                                                    .withOpacity(0.05),
+                                                effect: ShimmerEffect(
+                                                  baseColor: Colors.white
+                                                      .withOpacity(0.05),
+                                                  highlightColor: Colors.white
+                                                      .withOpacity(0.15),
+                                                ),
+                                                child: Container(
+                                                  color: Colors.grey[900],
+                                                ),
+                                              ),
+                                              errorWidget:
+                                                  (context, url, error) =>
+                                                      const Icon(Icons.error,
+                                                          color: Colors.white54,
+                                                          size: 20),
+                                            )
+                                          : const Icon(Icons.tv,
+                                              color: Colors.white54, size: 20),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          episode['episode_number'] == 0
+                                              ? 'Specials'
+                                              : 'Episode ${episode['episode_number']}',
+                                          style: TextStyle(
+                                            color: isReleased
+                                                ? Colors.white
+                                                : Colors.grey,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        if (episode['name'] != null &&
+                                            episode['name']
+                                                .toString()
+                                                .isNotEmpty)
+                                          Text(
+                                            episode['name'],
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: Colors.grey,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        const SizedBox(height: 2),
+                                        if (episode['air_date'] != null &&
+                                            episode['air_date']
+                                                .toString()
+                                                .isNotEmpty)
+                                          Text(
+                                            episode['air_date'],
+                                            style: const TextStyle(
+                                              color: Colors.grey,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (!isReleased && daysUntilRelease >= 0)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(right: 8.0),
+                                          child: Text(
+                                            '$daysUntilRelease days',
+                                            style: const TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 12),
+                                          ),
+                                        ),
+                                      if (episode['imdb_rating'] != null &&
+                                          episode['imdb_rating'] != 'N/A' &&
+                                          episode['imdb_rating']
+                                              .toString()
+                                              .trim()
+                                              .isNotEmpty)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(right: 8),
+                                          child: Text(
+                                            '⭐ ${episode['imdb_rating']}',
+                                            style: const TextStyle(
+                                              color: Colors.amber,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      EpisodeWatchToggle(
+                                        serieId: widget.serieId,
+                                        serieName: widget.serieName,
+                                        seasonNumber: widget.seasonNumber,
+                                        episodeNumber:
+                                            episode['episode_number'],
+                                        episodeTitle: episode['name'],
+                                        posterPath: widget.seasonPosterPath,
+                                        initialIsWatched: watchedSet
+                                            .contains(episode['episode_number']),
+                                        onToggle: () {
+                                          widget.onWatchStatusChanged?.call();
+                                        },
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        Icons.arrow_forward_ios,
+                                        size: 14,
+                                        color: isReleased
+                                            ? getSeriesColor(
+                                                context, widget.serieId)
+                                            : Colors.grey,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const CustomDivider()
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _EpisodeDetailsSheet extends StatefulWidget {
+  const _EpisodeDetailsSheet({
+    required this.seasonNumber,
+    required this.episodeNumber,
+    required this.serieId,
+    required this.serieName,
+    required this.imdbId,
+    required this.seasonPosterPath,
+    this.onWatchStatusChanged,
+  });
+
+  final int seasonNumber;
+  final int episodeNumber;
+  final int serieId;
+  final String serieName;
+  final String imdbId;
+  final String? seasonPosterPath;
+  final VoidCallback? onWatchStatusChanged;
+
+  @override
+  State<_EpisodeDetailsSheet> createState() => _EpisodeDetailsSheetState();
+}
+
+class _EpisodeDetailsSheetState extends State<_EpisodeDetailsSheet> {
+  Future<Map<String, dynamic>>? _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= Future.wait([
+      fetchEpisodesDetails(
+        context,
+        widget.seasonNumber,
+        widget.episodeNumber,
+        widget.serieId,
+      ),
+      fetchImdbRating(
+        context,
+        widget.serieId,
+        widget.imdbId,
+        widget.seasonNumber,
+        widget.episodeNumber,
+      ),
+    ]).then((results) => {
+          'episodeDetails': results[0],
+          'imdbRating': results[1],
+        });
+  }
+
+  List<Map<String, dynamic>> _mapsFrom(dynamic value) {
+    if (value is! List) return const [];
+    return value
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            height: 250,
+            alignment: Alignment.center,
+            child: const M3ExpressiveSpinner(),
+          );
+        } else if (snapshot.hasError) {
+          return Container(
+            height: 200,
+            alignment: Alignment.center,
+            child: Text('Error: ${snapshot.error}'),
+          );
+        } else if (!snapshot.hasData) {
+          return Container(
+            height: 200,
+            alignment: Alignment.center,
+            child: const Text('No data found.'),
+          );
+        }
+
+        final episodeDetails =
+            snapshot.data!['episodeDetails'] as Map<String, dynamic>;
+        final imdbRating = snapshot.data!['imdbRating'];
+        final overview =
+            episodeDetails['overview'] ?? 'No overview available.';
+        final episodeName = episodeDetails['name'] ?? '';
+        final castList = _mapsFrom(episodeDetails['guest_stars']);
+        final crewList = _mapsFrom(episodeDetails['crew']);
+        final isLargeScreen = MediaQuery.sizeOf(context).width >= 800;
+
+        final watchButton = FloatingActionButton(
+          heroTag: null,
+          backgroundColor: getSeriesColor(context, widget.serieId),
+          onPressed: () => showWatchOptions(
+            context,
+            widget.serieId,
+            widget.seasonNumber,
+            widget.episodeNumber,
+            widget.imdbId,
+          ),
+          child: Text(
+            'Watch',
+            style: getSeriesButtonTextStyle(widget.serieId),
+          ),
+        );
+
+        final torrentButton = FloatingActionButton(
+          heroTag: null,
+          backgroundColor: getSeriesColor(context, widget.serieId),
+          onPressed: () => showTorrentOptions(
+            context,
+            widget.serieName,
+            widget.serieId,
+            widget.seasonNumber,
+            widget.episodeNumber,
+            widget.imdbId,
+          ),
+          child: Text(
+            'Torrent Search',
+            style: getSeriesButtonTextStyle(widget.serieId),
+          ),
+        );
+
+        return SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 5,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2.5),
+                    ),
+                  ),
+                ),
+                episodeName.toString().isNotEmpty
+                    ? Text(episodeName,
+                        style: getSeriesTitleTextStyle(widget.serieId))
+                    : Text('Episode Overview',
+                        style: getSeriesTitleTextStyle(widget.serieId)),
+                const SizedBox(height: 10),
+                if (imdbRating != null &&
+                    imdbRating.toString().isNotEmpty &&
+                    imdbRating != 'N/A')
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Text(
+                      'IMDB⭐ $imdbRating',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w300,
+                        fontSize: 13,
+                        color: Colors.amber,
+                      ),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: EpisodeWatchToggleButton(
+                    serieId: widget.serieId,
+                    serieName: widget.serieName,
+                    seasonNumber: widget.seasonNumber,
+                    episodeNumber: widget.episodeNumber,
+                    episodeTitle: episodeName,
+                    posterPath: widget.seasonPosterPath,
+                    onToggle: () {
+                      widget.onWatchStatusChanged?.call();
+                    },
+                  ),
+                ),
+                Text(
+                  overview,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                if (isLargeScreen)
+                  Row(
+                    children: [
+                      Expanded(child: watchButton),
+                      const SizedBox(width: 16),
+                      Expanded(child: torrentButton),
+                    ],
+                  )
+                else
+                  Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: watchButton,
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: torrentButton,
+                      ),
+                    ],
+                  ),
+                if (castList.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: Text(
+                      'Guest Stars',
+                      style: getSeriesTitleTextStyle(widget.serieId),
+                    ),
+                  ),
+                  const CustomDivider(),
+                  buildCastRow(castList, context),
+                ],
+                if (crewList.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: Text(
+                      'Crew',
+                      style: getSeriesTitleTextStyle(widget.serieId),
+                    ),
+                  ),
+                  const CustomDivider(),
+                  buildCrewRow(crewList, context),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 // Watch history helper functions
