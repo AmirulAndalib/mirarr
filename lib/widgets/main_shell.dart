@@ -15,18 +15,17 @@ import 'package:provider/provider.dart';
 class MainShellPage extends StatelessWidget {
   const MainShellPage({Key? key}) : super(key: key);
 
+  static const List<Widget> _pages = [
+    MovieSearchScreen(),
+    SerieSearchScreen(),
+    SearchScreen(),
+    ShelfPage(),
+    AccountTabWrapper(),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final navigationProvider = Provider.of<NavigationProvider>(context);
     final bool isTv = TvFocusModeManager.isTvDevice;
-
-    final List<Widget> pages = [
-      const MovieSearchScreen(),
-      const SerieSearchScreen(),
-      const SearchScreen(),
-      const ShelfPage(),
-      const AccountTabWrapper(),
-    ];
 
     return Scaffold(
       extendBody: true,
@@ -35,9 +34,14 @@ class MainShellPage extends StatelessWidget {
           if (isTv) const BottomBar(),
           Expanded(
             // Build tabs on first visit so cold start only fetches the active page.
-            child: LazyIndexedStack(
-              index: navigationProvider.currentIndex,
-              children: pages,
+            child: Selector<NavigationProvider, int>(
+              selector: (_, nav) => nav.currentIndex,
+              builder: (context, index, _) {
+                return LazyIndexedStack(
+                  index: index,
+                  children: _pages,
+                );
+              },
             ),
           ),
         ],
