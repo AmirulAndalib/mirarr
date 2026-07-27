@@ -131,6 +131,25 @@ class _ShelfPageState extends State<ShelfPage> {
         : 'tv_ep_${item.tmdbId}_${item.seasonNumber}_${item.episodeNumber}';
   }
 
+  Widget _shelfPoster({
+    required String? posterPath,
+    required String region,
+    required String size,
+    required int memCacheWidth,
+    required Widget placeholder,
+  }) {
+    if (posterPath == null || posterPath.isEmpty) return placeholder;
+    return CachedNetworkImage(
+      imageUrl: '${getImageBaseUrl(region)}/t/p/$size$posterPath',
+      memCacheWidth: memCacheWidth,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      placeholder: (_, __) => placeholder,
+      errorWidget: (_, __, ___) => placeholder,
+    );
+  }
+
   Future<void> _loadWatchHistory() async {
     // This also runs on every entry into the shelf tab and on every pop back
     // from a detail page, so the spinner is only for the very first load.
@@ -1596,22 +1615,16 @@ class _ShelfPageState extends State<ShelfPage> {
             child: IntrinsicHeight(
               child: Row(
                 children: [
-                  Container(
+                  SizedBox(
                     width: 60,
                     height: 90,
-                    decoration: BoxDecoration(
-                      image: item.posterPath != null
-                          ? DecorationImage(
-                              image: CachedNetworkImageProvider(
-                                  '${getImageBaseUrl(region)}/t/p/w200${item.posterPath}',
-                              ),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
+                    child: _shelfPoster(
+                      posterPath: item.posterPath,
+                      region: region,
+                      size: 'w92',
+                      memCacheWidth: 120,
+                      placeholder: Icon(isMovie ? Icons.movie : Icons.tv, color: Colors.grey[700]),
                     ),
-                    child: item.posterPath == null
-                        ? Icon(isMovie ? Icons.movie : Icons.tv, color: Colors.grey[700])
-                        : null,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1698,20 +1711,12 @@ class _ShelfPageState extends State<ShelfPage> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Container(
-                  decoration: BoxDecoration(
-                    image: item.posterPath != null
-                        ? DecorationImage(
-                            image: CachedNetworkImageProvider(
-                              '${getImageBaseUrl(region)}/t/p/w500${item.posterPath}',
-                            ),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: item.posterPath == null
-                      ? Icon(isMovie ? Icons.movie : Icons.tv, size: 40, color: Colors.grey[700])
-                      : null,
+                _shelfPoster(
+                  posterPath: item.posterPath,
+                  region: region,
+                  size: 'w185',
+                  memCacheWidth: 280,
+                  placeholder: Icon(isMovie ? Icons.movie : Icons.tv, size: 40, color: Colors.grey[700]),
                 ),
                 Positioned.fill(
                   child: Container(
@@ -1792,21 +1797,15 @@ class _ShelfPageState extends State<ShelfPage> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                image: item.posterPath != null
-                    ? DecorationImage(
-                        image: CachedNetworkImageProvider(
-                          '${getImageBaseUrl(region)}/t/p/w200${item.posterPath}',
-                        ),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: _shelfPoster(
+                posterPath: item.posterPath,
+                region: region,
+                size: 'w185',
+                memCacheWidth: 200,
+                placeholder: Icon(isMovie ? Icons.movie : Icons.tv, size: 24, color: Colors.grey[700]),
               ),
-              child: item.posterPath == null
-                  ? Icon(isMovie ? Icons.movie : Icons.tv, size: 24, color: Colors.grey[700])
-                  : null,
             ),
             Positioned(
               bottom: 4,
@@ -1867,23 +1866,19 @@ class _ShelfPageState extends State<ShelfPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
+                SizedBox(
                   width: 72,
                   height: 108,
-                  decoration: BoxDecoration(
+                  child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    image: item.posterPath != null
-                        ? DecorationImage(
-                            image: CachedNetworkImageProvider(
-                              '${getImageBaseUrl(region)}/t/p/w200${item.posterPath}',
-                            ),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
+                    child: _shelfPoster(
+                      posterPath: item.posterPath,
+                      region: region,
+                      size: 'w185',
+                      memCacheWidth: 200,
+                      placeholder: Icon(isMovie ? Icons.movie : Icons.tv, color: Colors.grey[600], size: 30),
+                    ),
                   ),
-                  child: item.posterPath == null
-                      ? Icon(isMovie ? Icons.movie : Icons.tv, color: Colors.grey[600], size: 30)
-                      : null,
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -1954,20 +1949,12 @@ class _ShelfPageState extends State<ShelfPage> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Container(
-                decoration: BoxDecoration(
-                  image: posterPath != null
-                      ? DecorationImage(
-                          image: CachedNetworkImageProvider(
-                            '${getImageBaseUrl(region)}/t/p/w500$posterPath',
-                          ),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                ),
-                child: posterPath == null
-                    ? Icon(Icons.tv, size: 40, color: Colors.grey[700])
-                    : null,
+              _shelfPoster(
+                posterPath: posterPath,
+                region: region,
+                size: 'w185',
+                memCacheWidth: 280,
+                placeholder: Icon(Icons.tv, size: 40, color: Colors.grey[700]),
               ),
               Positioned.fill(
                 child: Container(
@@ -2075,20 +2062,12 @@ class _ShelfPageState extends State<ShelfPage> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                image: posterPath != null
-                    ? DecorationImage(
-                        image: CachedNetworkImageProvider(
-                          '${getImageBaseUrl(region)}/t/p/w200$posterPath',
-                        ),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: posterPath == null
-                  ? const Icon(Icons.tv, size: 20, color: Colors.grey)
-                  : null,
+            _shelfPoster(
+              posterPath: posterPath,
+              region: region,
+              size: 'w185',
+              memCacheWidth: 200,
+              placeholder: const Icon(Icons.tv, size: 20, color: Colors.grey),
             ),
             Positioned(
               top: 4,
