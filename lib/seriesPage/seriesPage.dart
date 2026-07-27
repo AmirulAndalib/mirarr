@@ -49,9 +49,8 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
   Map<int, List<Serie>> seriesByGenre = {};
   late RegionProvider _regionProvider;
 
-  // Only the 2–3 cards actually on-screen; avoid rebuilding extras per shimmer tick.
   final List<Serie> _dummySeries = List.generate(
-    3,
+    6,
     (index) => Serie(
       name: 'TV Show Title Placeholder',
       posterPath: '',
@@ -68,7 +67,7 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
 
   late final Map<int, List<Serie>> _dummySeriesByGenre = {
     -100: List.generate(
-      3,
+      6,
       (index) => Serie(
         name: 'TV Show Title Placeholder',
         posterPath: '',
@@ -78,7 +77,7 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
       ),
     ),
     -101: List.generate(
-      3,
+      6,
       (index) => Serie(
         name: 'TV Show Title Placeholder',
         posterPath: '',

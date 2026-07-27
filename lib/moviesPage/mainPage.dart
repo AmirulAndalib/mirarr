@@ -73,9 +73,8 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
     }
   }
 
-  // Only the 2–3 cards actually on-screen; avoid rebuilding extras per shimmer tick.
   final List<Movie> _dummyMovies = List.generate(
-    3,
+    6,
     (index) => Movie(
       title: 'Movie Title Placeholder',
       releaseDate: '2026-01-01',
@@ -93,7 +92,7 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
 
   late final Map<int, List<Movie>> _dummyMoviesByGenre = {
     -100: List.generate(
-      3,
+      6,
       (index) => Movie(
         title: 'Movie Title Placeholder',
         releaseDate: '2026-01-01',
@@ -104,7 +103,7 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
       ),
     ),
     -101: List.generate(
-      3,
+      6,
       (index) => Movie(
         title: 'Movie Title Placeholder',
         releaseDate: '2026-01-01',
