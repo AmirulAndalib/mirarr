@@ -1,153 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:Mirarr/widgets/m3_expressive_rating_bar.dart';
-import 'package:Mirarr/database/watch_history_database.dart';
-import 'package:Mirarr/moviesPage/functions/movie_tmdb_actions.dart';
+import 'package:Mirarr/seriesPage/function/series_tmdb_actions.dart';
 import 'package:Mirarr/widgets/profile.dart';
-import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
+import 'package:Mirarr/moviesPage/UI/movie_action_buttons.dart';
 import 'package:Mirarr/widgets/expressive_interactive_container.dart';
 import 'package:Mirarr/utils/expressive_motion.dart';
 import 'package:Mirarr/widgets/custom_divider.dart';
 
-Widget buildM3FloatingActionButton({
-  required BuildContext context,
-  required Widget child,
-  required VoidCallback onTap,
-  Color? backgroundColor,
-  Color? borderColor,
-}) {
-  final colorScheme = Theme.of(context).colorScheme;
-  final defaultBg = colorScheme.surfaceContainerHigh.withValues(alpha: 0.85);
-  final defaultBorder = colorScheme.outlineVariant.withValues(alpha: 0.3);
-
-  return Container(
-    width: 46,
-    height: 46,
-    decoration: BoxDecoration(
-      color: backgroundColor ?? defaultBg,
-      shape: BoxShape.circle,
-      border: Border.all(color: borderColor ?? defaultBorder, width: 1.2),
-      boxShadow: const [
-        BoxShadow(
-          color: Colors.black26,
-          blurRadius: 8,
-          offset: Offset(0, 3),
-        ),
-      ],
-    ),
-    child: TvFocusWrapper(
-      borderRadius: 23.0,
-      onTap: onTap,
-      child: Center(child: child),
-    ),
-  );
-}
-
-Widget buildM3FloatingPillButton({
-  required BuildContext context,
-  required Widget child,
-  required VoidCallback onTap,
-  Color? backgroundColor,
-  Color? borderColor,
-}) {
-  final colorScheme = Theme.of(context).colorScheme;
-  final defaultBg = colorScheme.surfaceContainerHigh.withValues(alpha: 0.85);
-  final defaultBorder = colorScheme.outlineVariant.withValues(alpha: 0.3);
-
-  return Container(
-    height: 42,
-    decoration: BoxDecoration(
-      color: backgroundColor ?? defaultBg,
-      borderRadius: BorderRadius.circular(24.0),
-      border: Border.all(color: borderColor ?? defaultBorder, width: 1.2),
-      boxShadow: const [
-        BoxShadow(
-          color: Colors.black26,
-          blurRadius: 8,
-          offset: Offset(0, 3),
-        ),
-      ],
-    ),
-    child: TvFocusWrapper(
-      borderRadius: 24.0,
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [child],
-        ),
-      ),
-    ),
-  );
-}
-
-Widget buildActionButton({
-  required BuildContext context,
-  required IconData icon,
-  required Color iconColor,
-  required VoidCallback onTap,
-  String? tooltip,
-}) {
-  return Tooltip(
-    message: tooltip ?? '',
-    child: TvFocusWrapper(
-      borderRadius: 23.0,
-      onTap: onTap,
-      child: Container(
-        width: 46,
-        height: 46,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: iconColor != Colors.white
-              ? iconColor.withValues(alpha: 0.2)
-              : Colors.white.withValues(alpha: 0.1),
-          border: Border.all(
-            color: iconColor != Colors.white
-                ? iconColor.withValues(alpha: 0.5)
-                : Colors.white.withValues(alpha: 0.2),
-            width: 1.2,
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 8,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Icon(
-            icon,
-            color: iconColor,
-            size: 22,
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-class MovieWatchlistButton extends StatefulWidget {
-  final int movieId;
+class SerieWatchlistButton extends StatefulWidget {
+  final int serieId;
   final bool? initialIsWatchlist;
   final bool isUserLoggedIn;
   final bool isDesktop;
 
-  const MovieWatchlistButton({
+  const SerieWatchlistButton({
     Key? key,
-    required this.movieId,
+    required this.serieId,
     required this.initialIsWatchlist,
     required this.isUserLoggedIn,
     required this.isDesktop,
   }) : super(key: key);
 
   @override
-  State<MovieWatchlistButton> createState() => _MovieWatchlistButtonState();
+  State<SerieWatchlistButton> createState() => _SerieWatchlistButtonState();
 }
 
-class _MovieWatchlistButtonState extends State<MovieWatchlistButton> {
+class _SerieWatchlistButtonState extends State<SerieWatchlistButton> {
   bool? _isWatchlist;
 
   @override
@@ -157,7 +36,7 @@ class _MovieWatchlistButtonState extends State<MovieWatchlistButton> {
   }
 
   @override
-  void didUpdateWidget(MovieWatchlistButton oldWidget) {
+  void didUpdateWidget(SerieWatchlistButton oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialIsWatchlist != widget.initialIsWatchlist) {
       _isWatchlist = widget.initialIsWatchlist;
@@ -176,9 +55,9 @@ class _MovieWatchlistButtonState extends State<MovieWatchlistButton> {
     final String sessionData = openbox.get('sessionData');
 
     if (currentStatus) {
-      await removeFromWatchList(accountId, sessionData, widget.movieId, context);
+      await removeFromWatchList(accountId, sessionData, widget.serieId, context);
     } else {
-      await addWatchList(accountId, sessionData, widget.movieId, context);
+      await addWatchList(accountId, sessionData, widget.serieId, context);
     }
     profileRefreshNotifier.value++;
   }
@@ -218,25 +97,25 @@ class _MovieWatchlistButtonState extends State<MovieWatchlistButton> {
   }
 }
 
-class MovieFavoriteButton extends StatefulWidget {
-  final int movieId;
+class SerieFavoriteButton extends StatefulWidget {
+  final int serieId;
   final bool? initialIsFavorite;
   final bool isUserLoggedIn;
   final bool isDesktop;
 
-  const MovieFavoriteButton({
+  const SerieFavoriteButton({
     Key? key,
-    required this.movieId,
+    required this.serieId,
     required this.initialIsFavorite,
     required this.isUserLoggedIn,
     required this.isDesktop,
   }) : super(key: key);
 
   @override
-  State<MovieFavoriteButton> createState() => _MovieFavoriteButtonState();
+  State<SerieFavoriteButton> createState() => _SerieFavoriteButtonState();
 }
 
-class _MovieFavoriteButtonState extends State<MovieFavoriteButton> {
+class _SerieFavoriteButtonState extends State<SerieFavoriteButton> {
   bool? _isFavorite;
 
   @override
@@ -246,7 +125,7 @@ class _MovieFavoriteButtonState extends State<MovieFavoriteButton> {
   }
 
   @override
-  void didUpdateWidget(MovieFavoriteButton oldWidget) {
+  void didUpdateWidget(SerieFavoriteButton oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialIsFavorite != widget.initialIsFavorite) {
       _isFavorite = widget.initialIsFavorite;
@@ -265,9 +144,9 @@ class _MovieFavoriteButtonState extends State<MovieFavoriteButton> {
     final String sessionData = openbox.get('sessionData');
 
     if (currentStatus) {
-      await removeFromFavorite(accountId, sessionData, widget.movieId, context);
+      await removeFromFavorite(accountId, sessionData, widget.serieId, context);
     } else {
-      await addFavorite(accountId, sessionData, widget.movieId, context);
+      await addFavorite(accountId, sessionData, widget.serieId, context);
     }
     profileRefreshNotifier.value++;
   }
@@ -306,151 +185,16 @@ class _MovieFavoriteButtonState extends State<MovieFavoriteButton> {
   }
 }
 
-class MovieWatchedButton extends StatefulWidget {
-  final int movieId;
-  final String movieTitle;
-  final String? posterPath;
-  final double? userRating;
-  final bool initialIsWatched;
-  final bool isDesktop;
-
-  const MovieWatchedButton({
-    Key? key,
-    required this.movieId,
-    required this.movieTitle,
-    required this.posterPath,
-    required this.userRating,
-    required this.initialIsWatched,
-    required this.isDesktop,
-  }) : super(key: key);
-
-  @override
-  State<MovieWatchedButton> createState() => _MovieWatchedButtonState();
-}
-
-class _MovieWatchedButtonState extends State<MovieWatchedButton> {
-  late bool _isWatched;
-  final WatchHistoryDatabase _watchHistoryDb = WatchHistoryDatabase();
-
-  @override
-  void initState() {
-    super.initState();
-    _isWatched = widget.initialIsWatched;
-  }
-
-  @override
-  void didUpdateWidget(MovieWatchedButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialIsWatched != widget.initialIsWatched) {
-      _isWatched = widget.initialIsWatched;
-    }
-  }
-
-  Future<void> _toggleWatched() async {
-    if (_isWatched) {
-      try {
-        final watchHistory = await _watchHistoryDb.getWatchHistoryByTmdbId(widget.movieId, 'movie');
-        if (watchHistory.isNotEmpty) {
-          await _watchHistoryDb.deleteWatchHistoryItem(watchHistory.first.id!);
-          if (mounted) {
-            setState(() {
-              _isWatched = false;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${widget.movieTitle} removed from watched!'),
-                backgroundColor: Colors.orange,
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          }
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error removing movie from watched: $e'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      }
-    } else {
-      try {
-        await _watchHistoryDb.addMovieToHistory(
-          tmdbId: widget.movieId,
-          title: widget.movieTitle,
-          posterPath: widget.posterPath,
-          userRating: widget.userRating,
-        );
-        if (mounted) {
-          setState(() {
-            _isWatched = true;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${widget.movieTitle} marked as watched!'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error marking movie as watched: $e'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return buildM3FloatingPillButton(
-      context: context,
-      backgroundColor: _isWatched ? Colors.green.withValues(alpha: 0.25) : null,
-      borderColor: _isWatched ? Colors.green.withValues(alpha: 0.6) : null,
-      onTap: _toggleWatched,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            _isWatched ? Icons.check_circle_rounded : Icons.visibility_outlined,
-            color: _isWatched ? Colors.greenAccent : Colors.white,
-            size: 18,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            _isWatched ? 'Watched' : 'Mark as Watched',
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: _isWatched ? Colors.greenAccent : Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class MovieRatingButton extends StatefulWidget {
-  final int movieId;
+class SerieRatingButton extends StatefulWidget {
+  final int serieId;
   final bool isUserLoggedIn;
   final dynamic initialIsRated;
   final double? initialUserRating;
   final bool isDesktop;
 
-  const MovieRatingButton({
+  const SerieRatingButton({
     Key? key,
-    required this.movieId,
+    required this.serieId,
     required this.isUserLoggedIn,
     required this.initialIsRated,
     required this.initialUserRating,
@@ -458,10 +202,10 @@ class MovieRatingButton extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<MovieRatingButton> createState() => _MovieRatingButtonState();
+  State<SerieRatingButton> createState() => _SerieRatingButtonState();
 }
 
-class _MovieRatingButtonState extends State<MovieRatingButton> {
+class _SerieRatingButtonState extends State<SerieRatingButton> {
   dynamic _isRated;
   double? _userRating;
 
@@ -473,7 +217,7 @@ class _MovieRatingButtonState extends State<MovieRatingButton> {
   }
 
   @override
-  void didUpdateWidget(MovieRatingButton oldWidget) {
+  void didUpdateWidget(SerieRatingButton oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialIsRated != widget.initialIsRated ||
         oldWidget.initialUserRating != widget.initialUserRating) {
@@ -508,7 +252,7 @@ class _MovieRatingButtonState extends State<MovieRatingButton> {
                 onRatingEnd: (rating) async {
                   final openbox = Hive.box('sessionBox');
                   final String sessionData = openbox.get('sessionData');
-                  await addRating(sessionData, widget.movieId, rating, context);
+                  await addRating(sessionData, widget.serieId, rating, context);
                   profileRefreshNotifier.value++;
                 },
               ),
@@ -520,7 +264,7 @@ class _MovieRatingButtonState extends State<MovieRatingButton> {
                 onTap: () async {
                   final openbox = Hive.box('sessionBox');
                   final String sessionData = openbox.get('sessionData');
-                  removeRating(sessionData, widget.movieId, context);
+                  removeRating(sessionData, widget.serieId, context);
                   Navigator.of(sheetContext).pop();
                   setState(() {
                     _isRated = false;
@@ -589,7 +333,7 @@ class _MovieRatingButtonState extends State<MovieRatingButton> {
           context: context,
           icon: Icons.add_reaction_rounded,
           iconColor: Colors.white,
-          tooltip: 'Rate Movie',
+          tooltip: 'Rate Show',
           onTap: _showRatingModal,
         );
       }

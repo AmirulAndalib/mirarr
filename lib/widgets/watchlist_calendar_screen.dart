@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive/hive.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -55,31 +55,50 @@ class _WatchlistCalendarScreenState extends State<WatchlistCalendarScreen> {
       }
 
       // Fetch all pages of TV watchlist
-      int page = 1;
-      int totalPages = 1;
-      List<Serie> basicSeries = [];
+      final response = await apiClient.get(
+        Uri.parse('${baseUrl}account/$accountId/watchlist/tv?api_key=$apiKey&session_id=$sessionData&page=1'),
+      );
 
-      while (page <= totalPages) {
-        final response = await http.get(
-          Uri.parse('${baseUrl}account/$accountId/watchlist/tv?api_key=$apiKey&session_id=$sessionData&page=$page'),
-        );
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load watchlist series');
+      }
 
-        if (response.statusCode == 200) {
-          final Map<String, dynamic> decoded = json.decode(response.body);
-          totalPages = decoded['total_pages'] ?? 1;
-          final List<dynamic> results = decoded['results'] ?? [];
-          for (var result in results) {
-            basicSeries.add(Serie(
-              name: result['name'],
-              posterPath: result['poster_path'] ?? '',
-              overView: result['overview'] ?? '',
-              id: result['id'],
-              score: (result['vote_average'] as num?)?.toDouble() ?? 0.0,
-            ));
+      final Map<String, dynamic> decoded = json.decode(response.body);
+      final int totalPages = decoded['total_pages'] ?? 1;
+      final List<Serie> basicSeries = [];
+      void addResults(List<dynamic> results) {
+        for (var result in results) {
+          basicSeries.add(Serie(
+            name: result['name'],
+            posterPath: result['poster_path'] ?? '',
+            overView: result['overview'] ?? '',
+            id: result['id'],
+            score: (result['vote_average'] as num?)?.toDouble() ?? 0.0,
+          ));
+        }
+      }
+
+      addResults(decoded['results'] as List<dynamic>? ?? []);
+
+      if (totalPages > 1) {
+        const pageConcurrency = 4;
+        for (var start = 2; start <= totalPages; start += pageConcurrency) {
+          final end = start + pageConcurrency - 1 > totalPages
+              ? totalPages
+              : start + pageConcurrency - 1;
+          final pages = List.generate(end - start + 1, (i) => start + i);
+          final pageBodies = await Future.wait(pages.map((page) async {
+            final pageResponse = await apiClient.get(
+              Uri.parse('${baseUrl}account/$accountId/watchlist/tv?api_key=$apiKey&session_id=$sessionData&page=$page'),
+            );
+            if (pageResponse.statusCode != 200) {
+              throw Exception('Failed to load watchlist series');
+            }
+            return json.decode(pageResponse.body)['results'] as List<dynamic>? ?? [];
+          }));
+          for (final results in pageBodies) {
+            addResults(results);
           }
-          page++;
-        } else {
-          throw Exception('Failed to load watchlist series');
         }
       }
 

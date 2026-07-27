@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:html/dom.dart';
 import 'package:html/parser.dart' as html_parser;
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 
 class F2MLink {
   final String label;
@@ -368,13 +368,14 @@ Future<List<F2MSeasonGroup>> fetchF2MDownloadLinks(String imdbId) async {
     const searchUrl = 'https://www.nilfgaard.top/quick-search';
     const siteOrigin = 'https://www.nilfgaard.top';
 
-    final response = await http.post(
+    final response = await apiClient.post(
       Uri.parse(searchUrl),
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: 'q=${Uri.encodeQueryComponent(formattedId)}&sort=${Uri.encodeQueryComponent('modified_at:desc')}',
-    ).timeout(const Duration(seconds: 10));
+      timeout: const Duration(seconds: 10),
+    );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       return [];
@@ -395,9 +396,10 @@ Future<List<F2MSeasonGroup>> fetchF2MDownloadLinks(String imdbId) async {
 
     if (pageUrl == null) return [];
 
-    final pageResponse = await http
-        .get(Uri.parse(pageUrl))
-        .timeout(const Duration(seconds: 12));
+    final pageResponse = await apiClient.get(
+      Uri.parse(pageUrl),
+      timeout: const Duration(seconds: 12),
+    );
 
     if (pageResponse.statusCode < 200 || pageResponse.statusCode >= 300) {
       return [];

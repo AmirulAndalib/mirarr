@@ -15,7 +15,7 @@ import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'package:Mirarr/moviesPage/models/movie.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:Mirarr/seriesPage/models/serie.dart';
@@ -38,6 +38,7 @@ class _SearchScreenState extends State<SearchScreen>
   final apiKey = dotenv.env['TMDB_API_KEY'];
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
+  int _searchFetchId = 0;
 
   late FocusNode _searchFocusNode;
 
@@ -59,136 +60,131 @@ class _SearchScreenState extends State<SearchScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _tabController.addListener(_onTabChanged);
     _searchController.addListener(_onSearchChanged);
     _searchFocusNode = FocusNode(onKeyEvent: _handleSearchFocusKey);
-  }
-
-  void _onTabChanged() {
-    if (mounted) {
-      setState(() {});
-    }
   }
 
   void _onSearchChanged() {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
-      String query = _searchController.text.trim();
+      final query = _searchController.text.trim();
+      if (!mounted) return;
       if (query.isNotEmpty) {
-        if (mounted) {
-          searchMovies(query, context);
-          searchSeries(query, context);
-          searchPerson(query, context);
-        }
+        _runSearch(query);
       } else {
+        _searchFetchId++;
         setState(() {
-          movieResults.clear();
-          tvResults.clear();
-          personResults.clear();
+          movieResults = [];
+          tvResults = [];
+          personResults = [];
         });
       }
     });
   }
 
-  Future<void> searchMovies(String query, BuildContext context) async {
+  Future<void> _runSearch(String query) async {
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
-    final response = await http.get(
-      Uri.parse(
-        '${baseUrl}search/movie?api_key=$apiKey&query=$query',
-      ),
-    );
-    if (response.statusCode == 200) {
-      final List<Movie> movies = [];
-      final List<dynamic> results = json.decode(response.body)['results'];
+    final encodedQuery = Uri.encodeQueryComponent(query);
+    final currentFetchId = ++_searchFetchId;
 
-      for (var result in results) {
-        final movie = Movie(
-            title: result['title'],
-            releaseDate: result['release_date'] ?? '',
-            posterPath: result['poster_path'] ?? '',
-            overView: result['overview'] ?? '',
-            id: result['id'] ?? '',
-            backdropPath: result['backdrop_path'] ?? '',
-            score: result['vote_average'] ?? 0.0);
-        movies.add(movie);
-      }
+    try {
+      final results = await Future.wait([
+        _fetchMovies(baseUrl, encodedQuery),
+        _fetchSeries(baseUrl, encodedQuery),
+        _fetchPeople(baseUrl, encodedQuery),
+      ]);
+
+      if (!mounted || currentFetchId != _searchFetchId) return;
 
       setState(() {
-        movieResults = movies;
+        movieResults = results[0] as List<Movie>;
+        tvResults = results[1] as List<Serie>;
+        personResults = results[2] as List<Person>;
       });
-    } else {
+    } catch (e) {
+      if (!mounted || currentFetchId != _searchFetchId) return;
+      debugPrint('Search failed for "$query": $e');
+    }
+  }
+
+  Future<List<Movie>> _fetchMovies(String baseUrl, String encodedQuery) async {
+    final response = await apiClient.get(
+      Uri.parse(
+        '${baseUrl}search/movie?api_key=$apiKey&query=$encodedQuery',
+      ),
+    );
+    if (response.statusCode != 200) {
       throw Exception('Failed to load movie data');
     }
+
+    final List<Movie> movies = [];
+    final List<dynamic> results = json.decode(response.body)['results'];
+    for (var result in results) {
+      movies.add(Movie(
+        title: result['title'],
+        releaseDate: result['release_date'] ?? '',
+        posterPath: result['poster_path'] ?? '',
+        overView: result['overview'] ?? '',
+        id: result['id'] ?? '',
+        backdropPath: result['backdrop_path'] ?? '',
+        score: result['vote_average'] ?? 0.0,
+      ));
+    }
+    return movies;
   }
 
-  Future<void> searchSeries(String query, BuildContext context) async {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final baseUrl = getBaseUrl(region);
-    final response = await http.get(
+  Future<List<Serie>> _fetchSeries(String baseUrl, String encodedQuery) async {
+    final response = await apiClient.get(
       Uri.parse(
-        '${baseUrl}search/tv?api_key=$apiKey&query=$query',
+        '${baseUrl}search/tv?api_key=$apiKey&query=$encodedQuery',
       ),
     );
-    if (response.statusCode == 200) {
-      final List<Serie> series = [];
-      final List<dynamic> results = json.decode(response.body)['results'];
-
-      for (var result in results) {
-        final serie = Serie(
-          name: result['name'],
-          posterPath: result['poster_path'] ?? '',
-          overView: result['overview'] ?? '',
-          id: result['id'],
-          backdropPath: result['backdrop_path'] ?? '',
-          score: result['vote_average'] ?? 0.0,
-        );
-        series.add(serie);
-      }
-
-      setState(() {
-        tvResults = series;
-      });
-    } else {
+    if (response.statusCode != 200) {
       throw Exception('Failed to load serie data');
     }
+
+    final List<Serie> series = [];
+    final List<dynamic> results = json.decode(response.body)['results'];
+    for (var result in results) {
+      series.add(Serie(
+        name: result['name'],
+        posterPath: result['poster_path'] ?? '',
+        overView: result['overview'] ?? '',
+        id: result['id'],
+        backdropPath: result['backdrop_path'] ?? '',
+        score: result['vote_average'] ?? 0.0,
+      ));
+    }
+    return series;
   }
 
-  Future<void> searchPerson(String query, BuildContext context) async {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final baseUrl = getBaseUrl(region);
-    final response = await http.get(
+  Future<List<Person>> _fetchPeople(String baseUrl, String encodedQuery) async {
+    final response = await apiClient.get(
       Uri.parse(
-        '${baseUrl}search/person?api_key=$apiKey&query=$query',
+        '${baseUrl}search/person?api_key=$apiKey&query=$encodedQuery',
       ),
     );
-    if (response.statusCode == 200) {
-      final List<Person> persons = [];
-      final List<dynamic> results = json.decode(response.body)['results'];
-
-      for (var result in results) {
-        final person = Person(
-          name: result['name'],
-          profilePath: result['profile_path'] ?? '',
-          id: result['id'],
-          department: result['known_for_department'] ?? '',
-        );
-        persons.add(person);
-      }
-
-      setState(() {
-        personResults = persons;
-      });
-    } else {
+    if (response.statusCode != 200) {
       throw Exception('Failed to load people data');
     }
+
+    final List<Person> persons = [];
+    final List<dynamic> results = json.decode(response.body)['results'];
+    for (var result in results) {
+      persons.add(Person(
+        name: result['name'],
+        profilePath: result['profile_path'] ?? '',
+        id: result['id'],
+        department: result['known_for_department'] ?? '',
+      ));
+    }
+    return persons;
   }
 
-  String _getSearchLabelText() {
-    switch (_tabController.index) {
+  String _getSearchLabelText(int tabIndex) {
+    switch (tabIndex) {
       case 0:
         return 'Search for movies...';
       case 1:
@@ -434,7 +430,6 @@ class _SearchScreenState extends State<SearchScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isDiscoverTab = _tabController.index == 3;
 
     return Scaffold(
       extendBody: true,
@@ -442,62 +437,76 @@ class _SearchScreenState extends State<SearchScreen>
       body: SafeArea(
         child: Column(
           children: [
-            // Unified search bar at top
-            if (!isDiscoverTab)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: Align(
-                  alignment: Alignment.center,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600),
-                    child: TextField(
-                      focusNode: _searchFocusNode,
-                      autocorrect: false,
-                      style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
-                      cursorColor: colorScheme.primary,
-                      controller: _searchController,
-                      keyboardType: TextInputType.text,
-                      decoration: InputDecoration(
-                        hintText: _getSearchLabelText(),
-                        hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                        ),
-                        prefixIcon: Icon(
-                          Icons.search_rounded,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                        filled: true,
-                        fillColor: colorScheme.surfaceContainerHigh,
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: colorScheme.primary, width: 2),
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: colorScheme.outlineVariant.withValues(alpha: 0.2),
-                            width: 1,
+            // Hint + visibility depend on tab index; rebuild only this bar, not the grids.
+            ValueListenableBuilder<double>(
+              valueListenable: _tabController.animation!,
+              builder: (context, animationValue, _) {
+                final tabIndex = animationValue.round().clamp(0, 3);
+                if (tabIndex == 3) return const SizedBox.shrink();
+
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: TextField(
+                        focusNode: _searchFocusNode,
+                        autocorrect: false,
+                        style: theme.textTheme.bodyLarge
+                            ?.copyWith(color: colorScheme.onSurface),
+                        cursorColor: colorScheme.primary,
+                        controller: _searchController,
+                        keyboardType: TextInputType.text,
+                        decoration: InputDecoration(
+                          hintText: _getSearchLabelText(tabIndex),
+                          hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.6),
                           ),
-                          borderRadius: BorderRadius.circular(28),
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerHigh,
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: colorScheme.primary, width: 2),
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: colorScheme.outlineVariant
+                                  .withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 14, horizontal: 20),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.close_rounded,
+                                      color: colorScheme.onSurfaceVariant),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    _searchFetchId++;
+                                    setState(() {
+                                      movieResults = [];
+                                      tvResults = [];
+                                      personResults = [];
+                                    });
+                                  },
+                                )
+                              : null,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: Icon(Icons.close_rounded, color: colorScheme.onSurfaceVariant),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() {
-                                    movieResults.clear();
-                                    tvResults.clear();
-                                    personResults.clear();
-                                  });
-                                },
-                              )
-                            : null,
                       ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
+            ),
 
             // Material 3 Expressive Segmented TabBar
             LayoutBuilder(
@@ -589,7 +598,6 @@ class _SearchScreenState extends State<SearchScreen>
   @override
   void dispose() {
     _debounce?.cancel();
-    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();

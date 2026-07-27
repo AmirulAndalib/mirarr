@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io' as io;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeProvider extends ChangeNotifier {
@@ -30,12 +29,11 @@ class ThemeProvider extends ChangeNotifier {
   ThemeData get currentTheme => _currentTheme;
 
   void updateSystemDynamicColorScheme(ColorScheme? darkDynamic) {
-    if (darkDynamic == null) return;
+    if (darkDynamic == null || darkDynamic == _systemDynamicColorScheme) return;
     _systemDynamicColorScheme = darkDynamic;
-    if (_isDynamicTheme) {
-      _currentTheme = AppThemes.buildDynamicTheme(darkDynamic);
-      notifyListeners();
-    }
+    if (!_isDynamicTheme) return;
+    _currentTheme = AppThemes.buildDynamicTheme(darkDynamic);
+    notifyListeners();
   }
 
   void setTheme(ThemeData theme) async {
@@ -64,16 +62,16 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   Future<bool> _checkOmarchyLinux() async {
-    if (kIsWeb) return false;
-    if (!io.Platform.isLinux) return false;
+    if (kIsWeb || !io.Platform.isLinux) return false;
     try {
-      final result = await io.Process.run('omarchy', ['version']);
-      if (result.exitCode == 0) {
-        final stdout = result.stdout.toString().trim();
-        return stdout.isNotEmpty;
-      }
-    } catch (_) {}
-    return false;
+      final home = io.Platform.environment['HOME'];
+      if (home == null) return false;
+      return await io.File(
+        '$home/.config/omarchy/current/theme/colors.toml',
+      ).exists();
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<Map<String, Color>> _loadOmarchyColors() async {
@@ -306,15 +304,9 @@ class AppThemes {
     );
 
     final TextTheme baseTextTheme = ThemeData.dark().textTheme;
-
-    TextTheme expressiveTextTheme;
-    if (fontFamily == 'RobotoMono') {
-      expressiveTextTheme = GoogleFonts.robotoMonoTextTheme(baseTextTheme);
-    } else if (fontFamily == 'Nothing') {
-      expressiveTextTheme = baseTextTheme.apply(fontFamily: 'Nothing');
-    } else {
-      expressiveTextTheme = GoogleFonts.plusJakartaSansTextTheme(baseTextTheme);
-    }
+    final String resolvedFontFamily = fontFamily ?? 'PlusJakartaSans';
+    final TextTheme expressiveTextTheme =
+        baseTextTheme.apply(fontFamily: resolvedFontFamily);
 
     return ThemeData(
       useMaterial3: true,
@@ -322,7 +314,7 @@ class AppThemes {
       colorScheme: baseColorScheme,
       scaffoldBackgroundColor: const Color(0xFF0E0E12),
       textTheme: expressiveTextTheme,
-      fontFamily: fontFamily,
+      fontFamily: resolvedFontFamily,
       pageTransitionsTheme: PageTransitionsTheme(
         builders: Map<TargetPlatform, PageTransitionsBuilder>.fromIterable(
           TargetPlatform.values,
@@ -469,15 +461,9 @@ class AppThemes {
     final TextTheme baseTextTheme = brightness == Brightness.dark
         ? ThemeData.dark().textTheme
         : ThemeData.light().textTheme;
-
-    TextTheme expressiveTextTheme;
-    if (fontFamily == 'RobotoMono') {
-      expressiveTextTheme = GoogleFonts.robotoMonoTextTheme(baseTextTheme);
-    } else if (fontFamily == 'Nothing') {
-      expressiveTextTheme = baseTextTheme.apply(fontFamily: 'Nothing');
-    } else {
-      expressiveTextTheme = GoogleFonts.plusJakartaSansTextTheme(baseTextTheme);
-    }
+    final String resolvedFontFamily = fontFamily ?? 'PlusJakartaSans';
+    final TextTheme expressiveTextTheme =
+        baseTextTheme.apply(fontFamily: resolvedFontFamily);
 
     return ThemeData(
       useMaterial3: true,
@@ -485,7 +471,7 @@ class AppThemes {
       colorScheme: baseColorScheme,
       scaffoldBackgroundColor: const Color(0xFF0E0E12),
       textTheme: expressiveTextTheme,
-      fontFamily: fontFamily,
+      fontFamily: resolvedFontFamily,
       pageTransitionsTheme: PageTransitionsTheme(
         builders: Map<TargetPlatform, PageTransitionsBuilder>.fromIterable(
           TargetPlatform.values,

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 
 import 'package:hive/hive.dart';
 import 'package:provider/provider.dart';
@@ -26,7 +27,7 @@ Future<void> addRating(String sessionId, int serieId, double userScore,
   };
 
   try {
-    final http.Response response = await http.post(
+    final http.Response response = await apiClient.post(
       Uri.parse(url),
       headers: <String, String>{
         'Content-Type': 'application/json;charset=utf-8',
@@ -58,7 +59,7 @@ Future<void> removeRating(
       '${baseUrl}tv/$serieId/rating?api_key=$apiKey&session_id=$sessionData';
 
   try {
-    final http.Response response = await http.delete(
+    final http.Response response = await apiClient.delete(
       Uri.parse(url),
       headers: <String, String>{
         'Content-Type': 'application/json;charset=utf-8',
@@ -96,7 +97,7 @@ Future<void> addWatchList(String accountId, String sessionId, int serieId,
   };
 
   try {
-    final http.Response response = await http.post(
+    final http.Response response = await apiClient.post(
       Uri.parse(url),
       headers: <String, String>{
         'Content-Type': 'application/json;charset=utf-8',
@@ -135,7 +136,7 @@ Future<void> addFavorite(String accountId, String sessionId, int serieId,
   };
 
   try {
-    final http.Response response = await http.post(
+    final http.Response response = await apiClient.post(
       Uri.parse(url),
       headers: <String, String>{
         'Content-Type': 'application/json;charset=utf-8',
@@ -174,7 +175,7 @@ Future<void> removeFromWatchList(String accountId, String sessionId,
   };
 
   try {
-    final http.Response response = await http.post(
+    final http.Response response = await apiClient.post(
       Uri.parse(url),
       headers: <String, String>{
         'Content-Type': 'application/json;charset=utf-8',
@@ -214,7 +215,7 @@ Future<void> removeFromFavorite(String accountId, String sessionId, int serieId,
   };
 
   try {
-    final http.Response response = await http.post(
+    final http.Response response = await apiClient.post(
       Uri.parse(url),
       headers: <String, String>{
         'Content-Type': 'application/json;charset=utf-8',

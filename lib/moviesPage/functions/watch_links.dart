@@ -9,7 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher_string.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'dart:convert';
 
 // Model class for download items from Iran servers
@@ -75,7 +75,7 @@ Color getColor(BuildContext context, int movieId) {
 
 Future<Map<String, Map<String, dynamic>>> fetchSources() async {
   try {
-    final response = await http.get(Uri.parse(
+    final response = await apiClient.get(Uri.parse(
         'https://raw.githubusercontent.com/mirarr-app/sources/refs/heads/main/moviesources.txt'));
 
     if (response.statusCode == 200) {
@@ -92,7 +92,7 @@ Future<Map<String, Map<String, dynamic>>> fetchSources() async {
 Future<List<DownloadItem>> fetchIranDownloadLinks(
     String baseUrl, String server) async {
   try {
-    final response = await http.get(Uri.parse(baseUrl));
+    final response = await apiClient.get(Uri.parse(baseUrl));
 
     if (response.statusCode == 200) {
       final List<DownloadItem> items = [];
@@ -144,7 +144,7 @@ Future<List<DownloadItem>> fetchGiftMondDownloadLinks(
     final apiUrl =
         'https://server-hi-speed-iran.info/api/search/$encodedTitle/4F5A9C3D9A86FA54EACEDDD635185/';
 
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(apiUrl),
       headers: {'Accept': 'application/json'},
     );

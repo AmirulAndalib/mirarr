@@ -12,7 +12,6 @@ import 'package:Mirarr/widgets/expressive_interactive_container.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart';
 import 'package:Mirarr/moviesPage/UI/customMovieWidget.dart';
 import 'package:Mirarr/moviesPage/models/movie.dart';
 import 'dart:async';
@@ -51,16 +50,16 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
   Map<int, List<Movie>> moviesByGenre = {};
   late RegionProvider _regionProvider;
   final WatchHistoryDatabase _watchHistoryDb = WatchHistoryDatabase();
-  Set<int> _watchedMovieIds = {};
+  final ValueNotifier<Set<int>> _watchedMovieIds = ValueNotifier({});
 
   Future<void> _loadWatchedMovies() async {
     try {
       final watched = await _watchHistoryDb.getWatchedMovies();
-      if (mounted) {
-        setState(() {
-          _watchedMovieIds = watched.map((e) => e.tmdbId).toSet();
-        });
-      }
+      if (!mounted) return;
+      final next = watched.map((e) => e.tmdbId).toSet();
+      final current = _watchedMovieIds.value;
+      if (next.length == current.length && next.containsAll(current)) return;
+      _watchedMovieIds.value = next;
     } catch (e) {
       debugPrint('Error loading watched movies: $e');
     }
@@ -74,7 +73,7 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
   }
 
   final List<Movie> _dummyMovies = List.generate(
-    5,
+    6,
     (index) => Movie(
       title: 'Movie Title Placeholder',
       releaseDate: '2026-01-01',
@@ -92,7 +91,7 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
 
   late final Map<int, List<Movie>> _dummyMoviesByGenre = {
     -100: List.generate(
-      5,
+      6,
       (index) => Movie(
         title: 'Movie Title Placeholder',
         releaseDate: '2026-01-01',
@@ -103,7 +102,7 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
       ),
     ),
     -101: List.generate(
-      5,
+      6,
       (index) => Movie(
         title: 'Movie Title Placeholder',
         releaseDate: '2026-01-01',
@@ -114,6 +113,18 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
       ),
     ),
   };
+
+  /// Static bone fill — animated shimmer would setState the whole card subtree every frame.
+  Widget _skeletonCard({required Widget child}) {
+    final fill = Colors.white.withValues(alpha: 0.05);
+    return Skeletonizer(
+      enabled: true,
+      ignorePointers: true,
+      containersColor: fill,
+      effect: SolidColorEffect(color: fill),
+      child: child,
+    );
+  }
 
   Future<List<Movie>> _fetchTrendingMovies() async {
     final region =
@@ -127,127 +138,65 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
     return await fetchPopularMovies(region);
   }
 
-  Future<({List<Genre> genres, Map<int, List<Movie>> moviesByGenre})> _fetchGenresAndMovies() async {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final fetchedGenres = await fetchGenres(region);
-    final Map<int, List<Movie>> genreMap = {};
+  Future<void> _loadPrimaryMovies() async {
+    try {
+      final primaryResults = await Future.wait([
+        _fetchTrendingMovies(),
+        _fetchPopularMovies(),
+      ]);
 
-    // Process requests in small batches to prevent Web connection exhaustion
-    const batchSize = 4;
-    for (var i = 0; i < fetchedGenres.length; i += batchSize) {
-      final end = (i + batchSize < fetchedGenres.length) ? i + batchSize : fetchedGenres.length;
-      final chunk = fetchedGenres.sublist(i, end);
-      await Future.wait(chunk.map((genre) async {
-        try {
-          final movies = await fetchMoviesByGenre(genre.id, region);
-          genreMap[genre.id] = movies;
-        } catch (e) {
-          debugPrint('Failed to fetch movies for genre ${genre.name}: $e');
-          genreMap[genre.id] = [];
-        }
-      }));
+      if (mounted) {
+        setState(() {
+          trendingMovies = primaryResults[0];
+          popularMovies = primaryResults[1];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching primary movie data: $e');
     }
-    return (genres: fetchedGenres, moviesByGenre: genreMap);
   }
 
-  void handleNetworkError(ClientException e) {
-    if (e.message.contains('No address associated with hostname')) {
-      // Handle case where there's no internet connection
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          final colorScheme = Theme.of(context).colorScheme;
-          final textTheme = Theme.of(context).textTheme;
+  Future<void> _loadGenreMovies() async {
+    try {
+      final region =
+          Provider.of<RegionProvider>(context, listen: false).currentRegion;
+      final fetchedGenres = await fetchGenres(region);
+      if (!mounted) return;
 
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-              side: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-            ),
-            icon: Icon(Icons.wifi_off_rounded, color: colorScheme.error, size: 32),
-            title: Text(
-              'No Internet Connection',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            content: Text(
-              'Please connect to the internet and try again.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            actions: [
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
-    } else {
-      // Handle other network-related errors
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          final colorScheme = Theme.of(context).colorScheme;
-          final textTheme = Theme.of(context).textTheme;
+      // Show genre headers immediately; rows skeleton until each batch lands.
+      setState(() {
+        genres = fetchedGenres;
+      });
 
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-              side: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-            ),
-            icon: Icon(Icons.error_outline_rounded, color: colorScheme.error, size: 32),
-            title: Text(
-              'Network Error',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            content: Text(
-              'An error occurred while fetching data. Please try again later.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            actions: [
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
+      // Cap concurrent genre discovers so posters keep connection-pool headroom.
+      const batchSize = 8;
+      if (fetchedGenres.isEmpty) return;
+
+      for (var i = 0; i < fetchedGenres.length; i += batchSize) {
+        final end = (i + batchSize < fetchedGenres.length)
+            ? i + batchSize
+            : fetchedGenres.length;
+        final chunk = fetchedGenres.sublist(i, end);
+        final results = await Future.wait(chunk.map((genre) async {
+          try {
+            final movies = await fetchMoviesByGenre(genre.id, region);
+            return MapEntry(genre.id, movies);
+          } catch (e) {
+            debugPrint('Failed to fetch movies for genre ${genre.name}: $e');
+            return MapEntry(genre.id, <Movie>[]);
+          }
+        }));
+
+        if (!mounted) return;
+        setState(() {
+          moviesByGenre = {
+            ...moviesByGenre,
+            for (final entry in results) entry.key: entry.value,
+          };
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching genres: $e');
     }
   }
 
@@ -270,6 +219,7 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
   void dispose() {
     // Remove listener when disposing
     _regionProvider.removeListener(_onRegionChanged);
+    _watchedMovieIds.dispose();
     super.dispose();
   }
 
@@ -284,39 +234,11 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
     }
     _loadWatchedMovies();
 
-    // 1. Progressive load of Trending & Popular
-    try {
-      final primaryResults = await Future.wait([
-        _fetchTrendingMovies(),
-        _fetchPopularMovies(),
-      ]);
-
-      if (mounted) {
-        setState(() {
-          trendingMovies = primaryResults[0];
-          popularMovies = primaryResults[1];
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching primary movie data: $e');
-      if (mounted && (e is ClientException || e is Exception)) {
-        handleNetworkError(e is ClientException ? e : ClientException(e.toString()));
-        return;
-      }
-    }
-
-    // 2. Progressive load of Genre lists (batched into chunks of 4)
-    try {
-      final genreData = await _fetchGenresAndMovies();
-      if (mounted) {
-        setState(() {
-          genres = genreData.genres;
-          moviesByGenre = genreData.moviesByGenre;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching genres: $e');
-    }
+    // Primary shelves and genre lists load concurrently.
+    await Future.wait([
+      _loadPrimaryMovies(),
+      _loadGenreMovies(),
+    ]);
   }
 
   @override
@@ -354,40 +276,34 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
                   height: 320,
                   child: ScrollConfiguration(
                     behavior: _movieScrollBehavior,
-                    child: Skeletonizer(
-                      enabled: trendingMovies.isEmpty,
-                      containersColor: Colors.white.withValues(alpha: 0.05),
-                      effect: ShimmerEffect(
-                        baseColor: Colors.white.withValues(alpha: 0.05),
-                        highlightColor: Colors.white.withValues(alpha: 0.15),
-                      ),
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: trendingMovies.isEmpty
-                            ? _dummyMovies.length
-                            : trendingMovies.length,
-                        itemBuilder: (context, index) {
-                          final movie = trendingMovies.isEmpty
-                              ? _dummyMovies[index]
-                              : trendingMovies[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: TvFocusWrapper(
-                              autoFocus: index == 0 && trendingMovies.isNotEmpty,
-                              onTap: trendingMovies.isEmpty
-                                  ? () {}
-                                  : () => _onMovieTapped(movie),
-                              child: CustomMovieWidget(
-                                movie: movie,
-                                showAvailability: false,
-                                isWatched: _watchedMovieIds.contains(movie.id),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemExtent: 262,
+                      itemCount: trendingMovies.isEmpty
+                          ? _dummyMovies.length
+                          : trendingMovies.length,
+                      itemBuilder: (context, index) {
+                        final loading = trendingMovies.isEmpty;
+                        final movie =
+                            loading ? _dummyMovies[index] : trendingMovies[index];
+                        final card = CustomMovieWidget(
+                          movie: movie,
+                          showAvailability: false,
+                          watchedMovieIds: loading ? null : _watchedMovieIds,
+                        );
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: loading
+                              ? _skeletonCard(child: card)
+                              : TvFocusWrapper(
+                                  autoFocus: index == 0,
+                                  onTap: () => _onMovieTapped(movie),
+                                  child: card,
+                                ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -398,33 +314,33 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
                   height: 320,
                   child: ScrollConfiguration(
                     behavior: _movieScrollBehavior,
-                    child: Skeletonizer(
-                      enabled: popularMovies.isEmpty,
-                      containersColor: Colors.white.withValues(alpha: 0.05),
-                      effect: ShimmerEffect(
-                        baseColor: Colors.white.withValues(alpha: 0.05),
-                        highlightColor: Colors.white.withValues(alpha: 0.15),
-                      ),
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: popularMovies.isEmpty ? _dummyMovies.length : popularMovies.length,
-                        itemBuilder: (context, index) {
-                          final movie = popularMovies.isEmpty ? _dummyMovies[index] : popularMovies[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: TvFocusWrapper(
-                              onTap: popularMovies.isEmpty ? () {} : () => _onMovieTapped(movie),
-                              child: CustomMovieWidget(
-                                movie: movie,
-                                showAvailability: false,
-                                isWatched: _watchedMovieIds.contains(movie.id),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemExtent: 262,
+                      itemCount: popularMovies.isEmpty
+                          ? _dummyMovies.length
+                          : popularMovies.length,
+                      itemBuilder: (context, index) {
+                        final loading = popularMovies.isEmpty;
+                        final movie =
+                            loading ? _dummyMovies[index] : popularMovies[index];
+                        final card = CustomMovieWidget(
+                          movie: movie,
+                          showAvailability: false,
+                          watchedMovieIds: loading ? null : _watchedMovieIds,
+                        );
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: loading
+                              ? _skeletonCard(child: card)
+                              : TvFocusWrapper(
+                                  onTap: () => _onMovieTapped(movie),
+                                  child: card,
+                                ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -435,54 +351,60 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
             delegate: SliverChildBuilderDelegate(
               (context, index) {
                 final genre = currentGenres[index];
+                final genreLoading =
+                    genres.isNotEmpty && !moviesByGenre.containsKey(genre.id);
                 final moviesList = genres.isEmpty
                     ? _dummyMoviesByGenre[genre.id]
-                    : moviesByGenre[genre.id];
+                    : genreLoading
+                        ? _dummyMovies
+                        : moviesByGenre[genre.id];
 
-                return Skeletonizer(
-                  enabled: genres.isEmpty,
-                  containersColor: Colors.white.withValues(alpha: 0.05),
-                  effect: ShimmerEffect(
-                    baseColor: Colors.white.withValues(alpha: 0.05),
-                    highlightColor: Colors.white.withValues(alpha: 0.15),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      _buildSectionHeader(
-                        genre.name,
-                        genres.isEmpty ? null : () => onTapGridMovie(moviesByGenre[genre.id]!, context),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        height: 320,
-                        child: ScrollConfiguration(
-                          behavior: _movieScrollBehavior,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            physics: const BouncingScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: moviesList?.length ?? 0,
-                            itemBuilder: (context, itemIndex) {
-                              final movie = moviesList![itemIndex];
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 12),
-                                child: TvFocusWrapper(
-                                  onTap: genres.isEmpty ? () {} : () => _onMovieTapped(movie),
-                                  child: CustomMovieWidget(
-                                    movie: movie,
-                                    showAvailability: false,
-                                    isWatched: _watchedMovieIds.contains(movie.id),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                final loading = genres.isEmpty || genreLoading;
+                final header = _buildSectionHeader(
+                  genre.name,
+                  loading || moviesByGenre[genre.id] == null
+                      ? null
+                      : () => onTapGridMovie(
+                          moviesByGenre[genre.id]!, context),
+                );
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    // Skeletonize title until real genre names arrive.
+                    genres.isEmpty ? _skeletonCard(child: header) : header,
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 320,
+                      child: ScrollConfiguration(
+                        behavior: _movieScrollBehavior,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemExtent: 262,
+                          itemCount: moviesList?.length ?? 0,
+                          itemBuilder: (context, itemIndex) {
+                            final movie = moviesList![itemIndex];
+                            final card = CustomMovieWidget(
+                              movie: movie,
+                              showAvailability: false,
+                              watchedMovieIds: loading ? null : _watchedMovieIds,
+                            );
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: loading
+                                  ? _skeletonCard(child: card)
+                                  : TvFocusWrapper(
+                                      onTap: () => _onMovieTapped(movie),
+                                      child: card,
+                                    ),
+                            );
+                          },
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 );
               },
               childCount: currentGenres.length,

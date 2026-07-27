@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher_string.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'dart:convert';
 import 'dart:developer';
 
@@ -51,7 +51,7 @@ Future<void> _copyToClipboard(BuildContext context, String url) async {
 
 Future<Map<String, Map<String, dynamic>>> fetchTvSources() async {
   try {
-    final response = await http.get(Uri.parse(
+    final response = await apiClient.get(Uri.parse(
         'https://raw.githubusercontent.com/mirarr-app/sources/refs/heads/main/tvsources.txt'));
 
     if (response.statusCode == 200) {
@@ -74,7 +74,7 @@ Future<List<SeriesDownloadItem>> fetchIranSeriesDownloadLinks(
   try {
     final url =
         'https://subtitle.saymyname.website/DL/filmgir/?i=$imdbId&f=$seasonNumber&q=$quality';
-    final response = await http.get(Uri.parse(url));
+    final response = await apiClient.get(Uri.parse(url));
 
     if (response.statusCode == 200) {
       final List<SeriesDownloadItem> items = [];

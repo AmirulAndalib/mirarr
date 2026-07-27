@@ -11,16 +11,8 @@ class _MovieDetailPageMobile extends StatelessWidget {
     final moviedetails = state.moviedetails;
     final duration = state.duration;
     final releaseDate = state.releaseDate;
-    final imdbRating = state.imdbRating;
-    final rottenTomatoesRating = state.rottenTomatoesRating;
-    final isWatched = state.isWatched;
     final score = state.score;
     final backdrops = state.backdrops;
-    final isUserLoggedIn = state.isUserLoggedIn;
-    final isMovieWatchlist = state.isMovieWatchlist;
-    final isMovieFavorite = state.isMovieFavorite;
-    final isMovieRated = state.isMovieRated;
-    final userRating = state.userRating;
     final genres = state.genres;
     final about = state.about;
     final budget = state.budget;
@@ -31,7 +23,6 @@ class _MovieDetailPageMobile extends StatelessWidget {
     final imdbId = state.imdbId;
     final availabilityFuture = state._availabilityFuture;
     final creditsFuture = state._creditsFuture;
-    final directorMoviesFuture = state._directorMoviesFuture;
     final screenshotController = state.screenshotController;
     final language = state.language;
 
@@ -62,7 +53,8 @@ class _MovieDetailPageMobile extends StatelessWidget {
                           },
                           child: Stack(
                             children: [
-                              CachedNetworkImage(
+                              RepaintBoundary(
+                                child: CachedNetworkImage(
                                 imageUrl:
                                     '${getImageBaseUrl(region)}/t/p/w780$backdrops',
                                 memCacheWidth: 780,
@@ -91,6 +83,7 @@ class _MovieDetailPageMobile extends StatelessWidget {
                                     ),
                                   ),
                                 ),
+                              ),
                               ),
                               Container(
                                 height: 320,
@@ -126,47 +119,53 @@ class _MovieDetailPageMobile extends StatelessWidget {
                             ),
                           ),
                         ),
-                        Visibility(
-                          visible: imdbRating != null && imdbRating.isNotEmpty,
-                          child: Positioned(
-                            bottom: 70,
-                            left: 110,
-                            child: Container(
-                              margin: const EdgeInsets.all(10),
-                              padding: const EdgeInsets.all(10),
-                              decoration: const BoxDecoration(
-                                  color: Colors.black38,
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(30))),
-                              child: Text(
-                                'IMDB⭐ $imdbRating',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w300,
-                                  fontSize: 12,
-                                  color: Colors.white,
+                        ValueListenableBuilder<String?>(
+                          valueListenable: state.imdbRating,
+                          builder: (_, rating, __) => Visibility(
+                            visible: rating != null && rating.isNotEmpty,
+                            child: Positioned(
+                              bottom: 70,
+                              left: 110,
+                              child: Container(
+                                margin: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(10),
+                                decoration: const BoxDecoration(
+                                    color: Colors.black38,
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(30))),
+                                child: Text(
+                                  'IMDB⭐ $rating',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w300,
+                                    fontSize: 12,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                        Visibility(
-                          visible: rottenTomatoesRating != 'N/A',
-                          child: Positioned(
-                            bottom: 70,
-                            left: 210,
-                            child: Container(
-                              margin: const EdgeInsets.all(10),
-                              padding: const EdgeInsets.all(10),
-                              decoration: const BoxDecoration(
-                                  color: Colors.black38,
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(30))),
-                              child: Text(
-                                'Rotten Tomatoes🍅 $rottenTomatoesRating',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w300,
-                                  fontSize: 12,
-                                  color: Colors.white,
+                        ValueListenableBuilder<String>(
+                          valueListenable: state.rottenTomatoesRating,
+                          builder: (_, rating, __) => Visibility(
+                            visible: rating != 'N/A',
+                            child: Positioned(
+                              bottom: 70,
+                              left: 210,
+                              child: Container(
+                                margin: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(10),
+                                decoration: const BoxDecoration(
+                                    color: Colors.black38,
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(30))),
+                                child: Text(
+                                  'Rotten Tomatoes🍅 $rating',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w300,
+                                    fontSize: 12,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
@@ -184,7 +183,7 @@ class _MovieDetailPageMobile extends StatelessWidget {
                                   borderRadius:
                                       BorderRadius.all(Radius.circular(20)),
                                 ),
-                                width: MediaQuery.of(context).size.width - 20,
+                                width: MediaQuery.sizeOf(context).width - 20,
                                 child: Text(
                                   widget.movieTitle,
                                   softWrap: true,
@@ -296,55 +295,77 @@ class _MovieDetailPageMobile extends StatelessWidget {
                             ),
                           ),
 
-                        if (isUserLoggedIn == true)
-                          Positioned(
-                            top: 140,
-                            right: 24,
-                            child: MovieWatchlistButton(
-                              movieId: widget.movieId,
-                              initialIsWatchlist: isMovieWatchlist,
-                              isUserLoggedIn: isUserLoggedIn,
-                              isDesktop: false,
-                            ),
-                          ),
-
-                        if (isUserLoggedIn == true)
-                          Positioned(
-                            top: 90,
-                            right: 24,
-                            child: MovieFavoriteButton(
-                              movieId: widget.movieId,
-                              initialIsFavorite: isMovieFavorite,
-                              isUserLoggedIn: isUserLoggedIn,
-                              isDesktop: false,
-                            ),
-                          ),
-
-                        Positioned(
-                          top: 40,
-                          left: 20,
-                          child: MovieWatchedButton(
-                            movieId: widget.movieId,
-                            movieTitle: widget.movieTitle,
-                            posterPath: state.posterPath,
-                            userRating: userRating,
-                            initialIsWatched: isWatched,
-                            isDesktop: false,
-                          ),
+                        // Positioned.fill gives this Stack bounded constraints
+                        // (non-positioned Stack-of-Positioneds breaks in scroll views).
+                        AnimatedBuilder(
+                          animation: Listenable.merge([
+                            state.isUserLoggedIn,
+                            state.isMovieWatchlist,
+                            state.isMovieFavorite,
+                            state.isMovieRated,
+                            state.userRating,
+                            state.isWatched,
+                          ]),
+                          builder: (context, _) {
+                            final loggedIn = state.isUserLoggedIn.value;
+                            return Positioned.fill(
+                              child: Stack(
+                                children: [
+                                  if (loggedIn)
+                                    Positioned(
+                                      top: 140,
+                                      right: 24,
+                                      child: MovieWatchlistButton(
+                                        movieId: widget.movieId,
+                                        initialIsWatchlist:
+                                            state.isMovieWatchlist.value,
+                                        isUserLoggedIn: loggedIn,
+                                        isDesktop: false,
+                                      ),
+                                    ),
+                                  if (loggedIn)
+                                    Positioned(
+                                      top: 90,
+                                      right: 24,
+                                      child: MovieFavoriteButton(
+                                        movieId: widget.movieId,
+                                        initialIsFavorite:
+                                            state.isMovieFavorite.value,
+                                        isUserLoggedIn: loggedIn,
+                                        isDesktop: false,
+                                      ),
+                                    ),
+                                  Positioned(
+                                    top: 40,
+                                    left: 20,
+                                    child: MovieWatchedButton(
+                                      movieId: widget.movieId,
+                                      movieTitle: widget.movieTitle,
+                                      posterPath: state.posterPath,
+                                      userRating: state.userRating.value,
+                                      initialIsWatched: state.isWatched.value,
+                                      isDesktop: false,
+                                    ),
+                                  ),
+                                  if (loggedIn)
+                                    Positioned(
+                                      top: 40,
+                                      right: 24,
+                                      child: MovieRatingButton(
+                                        movieId: widget.movieId,
+                                        isUserLoggedIn: loggedIn,
+                                        initialIsRated:
+                                            state.isMovieRated.value,
+                                        initialUserRating:
+                                            state.userRating.value,
+                                        isDesktop: false,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
-
-                        if (isUserLoggedIn == true)
-                          Positioned(
-                            top: 40,
-                            right: 24,
-                            child: MovieRatingButton(
-                              movieId: widget.movieId,
-                              isUserLoggedIn: isUserLoggedIn,
-                              initialIsRated: isMovieRated,
-                              initialUserRating: userRating,
-                              isDesktop: false,
-                            ),
-                          ),
                       ],
                     ),
                   Center(
@@ -643,140 +664,121 @@ class _MovieDetailPageMobile extends StatelessWidget {
                     },
                   ),
                   const CustomDivider(),
-                  FutureBuilder(
-                    future: creditsFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      } else if (snapshot.hasError) {
-                        return const Text(
-                            'Error loading cast and crew details');
-                      } else {
-                        final Map<String, List<Map<String, dynamic>>> data =
-                            snapshot.data
-                                as Map<String, List<Map<String, dynamic>>>;
+                  if (state.directorName != null)
+                    Column(
+                      children: [
+                        Align(
+                          alignment: Alignment.topLeft,
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.fromLTRB(25, 15, 10, 0),
+                            child: Text(
+                              "Movies by ${state.directorName}",
+                              style:
+                                  getMovieTitleTextStyle(widget.movieId),
+                            ),
+                          ),
+                        ),
+                        ValueListenableBuilder<Future<dynamic>?>(
+                          valueListenable: state.directorMoviesFuture,
+                          builder: (context, directorMoviesFuture, _) {
+                            if (directorMoviesFuture == null) {
+                              return const Center(
+                                  child: CircularProgressIndicator());
+                            }
+                            return FutureBuilder(
+                              future: directorMoviesFuture,
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return const Center(
+                                      child: CircularProgressIndicator());
+                                } else if (snapshot.hasError) {
+                                  return const Text(
+                                      'Error loading other movies');
+                                } else {
+                                  List<dynamic> movies =
+                                      snapshot.data as List<dynamic>;
 
-                        final List<Map<String, dynamic>> crewList =
-                            data['crew'] ?? [];
-
-                        Map<String, dynamic>? director;
-
-                        for (var crewMember in crewList) {
-                          if (crewMember['job'] == 'Director') {
-                            director = crewMember;
-                            break;
-                          }
-                        }
-
-                        if (director != null) {
-                          return Column(
-                            children: [
-                              Align(
-                                alignment: Alignment.topLeft,
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsets.fromLTRB(25, 15, 10, 0),
-                                  child: Text(
-                                    "Movies by ${director['name']}",
-                                    style:
-                                        getMovieTitleTextStyle(widget.movieId),
-                                  ),
-                                ),
-                              ),
-                              directorMoviesFuture == null
-                                  ? const Center(child: CircularProgressIndicator())
-                                  : FutureBuilder(
-                                      future: directorMoviesFuture,
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const Center(
-                                        child: CircularProgressIndicator());
-                                  } else if (snapshot.hasError) {
-                                    return const Text(
-                                        'Error loading other movies');
-                                  } else {
-                                    List<dynamic> movies =
-                                        snapshot.data as List<dynamic>;
-
-                                    return SingleChildScrollView(
+                                  return SizedBox(
+                                    height: 250,
+                                    child: ListView.builder(
                                       scrollDirection: Axis.horizontal,
-                                      child: Row(
-                                        children: movies.map((movie) {
-                                          return Padding(
-                                              padding:
-                                                  const EdgeInsets.all(8.0),
-                                              child: Column(
-                                                children: [
-                                                  TvFocusWrapper(
-                                                     onTap: () => state.onTapMovie(
-                                                         movie['title'],
-                                                         movie['id']),
-                                                     child: Card(
-                                                       child: SizedBox(
-                                                          height: 200,
-                                                          width: 100,
-                                                          child: ClipRRect(
-                                                            borderRadius: BorderRadius.circular(20),
-                                                            child: movie['poster_path'].isNotEmpty
-                                                                ? CachedNetworkImage(
-                                                                    imageUrl: '${getImageBaseUrl(region)}/t/p/w200${movie['poster_path']}',
-                                                                    fit: BoxFit.cover,
-                                                                    placeholder: (context, url) => Skeletonizer(
-                                                                      enabled: true,
-                                                                      containersColor: Colors.white.withOpacity(0.05),
-                                                                      effect: ShimmerEffect(
-                                                                        baseColor: Colors.white.withOpacity(0.05),
-                                                                        highlightColor: Colors.white.withOpacity(0.15),
-                                                                      ),
-                                                                      child: Container(
-                                                                        color: Colors.grey[900],
-                                                                      ),
+                                      physics: const BouncingScrollPhysics(),
+                                      itemExtent: 116,
+                                      itemCount: movies.length,
+                                      itemBuilder: (context, index) {
+                                        final movie = movies[index];
+                                        return Padding(
+                                            padding:
+                                                const EdgeInsets.all(8.0),
+                                            child: Column(
+                                              children: [
+                                                TvFocusWrapper(
+                                                   onTap: () => state.onTapMovie(
+                                                       movie['title'],
+                                                       movie['id']),
+                                                   child: Card(
+                                                     child: SizedBox(
+                                                        height: 200,
+                                                        width: 100,
+                                                        child: ClipRRect(
+                                                          borderRadius: BorderRadius.circular(20),
+                                                          child: movie['poster_path'].isNotEmpty
+                                                              ? CachedNetworkImage(
+                                                                  imageUrl: '${getImageBaseUrl(region)}/t/p/w200${movie['poster_path']}',
+                                                                  fit: BoxFit.cover,
+                                                                  placeholder: (context, url) => Skeletonizer(
+                                                                    enabled: true,
+                                                                    containersColor: Colors.white.withOpacity(0.05),
+                                                                    effect: ShimmerEffect(
+                                                                      baseColor: Colors.white.withOpacity(0.05),
+                                                                      highlightColor: Colors.white.withOpacity(0.15),
                                                                     ),
-                                                                    errorWidget: (context, url, error) => Container(
+                                                                    child: Container(
                                                                       color: Colors.grey[900],
-                                                                      child: const Icon(Icons.error),
                                                                     ),
-                                                                  )
-                                                                : Container(
-                                                                    color: Colors.grey[900],
                                                                   ),
-                                                          ),
+                                                                  errorWidget: (context, url, error) => Container(
+                                                                    color: Colors.grey[900],
+                                                                    child: const Icon(Icons.error),
+                                                                  ),
+                                                                )
+                                                              : Container(
+                                                                  color: Colors.grey[900],
+                                                                ),
                                                         ),
-                                                     ),
-                                                   ),
-                                                  SizedBox(
-                                                    width: 70,
-                                                    child: Text(
-                                                      movie['title'],
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      maxLines: 2,
-                                                      softWrap: true,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: const TextStyle(
-                                                        fontSize: 10,
-                                                        color: Colors.white,
                                                       ),
+                                                   ),
+                                                 ),
+                                                SizedBox(
+                                                  width: 70,
+                                                  child: Text(
+                                                    movie['title'],
+                                                    textAlign:
+                                                        TextAlign.center,
+                                                    maxLines: 2,
+                                                    softWrap: true,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      fontSize: 10,
+                                                      color: Colors.white,
                                                     ),
                                                   ),
-                                                ],
-                                              ));
-                                        }).toList(),
-                                      ),
-                                    );
-                                  }
-                                },
-                              ),
-                            ],
-                          );
-                        } else {
-                          return const SizedBox();
-                        }
-                      }
-                    },
-                  ),
+                                                ),
+                                              ],
+                                            ));
+                                      },
+                                    ),
+                                  );
+                                }
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   const CustomDivider(),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
@@ -1010,7 +1012,9 @@ class _MovieDetailPageMobile extends StatelessWidget {
         children: [
           Stack(children: [
             CachedNetworkImage(
-              imageUrl: '${getImageBaseUrl(region)}/t/p/original$backdrops',
+              imageUrl: '${getImageBaseUrl(region)}/t/p/w1280$backdrops',
+              memCacheWidth: 1280,
+              maxWidthDiskCache: 1280,
               placeholder: (context, url) => Skeletonizer(
                 enabled: true,
                 containersColor: Colors.white.withOpacity(0.05),
@@ -1058,7 +1062,7 @@ class _MovieDetailPageMobile extends StatelessWidget {
                     decoration: const BoxDecoration(
                       borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
-                    width: MediaQuery.of(context).size.width - 20,
+                    width: MediaQuery.sizeOf(context).width - 20,
                     child: Text(
                       widget.movieTitle,
                       softWrap: true,

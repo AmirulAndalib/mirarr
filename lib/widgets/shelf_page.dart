@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:Mirarr/functions/platform_helper.dart';
 import 'dart:ui';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -34,6 +34,7 @@ class ShelfPage extends StatefulWidget {
 
 class _ShelfPageState extends State<ShelfPage> {
   int _lastIndex = -1;
+  late final NavigationProvider _nav;
 
   Future<void> _navigateToMovie(String title, int id) async {
     await Navigator.push(
@@ -72,6 +73,8 @@ class _ShelfPageState extends State<ShelfPage> {
   List<WatchHistoryItem> watchedMovies = [];
   List<WatchHistoryItem> watchedShows = [];
   List<WatchHistoryItem> diaryItems = [];
+  List<Map<String, dynamic>> _groupedShows = [];
+  List<Map<String, dynamic>> _filteredGroupedShows = [];
 
   bool isLoading = true;
 
@@ -100,11 +103,21 @@ class _ShelfPageState extends State<ShelfPage> {
   @override
   void initState() {
     super.initState();
+    _nav = context.read<NavigationProvider>()..addListener(_onNavChanged);
+    _lastIndex = _nav.currentIndex;
     _loadWatchHistory();
+  }
+
+  void _onNavChanged() {
+    if (_nav.currentIndex == 3 && _lastIndex != 3) {
+      _loadWatchHistory();
+    }
+    _lastIndex = _nav.currentIndex;
   }
 
   @override
   void dispose() {
+    _nav.removeListener(_onNavChanged);
     _movieSearchController.dispose();
     _showSearchController.dispose();
     _diarySearchController.dispose();
@@ -112,44 +125,69 @@ class _ShelfPageState extends State<ShelfPage> {
     super.dispose();
   }
 
+  String _runtimeKey(WatchHistoryItem item) {
+    return item.type == 'movie'
+        ? 'movie_${item.tmdbId}'
+        : 'tv_ep_${item.tmdbId}_${item.seasonNumber}_${item.episodeNumber}';
+  }
+
+  Widget _shelfPoster({
+    required String? posterPath,
+    required String region,
+    required String size,
+    required int memCacheWidth,
+    required Widget placeholder,
+  }) {
+    if (posterPath == null || posterPath.isEmpty) return placeholder;
+    return CachedNetworkImage(
+      imageUrl: '${getImageBaseUrl(region)}/t/p/$size$posterPath',
+      memCacheWidth: memCacheWidth,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      placeholder: (_, __) => placeholder,
+      errorWidget: (_, __, ___) => placeholder,
+    );
+  }
+
   Future<void> _loadWatchHistory() async {
-    setState(() {
-      isLoading = true;
-    });
+    // This also runs on every entry into the shelf tab and on every pop back
+    // from a detail page, so the spinner is only for the very first load.
+    if (diaryItems.isEmpty) {
+      setState(() {
+        isLoading = true;
+      });
+    }
 
     try {
-      final movies = await _database.getWatchedMovies();
-      final shows = await _database.getWatchedShows();
       final diary = await _database.getAllWatchHistory();
 
+      final movies = diary.where((item) => item.type == 'movie').toList();
+      final shows = diary.where((item) => item.type == 'tv').toList();
+
       final runtimesBox = await _getBox();
-      
+
       int uncachedCount = 0;
       int movieMins = 0;
       int tvMins = 0;
 
-      for (final m in movies) {
-        final runtimeVal = runtimesBox.get('movie_${m.tmdbId}');
+      for (final item in diary) {
+        final runtimeVal = runtimesBox.get(_runtimeKey(item)) as int?;
         if (runtimeVal == null) {
           uncachedCount++;
+        } else if (item.type == 'movie') {
+          movieMins += runtimeVal;
         } else {
-          movieMins += runtimeVal as int;
+          tvMins += runtimeVal;
         }
       }
 
-      for (final s in shows) {
-        final runtimeVal = runtimesBox.get('tv_ep_${s.tmdbId}_${s.seasonNumber}_${s.episodeNumber}');
-        if (runtimeVal == null) {
-          uncachedCount++;
-        } else {
-          tvMins += runtimeVal as int;
-        }
-      }
-
+      if (!mounted) return;
       setState(() {
         watchedMovies = movies;
         watchedShows = shows;
         diaryItems = diary;
+        _rebuildGroupedShows();
         totalMovieMinutes = movieMins;
         totalTvMinutes = tvMins;
         needsCalculation = uncachedCount > 0;
@@ -158,10 +196,41 @@ class _ShelfPageState extends State<ShelfPage> {
       });
     } catch (e) {
       print('Error loading watch history: $e');
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
     }
+  }
+
+  /// Drops a single entry without re-reading and re-decoding the whole
+  /// history, which is what the delete affordances used to do.
+  Future<void> _deleteHistoryItem(WatchHistoryItem item) async {
+    final id = item.id;
+    if (id == null) return;
+
+    await _database.deleteWatchHistoryItem(id);
+    final runtimesBox = await _getBox();
+    final runtime = runtimesBox.get(_runtimeKey(item)) as int?;
+    if (!mounted) return;
+
+    setState(() {
+      watchedMovies.removeWhere((entry) => entry.id == id);
+      watchedShows.removeWhere((entry) => entry.id == id);
+      diaryItems.removeWhere((entry) => entry.id == id);
+      if (item.type == 'tv') {
+        _rebuildGroupedShows();
+      }
+
+      if (runtime == null) {
+        uncachedItemsCount = uncachedItemsCount > 0 ? uncachedItemsCount - 1 : 0;
+        needsCalculation = uncachedItemsCount > 0;
+      } else if (item.type == 'movie') {
+        totalMovieMinutes -= runtime;
+      } else {
+        totalTvMinutes -= runtime;
+      }
+    });
   }
 
   void _debouncedSetState(void Function() fn) {
@@ -195,7 +264,7 @@ class _ShelfPageState extends State<ShelfPage> {
       // 1. Gather all uncached items
       final List<WatchHistoryItem> uncachedMovies = [];
       for (final m in watchedMovies) {
-        if (!runtimesBox.containsKey('movie_${m.tmdbId}')) {
+        if (!runtimesBox.containsKey(_runtimeKey(m))) {
           uncachedMovies.add(m);
         }
       }
@@ -203,7 +272,7 @@ class _ShelfPageState extends State<ShelfPage> {
       // Group TV shows episodes by tvId and season number to request season runtimes
       final Map<String, List<WatchHistoryItem>> uncachedTvGroups = {};
       for (final s in watchedShows) {
-        final key = 'tv_ep_${s.tmdbId}_${s.seasonNumber}_${s.episodeNumber}';
+        final key = _runtimeKey(s);
         if (!runtimesBox.containsKey(key)) {
           final groupKey = '${s.tmdbId}_${s.seasonNumber}';
           uncachedTvGroups.putIfAbsent(groupKey, () => []).add(s);
@@ -216,7 +285,7 @@ class _ShelfPageState extends State<ShelfPage> {
       // 2. Fetch movies runtimes
       for (final movie in uncachedMovies) {
         try {
-          final response = await http.get(Uri.parse('${baseUrl}movie/${movie.tmdbId}?api_key=$apiKey'));
+          final response = await apiClient.get(Uri.parse('${baseUrl}movie/${movie.tmdbId}?api_key=$apiKey'));
           if (response.statusCode == 200) {
             final Map<String, dynamic> data = json.decode(response.body);
             final runtime = data['runtime'] as int? ?? 100;
@@ -244,7 +313,7 @@ class _ShelfPageState extends State<ShelfPage> {
         final eps = entry.value;
 
         try {
-          final response = await http.get(Uri.parse('${baseUrl}tv/$tvId/season/$seasonNum?api_key=$apiKey'));
+          final response = await apiClient.get(Uri.parse('${baseUrl}tv/$tvId/season/$seasonNum?api_key=$apiKey'));
           if (response.statusCode == 200) {
             final Map<String, dynamic> data = json.decode(response.body);
             final List<dynamic>? episodesList = data['episodes'] as List<dynamic>?;
@@ -399,18 +468,8 @@ class _ShelfPageState extends State<ShelfPage> {
 
   @override
   Widget build(BuildContext context) {
-    final navProvider = Provider.of<NavigationProvider>(context);
-    if (navProvider.currentIndex == 3 && _lastIndex != 3) {
-      _lastIndex = 3;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _loadWatchHistory();
-      });
-    } else if (navProvider.currentIndex != 3) {
-      _lastIndex = navProvider.currentIndex;
-    }
-
     final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final width = MediaQuery.of(context).size.width;
+    final width = MediaQuery.sizeOf(context).width;
     final bool isLargeScreen = width >= 800;
 
     return Scaffold(
@@ -462,6 +521,8 @@ class _ShelfPageState extends State<ShelfPage> {
 
   // Desktop Left Sidebar
   Widget _buildDesktopSidebar() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final sections = [
       {'id': 'movies', 'label': 'Movies', 'icon': Icons.movie, 'desc': 'Watched films'},
       {'id': 'shows', 'label': 'TV Shows', 'icon': Icons.tv, 'desc': 'Logged episodes'},
@@ -471,10 +532,10 @@ class _ShelfPageState extends State<ShelfPage> {
     return Container(
       width: 260,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.015),
+        color: colorScheme.surfaceContainerLow,
         border: Border(
           right: BorderSide(
-            color: Colors.white.withValues(alpha: 0.06),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -488,17 +549,17 @@ class _ShelfPageState extends State<ShelfPage> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Row(
               children: [
-                Icon(Icons.shelves, size: 28, color: Theme.of(context).primaryColor),
+                Icon(Icons.shelves, size: 28, color: colorScheme.primary),
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'MY SHELF',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                        color: colorScheme.onSurface,
                         letterSpacing: 1.5,
                       ),
                     ),
@@ -506,7 +567,7 @@ class _ShelfPageState extends State<ShelfPage> {
                       'Local Database',
                       style: TextStyle(
                         fontSize: 10,
-                        color: Theme.of(context).primaryColor,
+                        color: colorScheme.primary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -537,12 +598,12 @@ class _ShelfPageState extends State<ShelfPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? Theme.of(context).primaryColor.withValues(alpha: 0.12)
+                            ? colorScheme.primaryContainer
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isSelected
-                              ? Theme.of(context).primaryColor.withValues(alpha: 0.3)
+                              ? colorScheme.primary.withValues(alpha: 0.35)
                               : Colors.transparent,
                         ),
                       ),
@@ -550,7 +611,9 @@ class _ShelfPageState extends State<ShelfPage> {
                         children: [
                           Icon(
                             sec['icon'] as IconData,
-                            color: isSelected ? Theme.of(context).primaryColor : Colors.white60,
+                            color: isSelected
+                                ? colorScheme.onPrimaryContainer
+                                : colorScheme.onSurfaceVariant,
                             size: 20,
                           ),
                           const SizedBox(width: 14),
@@ -563,15 +626,17 @@ class _ShelfPageState extends State<ShelfPage> {
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                    color: isSelected ? Colors.white : Colors.white70,
+                                    color: isSelected
+                                        ? colorScheme.onPrimaryContainer
+                                        : colorScheme.onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   sec['desc'] as String,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 9,
-                                    color: Colors.white30,
+                                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
@@ -581,8 +646,8 @@ class _ShelfPageState extends State<ShelfPage> {
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
-                                  : Colors.white.withValues(alpha: 0.05),
+                                  ? colorScheme.primary.withValues(alpha: 0.2)
+                                  : colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -590,7 +655,9 @@ class _ShelfPageState extends State<ShelfPage> {
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: isSelected ? Theme.of(context).primaryColor : Colors.white70,
+                                color: isSelected
+                                    ? colorScheme.primary
+                                    : colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ),
@@ -609,23 +676,25 @@ class _ShelfPageState extends State<ShelfPage> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.02),
+                color: colorScheme.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                border: Border.all(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.25),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.analytics_outlined, size: 18, color: Theme.of(context).primaryColor),
+                      Icon(Icons.analytics_outlined, size: 18, color: colorScheme.primary),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'SHELF STATS',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white60,
+                          color: colorScheme.onSurfaceVariant,
                           letterSpacing: 1.0,
                         ),
                       ),
@@ -649,7 +718,10 @@ class _ShelfPageState extends State<ShelfPage> {
                     _formatWatchTime(totalTvMinutes),
                     secondaryValue: _formatWatchTimeYMD(totalTvMinutes),
                   ),
-                  const Divider(color: Colors.white10, height: 16),
+                  Divider(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+                    height: 16,
+                  ),
                   _buildStatItem(
                     'Total Watch Time',
                     _formatWatchTime(totalMovieMinutes + totalTvMinutes),
@@ -659,37 +731,20 @@ class _ShelfPageState extends State<ShelfPage> {
                     const SizedBox(height: 12),
                     LinearProgressIndicator(
                       value: calculationProgress,
-                      backgroundColor: Colors.white10,
-                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+                      backgroundColor: colorScheme.surfaceContainerHighest,
+                      valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Fetching runtimes... ${(calculationProgress * 100).toStringAsFixed(0)}%',
-                      style: const TextStyle(fontSize: 10, color: Colors.white54),
+                      'Fetching... ${(calculationProgress * 100).toStringAsFixed(0)}%',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ] else if (needsCalculation) ...[
                     const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.15),
-                          foregroundColor: Theme.of(context).primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        icon: const Badge(
-                          backgroundColor: Colors.amber,
-                          label: Text('!', style: TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.bold)),
-                          child: Icon(Icons.refresh, size: 14),
-                        ),
-                        label: Text(
-                          'Fetch watch times ($uncachedItemsCount logs)',
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                        ),
-                        onPressed: _showCalculationWarningDialog,
-                      ),
-                    ),
+                    _buildCalculateWatchTimeButton(),
                   ],
                 ],
               ),
@@ -702,30 +757,34 @@ class _ShelfPageState extends State<ShelfPage> {
   }
 
   Widget _buildStatItem(String label, String value, {String? secondaryValue}) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.white30)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+        ),
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: Colors.white70,
+                color: colorScheme.onSurface,
               ),
             ),
             if (secondaryValue != null) ...[
               const SizedBox(height: 2),
               Text(
                 secondaryValue,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 10,
-                  color: Colors.white38,
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
                 ),
               ),
             ],
@@ -735,8 +794,35 @@ class _ShelfPageState extends State<ShelfPage> {
     );
   }
 
+  Widget _buildCalculateWatchTimeButton({bool compact = false}) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: double.infinity,
+      height: compact ? 32 : 36,
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        icon: Icon(Icons.timer_outlined, size: compact ? 14 : 16),
+        label: Text(
+          'Calc. times ($uncachedItemsCount)',
+          style: TextStyle(
+            fontSize: compact ? 11 : 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        onPressed: _showCalculationWarningDialog,
+      ),
+    );
+  }
+
   // Desktop Header
   Widget _buildDesktopHeader() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final activeController = _activeSection == 'movies'
         ? _movieSearchController
         : _activeSection == 'shows'
@@ -751,14 +837,18 @@ class _ShelfPageState extends State<ShelfPage> {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05))),
+        border: Border(
+          bottom: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.25),
+          ),
+        ),
       ),
       child: Row(
         children: [
           Text(
             sectionTitle,
             style: TextStyle(
-              color: Theme.of(context).primaryColor,
+              color: colorScheme.onSurface,
               fontSize: 24,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.5,
@@ -769,31 +859,42 @@ class _ShelfPageState extends State<ShelfPage> {
             width: 300,
             child: TextField(
               controller: activeController,
-              style: TextStyle(color: Theme.of(context).primaryColor),
-              cursorColor: Theme.of(context).primaryColor,
+              style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface),
+              cursorColor: colorScheme.primary,
               onChanged: (value) => _debouncedSetState(() {
                 if (_activeSection == 'movies') _movieQuery = value;
-                if (_activeSection == 'shows') _showQuery = value;
+                if (_activeSection == 'shows') {
+                  _showQuery = value;
+                  _applyShowQueryFilter();
+                }
                 if (_activeSection == 'diary') _diaryQuery = value;
               }),
               decoration: InputDecoration(
-                prefixIcon: Icon(Icons.search, color: Theme.of(context).primaryColor, size: 20),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: colorScheme.onSurfaceVariant,
+                  size: 20,
+                ),
                 hintText: 'Search logs...',
-                hintStyle: TextStyle(color: Theme.of(context).primaryColor.withValues(alpha: 0.5)),
+                hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
                 filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.03),
+                fillColor: colorScheme.surfaceContainerHigh,
                 isDense: true,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor.withValues(alpha: 0.3)),
+                  borderSide: BorderSide.none,
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor.withValues(alpha: 0.2)),
+                  borderSide: BorderSide(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  borderSide: BorderSide(color: colorScheme.primary, width: 2),
                 ),
               ),
             ),
@@ -915,7 +1016,10 @@ class _ShelfPageState extends State<ShelfPage> {
               cursorColor: colorScheme.primary,
               onChanged: (value) => _debouncedSetState(() {
                 if (_activeSection == 'movies') _movieQuery = value;
-                if (_activeSection == 'shows') _showQuery = value;
+                if (_activeSection == 'shows') {
+                  _showQuery = value;
+                  _applyShowQueryFilter();
+                }
                 if (_activeSection == 'diary') _diaryQuery = value;
               }),
               decoration: InputDecoration(
@@ -1013,38 +1117,19 @@ class _ShelfPageState extends State<ShelfPage> {
             const SizedBox(height: 8),
             LinearProgressIndicator(
               value: calculationProgress,
-              backgroundColor: Colors.white10,
-              valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+              backgroundColor: colorScheme.surfaceContainerHighest,
+              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
             ),
             const SizedBox(height: 4),
             Text(
-              'Fetching runtimes... ${(calculationProgress * 100).toStringAsFixed(0)}%',
-              style: const TextStyle(fontSize: 9, color: Colors.white54),
+              'Fetching... ${(calculationProgress * 100).toStringAsFixed(0)}%',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
           ] else if (needsCalculation) ...[
             const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              height: 28,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.15),
-                  foregroundColor: Theme.of(context).primaryColor,
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                icon: const Badge(
-                  backgroundColor: Colors.amber,
-                  label: Text('!', style: TextStyle(color: Colors.black, fontSize: 7, fontWeight: FontWeight.bold)),
-                  child: Icon(Icons.refresh, size: 12),
-                ),
-                label: Text(
-                  'Update watch times ($uncachedItemsCount logs pending)',
-                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
-                ),
-                onPressed: _showCalculationWarningDialog,
-              ),
-            ),
+            _buildCalculateWatchTimeButton(compact: true),
           ],
         ],
       ),
@@ -1085,15 +1170,22 @@ class _ShelfPageState extends State<ShelfPage> {
   }
 
   Widget _buildViewOptionButton(String mode, IconData icon, String currentMode, Function(String) onTap) {
+    final colorScheme = Theme.of(context).colorScheme;
     final isSelected = mode == currentMode;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 2),
       decoration: BoxDecoration(
-        color: isSelected ? Theme.of(context).primaryColor.withValues(alpha: 0.2) : Colors.transparent,
+        color: isSelected ? colorScheme.primaryContainer : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
       child: IconButton(
-        icon: Icon(icon, size: 18, color: isSelected ? Theme.of(context).primaryColor : Colors.white54),
+        icon: Icon(
+          icon,
+          size: 18,
+          color: isSelected
+              ? colorScheme.onPrimaryContainer
+              : colorScheme.onSurfaceVariant,
+        ),
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         onPressed: () => onTap(mode),
@@ -1146,7 +1238,7 @@ class _ShelfPageState extends State<ShelfPage> {
   }
 
   Widget _buildMovieGrid(List<WatchHistoryItem> items, String region, {required bool isCompact}) {
-    final width = MediaQuery.of(context).size.width;
+    final width = MediaQuery.sizeOf(context).width;
     final isLarge = width >= 800;
     
     int crossAxisCount;
@@ -1215,13 +1307,12 @@ class _ShelfPageState extends State<ShelfPage> {
       );
     }
 
-    if (filtered.isEmpty) {
-      return const Center(
-        child: Text('No results', style: TextStyle(color: Colors.grey)),
-      );
-    }
-
     if (_showViewMode == 'list') {
+      if (filtered.isEmpty) {
+        return const Center(
+          child: Text('No results', style: TextStyle(color: Colors.grey)),
+        );
+      }
       return ListView.builder(
         padding: EdgeInsets.only(
           left: 16.0,
@@ -1235,8 +1326,15 @@ class _ShelfPageState extends State<ShelfPage> {
           return _buildDetailedListRow(show, region);
         },
       );
-    } else if (_showViewMode == 'compact') {
-      final grouped = _getGroupedShowsList(filtered);
+    }
+
+    if (_filteredGroupedShows.isEmpty) {
+      return const Center(
+        child: Text('No results', style: TextStyle(color: Colors.grey)),
+      );
+    }
+
+    if (_showViewMode == 'compact') {
       return GridView.builder(
         padding: EdgeInsets.only(
           left: 16.0,
@@ -1245,40 +1343,39 @@ class _ShelfPageState extends State<ShelfPage> {
           bottom: TvFocusModeManager.isTvDevice ? 16.0 : BottomBar.getHeight(context),
         ),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: MediaQuery.of(context).size.width >= 800 ? 7 : 4,
+          crossAxisCount: MediaQuery.sizeOf(context).width >= 800 ? 7 : 4,
           childAspectRatio: 0.7,
           crossAxisSpacing: 8,
           mainAxisSpacing: 8,
         ),
-        itemCount: grouped.length,
+        itemCount: _filteredGroupedShows.length,
         itemBuilder: (context, index) {
-          final showGroup = grouped[index];
+          final showGroup = _filteredGroupedShows[index];
           return _buildGroupedShowCompactCard(showGroup, region);
         },
       );
-    } else {
-      // Grid Grouped Shows
-      final grouped = _getGroupedShowsList(filtered);
-      return GridView.builder(
-        padding: EdgeInsets.only(
-          left: 16.0,
-          right: 16.0,
-          top: 16.0,
-          bottom: TvFocusModeManager.isTvDevice ? 16.0 : BottomBar.getHeight(context),
-        ),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: MediaQuery.of(context).size.width >= 800 ? 5 : 3,
-          childAspectRatio: 0.7,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-        ),
-        itemCount: grouped.length,
-        itemBuilder: (context, index) {
-          final showGroup = grouped[index];
-          return _buildGroupedShowDetailedCard(showGroup, region);
-        },
-      );
     }
+
+    // Grid Grouped Shows
+    return GridView.builder(
+      padding: EdgeInsets.only(
+        left: 16.0,
+        right: 16.0,
+        top: 16.0,
+        bottom: TvFocusModeManager.isTvDevice ? 16.0 : BottomBar.getHeight(context),
+      ),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: MediaQuery.sizeOf(context).width >= 800 ? 5 : 3,
+        childAspectRatio: 0.7,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: _filteredGroupedShows.length,
+      itemBuilder: (context, index) {
+        final showGroup = _filteredGroupedShows[index];
+        return _buildGroupedShowDetailedCard(showGroup, region);
+      },
+    );
   }
 
   List<Map<String, dynamic>> _getGroupedShowsList(List<WatchHistoryItem> sourceList) {
@@ -1298,7 +1395,25 @@ class _ShelfPageState extends State<ShelfPage> {
         'episodes': episodes,
         'latestWatchedAt': latest.watchedAt,
       };
-    }).toList()..sort((a, b) => (b['latestWatchedAt'] as DateTime).compareTo(a['latestWatchedAt'] as DateTime));
+    }).toList()
+      ..sort((a, b) => (b['latestWatchedAt'] as DateTime)
+          .compareTo(a['latestWatchedAt'] as DateTime));
+  }
+
+  void _rebuildGroupedShows() {
+    _groupedShows = _getGroupedShowsList(watchedShows);
+    _applyShowQueryFilter();
+  }
+
+  void _applyShowQueryFilter() {
+    final query = _showQuery.trim().toLowerCase();
+    if (query.isEmpty) {
+      _filteredGroupedShows = _groupedShows;
+    } else {
+      _filteredGroupedShows = _groupedShows
+          .where((g) => (g['title'] as String).toLowerCase().contains(query))
+          .toList();
+    }
   }
 
   // DIARY CONTENT LAYER
@@ -1431,9 +1546,8 @@ class _ShelfPageState extends State<ShelfPage> {
                             TvFocusWrapper(
                               onTap: () async {
                                 final confirm = await _showDeleteConfirmation(item);
-                                if (confirm == true && item.id != null) {
-                                  await _database.deleteWatchHistoryItem(item.id!);
-                                  _loadWatchHistory();
+                                if (confirm == true) {
+                                  await _deleteHistoryItem(item);
                                 }
                               },
                               borderRadius: 16.0,
@@ -1506,10 +1620,7 @@ class _ShelfPageState extends State<ShelfPage> {
       ),
       confirmDismiss: (direction) => _showDeleteConfirmation(item),
       onDismissed: (direction) async {
-        if (item.id != null) {
-          await _database.deleteWatchHistoryItem(item.id!);
-          _loadWatchHistory();
-        }
+        await _deleteHistoryItem(item);
       },
       child: TvFocusWrapper(
         onTap: () {
@@ -1531,22 +1642,16 @@ class _ShelfPageState extends State<ShelfPage> {
             child: IntrinsicHeight(
               child: Row(
                 children: [
-                  Container(
+                  SizedBox(
                     width: 60,
                     height: 90,
-                    decoration: BoxDecoration(
-                      image: item.posterPath != null
-                          ? DecorationImage(
-                              image: CachedNetworkImageProvider(
-                                  '${getImageBaseUrl(region)}/t/p/w200${item.posterPath}',
-                              ),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
+                    child: _shelfPoster(
+                      posterPath: item.posterPath,
+                      region: region,
+                      size: 'w92',
+                      memCacheWidth: 120,
+                      placeholder: Icon(isMovie ? Icons.movie : Icons.tv, color: Colors.grey[700]),
                     ),
-                    child: item.posterPath == null
-                        ? Icon(isMovie ? Icons.movie : Icons.tv, color: Colors.grey[700])
-                        : null,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1610,9 +1715,8 @@ class _ShelfPageState extends State<ShelfPage> {
     return GestureDetector(
       onLongPress: () async {
         final confirm = await _showDeleteConfirmation(item);
-        if (confirm == true && item.id != null) {
-          await _database.deleteWatchHistoryItem(item.id!);
-          _loadWatchHistory();
+        if (confirm == true) {
+          await _deleteHistoryItem(item);
         }
       },
       child: TvFocusWrapper(
@@ -1634,20 +1738,12 @@ class _ShelfPageState extends State<ShelfPage> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Container(
-                  decoration: BoxDecoration(
-                    image: item.posterPath != null
-                        ? DecorationImage(
-                            image: CachedNetworkImageProvider(
-                              '${getImageBaseUrl(region)}/t/p/w500${item.posterPath}',
-                            ),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: item.posterPath == null
-                      ? Icon(isMovie ? Icons.movie : Icons.tv, size: 40, color: Colors.grey[700])
-                      : null,
+                _shelfPoster(
+                  posterPath: item.posterPath,
+                  region: region,
+                  size: 'w185',
+                  memCacheWidth: 280,
+                  placeholder: Icon(isMovie ? Icons.movie : Icons.tv, size: 40, color: Colors.grey[700]),
                 ),
                 Positioned.fill(
                   child: Container(
@@ -1712,9 +1808,8 @@ class _ShelfPageState extends State<ShelfPage> {
     return GestureDetector(
       onLongPress: () async {
         final confirm = await _showDeleteConfirmation(item);
-        if (confirm == true && item.id != null) {
-          await _database.deleteWatchHistoryItem(item.id!);
-          _loadWatchHistory();
+        if (confirm == true) {
+          await _deleteHistoryItem(item);
         }
       },
       child: TvFocusWrapper(
@@ -1729,21 +1824,15 @@ class _ShelfPageState extends State<ShelfPage> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                image: item.posterPath != null
-                    ? DecorationImage(
-                        image: CachedNetworkImageProvider(
-                          '${getImageBaseUrl(region)}/t/p/w200${item.posterPath}',
-                        ),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: _shelfPoster(
+                posterPath: item.posterPath,
+                region: region,
+                size: 'w185',
+                memCacheWidth: 200,
+                placeholder: Icon(isMovie ? Icons.movie : Icons.tv, size: 24, color: Colors.grey[700]),
               ),
-              child: item.posterPath == null
-                  ? Icon(isMovie ? Icons.movie : Icons.tv, size: 24, color: Colors.grey[700])
-                  : null,
             ),
             Positioned(
               bottom: 4,
@@ -1783,10 +1872,7 @@ class _ShelfPageState extends State<ShelfPage> {
       ),
       confirmDismiss: (direction) => _showDeleteConfirmation(item),
       onDismissed: (direction) async {
-        if (item.id != null) {
-          await _database.deleteWatchHistoryItem(item.id!);
-          _loadWatchHistory();
-        }
+        await _deleteHistoryItem(item);
       },
       child: TvFocusWrapper(
         onTap: () {
@@ -1807,23 +1893,19 @@ class _ShelfPageState extends State<ShelfPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
+                SizedBox(
                   width: 72,
                   height: 108,
-                  decoration: BoxDecoration(
+                  child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    image: item.posterPath != null
-                        ? DecorationImage(
-                            image: CachedNetworkImageProvider(
-                              '${getImageBaseUrl(region)}/t/p/w200${item.posterPath}',
-                            ),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
+                    child: _shelfPoster(
+                      posterPath: item.posterPath,
+                      region: region,
+                      size: 'w185',
+                      memCacheWidth: 200,
+                      placeholder: Icon(isMovie ? Icons.movie : Icons.tv, color: Colors.grey[600], size: 30),
+                    ),
                   ),
-                  child: item.posterPath == null
-                      ? Icon(isMovie ? Icons.movie : Icons.tv, color: Colors.grey[600], size: 30)
-                      : null,
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -1894,20 +1976,12 @@ class _ShelfPageState extends State<ShelfPage> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Container(
-                decoration: BoxDecoration(
-                  image: posterPath != null
-                      ? DecorationImage(
-                          image: CachedNetworkImageProvider(
-                            '${getImageBaseUrl(region)}/t/p/w500$posterPath',
-                          ),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                ),
-                child: posterPath == null
-                    ? Icon(Icons.tv, size: 40, color: Colors.grey[700])
-                    : null,
+              _shelfPoster(
+                posterPath: posterPath,
+                region: region,
+                size: 'w185',
+                memCacheWidth: 280,
+                placeholder: Icon(Icons.tv, size: 40, color: Colors.grey[700]),
               ),
               Positioned.fill(
                 child: Container(
@@ -2015,20 +2089,12 @@ class _ShelfPageState extends State<ShelfPage> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                image: posterPath != null
-                    ? DecorationImage(
-                        image: CachedNetworkImageProvider(
-                          '${getImageBaseUrl(region)}/t/p/w200$posterPath',
-                        ),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: posterPath == null
-                  ? const Icon(Icons.tv, size: 20, color: Colors.grey)
-                  : null,
+            _shelfPoster(
+              posterPath: posterPath,
+              region: region,
+              size: 'w185',
+              memCacheWidth: 200,
+              placeholder: const Icon(Icons.tv, size: 20, color: Colors.grey),
             ),
             Positioned(
               top: 4,
@@ -2077,7 +2143,7 @@ class _ShelfPageState extends State<ShelfPage> {
       isScrollControlled: true,
       builder: (context) {
         return Container(
-          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.75),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -2121,10 +2187,7 @@ class _ShelfPageState extends State<ShelfPage> {
                         ),
                         confirmDismiss: (direction) => _showDeleteConfirmation(ep),
                         onDismissed: (direction) async {
-                          if (ep.id != null) {
-                            await _database.deleteWatchHistoryItem(ep.id!);
-                            _loadWatchHistory();
-                          }
+                          await _deleteHistoryItem(ep);
                         },
                         child: ListTile(
                           contentPadding: EdgeInsets.zero,

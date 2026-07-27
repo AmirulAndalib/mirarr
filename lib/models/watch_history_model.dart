@@ -41,19 +41,50 @@ class WatchHistoryItem {
     };
   }
 
+  static int? _asInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  static double? _asDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
   factory WatchHistoryItem.fromMap(Map<String, dynamic> map) {
+    final watchedAtMs = _asInt(map['watched_at']);
+    if (watchedAtMs == null) {
+      throw ArgumentError('watch history item missing watched_at');
+    }
+    final tmdbId = _asInt(map['tmdb_id']);
+    if (tmdbId == null) {
+      throw ArgumentError('watch history item missing tmdb_id');
+    }
+    final title = map['title'];
+    final type = map['type'];
+    if (title is! String || type is! String) {
+      throw ArgumentError('watch history item missing title/type');
+    }
+
     return WatchHistoryItem(
-      id: map['id'],
-      tmdbId: map['tmdb_id'],
-      title: map['title'],
-      type: map['type'],
-      posterPath: map['poster_path'],
-      watchedAt: DateTime.fromMillisecondsSinceEpoch(map['watched_at']),
-      seasonNumber: map['season_number'],
-      episodeNumber: map['episode_number'],
-      episodeTitle: map['episode_title'],
-      userRating: map['user_rating'],
-      notes: map['notes'],
+      id: _asInt(map['id']),
+      tmdbId: tmdbId,
+      title: title,
+      type: type,
+      posterPath: map['poster_path'] as String?,
+      watchedAt: DateTime.fromMillisecondsSinceEpoch(watchedAtMs),
+      seasonNumber: _asInt(map['season_number']),
+      episodeNumber: _asInt(map['episode_number']),
+      episodeTitle: map['episode_title'] as String?,
+      // Hive/web JSON often round-trips whole ratings as int.
+      userRating: _asDouble(map['user_rating']),
+      notes: map['notes'] as String?,
     );
   }
 

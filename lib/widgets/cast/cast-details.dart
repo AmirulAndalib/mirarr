@@ -5,7 +5,7 @@ import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:Mirarr/moviesPage/functions/on_tap_movie.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:Mirarr/widgets/custom_divider.dart';
@@ -52,7 +52,7 @@ class _CastDetailPageState extends State<CastDetailPage> {
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse('${baseUrl}person/$castId?api_key=$apiKey'),
     );
     if (response.statusCode == 200) {
@@ -66,7 +66,7 @@ class _CastDetailPageState extends State<CastDetailPage> {
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse('${baseUrl}person/$castId/movie_credits?api_key=$apiKey'),
     );
     if (response.statusCode == 200) {
@@ -95,7 +95,7 @@ class _CastDetailPageState extends State<CastDetailPage> {
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse('${baseUrl}person/$castId/images?api_key=$apiKey'),
     );
     if (response.statusCode == 200) {
@@ -164,7 +164,7 @@ class _CastDetailPageState extends State<CastDetailPage> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final isMobileLayout = MediaQuery.of(context).size.width < 800;
+    final isMobileLayout = MediaQuery.sizeOf(context).width < 800;
 
     return isMobileLayout
         ? SingleChildScrollView(
@@ -203,7 +203,10 @@ class _CastDetailPageState extends State<CastDetailPage> {
                                   child: Icon(Icons.person_rounded, size: 80, color: colorScheme.onSurfaceVariant),
                                 )
                               : CachedNetworkImage(
-                                  imageUrl: '${getImageBaseUrl(region)}/t/p/original${castData['profile_path']}',
+                                  imageUrl:
+                                      '${getImageBaseUrl(region)}/t/p/w500${castData['profile_path']}',
+                                  memCacheWidth: 400,
+                                  maxWidthDiskCache: 500,
                                   placeholder: (context, url) => Container(
                                     height: 360,
                                     color: colorScheme.surfaceContainerHigh,
@@ -351,7 +354,10 @@ class _CastDetailPageState extends State<CastDetailPage> {
                                   child: Icon(Icons.person_rounded, size: 100, color: colorScheme.onSurfaceVariant),
                                 )
                               : CachedNetworkImage(
-                                  imageUrl: '${getImageBaseUrl(region)}/t/p/original${castData['profile_path']}',
+                                  imageUrl:
+                                      '${getImageBaseUrl(region)}/t/p/w500${castData['profile_path']}',
+                                  memCacheWidth: 400,
+                                  maxWidthDiskCache: 500,
                                   placeholder: (context, url) => const M3ExpressiveSpinner(),
                                   errorWidget: (context, url, error) => const Icon(Icons.error),
                                   imageBuilder: (context, imageProvider) => Container(

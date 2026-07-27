@@ -2,6 +2,7 @@ import 'package:Mirarr/functions/navigation_provider.dart';
 import 'package:Mirarr/moviesPage/mainPage.dart';
 import 'package:Mirarr/seriesPage/seriesPage.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
+import 'package:Mirarr/widgets/lazy_indexed_stack.dart';
 import 'package:Mirarr/widgets/login.dart';
 import 'package:Mirarr/widgets/profile.dart';
 import 'package:Mirarr/widgets/search_screen.dart';
@@ -14,18 +15,17 @@ import 'package:provider/provider.dart';
 class MainShellPage extends StatelessWidget {
   const MainShellPage({Key? key}) : super(key: key);
 
+  static const List<Widget> _pages = [
+    MovieSearchScreen(),
+    SerieSearchScreen(),
+    SearchScreen(),
+    ShelfPage(),
+    AccountTabWrapper(),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final navigationProvider = Provider.of<NavigationProvider>(context);
     final bool isTv = TvFocusModeManager.isTvDevice;
-
-    final List<Widget> pages = [
-      const MovieSearchScreen(),
-      const SerieSearchScreen(),
-      const SearchScreen(),
-      const ShelfPage(),
-      const AccountTabWrapper(),
-    ];
 
     return Scaffold(
       extendBody: true,
@@ -33,9 +33,15 @@ class MainShellPage extends StatelessWidget {
         children: [
           if (isTv) const BottomBar(),
           Expanded(
-            child: IndexedStack(
-              index: navigationProvider.currentIndex,
-              children: pages,
+            // Build tabs on first visit so cold start only fetches the active page.
+            child: Selector<NavigationProvider, int>(
+              selector: (_, nav) => nav.currentIndex,
+              builder: (context, index, _) {
+                return LazyIndexedStack(
+                  index: index,
+                  children: _pages,
+                );
+              },
             ),
           ),
         ],

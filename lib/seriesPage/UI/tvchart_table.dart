@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:Mirarr/functions/get_imdb_score.dart';
 import 'package:Mirarr/functions/get_base_url.dart';
@@ -39,9 +40,10 @@ class _TvChartTableState extends State<TvChartTable> {
       }
 
       // 1. Fetch main series metadata to get show title and total seasons
-      final metadataResponse = await http.get(
+      final metadataResponse = await apiClient.get(
         Uri.parse('http://www.omdbapi.com/?i=${widget.imdbId}&apikey=$omdbApiKey'),
-      ).timeout(const Duration(seconds: 5));
+        timeout: const Duration(seconds: 5),
+      );
 
       if (metadataResponse.statusCode != 200) {
         throw Exception('Failed to fetch metadata: ${metadataResponse.statusCode}');
@@ -67,9 +69,10 @@ class _TvChartTableState extends State<TvChartTable> {
       final List<Future<http.Response>> seasonFutures = [];
       for (int season = 1; season <= totalSeasons; season++) {
         seasonFutures.add(
-          http.get(
+          apiClient.get(
             Uri.parse('http://www.omdbapi.com/?i=${widget.imdbId}&Season=$season&apikey=$omdbApiKey'),
-          ).timeout(const Duration(seconds: 5)),
+            timeout: const Duration(seconds: 5),
+          ),
         );
       }
 
@@ -270,7 +273,7 @@ class _TvChartTableState extends State<TvChartTable> {
   Widget build(BuildContext context) {
     final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final imageUrl = widget.imagePath != null && widget.imagePath!.isNotEmpty
-        ? '${getImageBaseUrl(region)}/t/p/original${widget.imagePath}'
+        ? '${getImageBaseUrl(region)}/t/p/w1280${widget.imagePath}'
         : null;
 
     return Scaffold(
@@ -278,20 +281,30 @@ class _TvChartTableState extends State<TvChartTable> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Blurred background image
+          // Dimmed background image
           if (imageUrl != null)
             Positioned.fill(
-              child: Container(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
                   image: DecorationImage(
-                    image: CachedNetworkImageProvider(imageUrl),
+                    image: CachedNetworkImageProvider(
+                      imageUrl,
+                      maxWidth: 1280,
+                    ),
                     fit: BoxFit.cover,
+                    alignment: Alignment.center,
                   ),
                 ),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: Container(
-                    color: Colors.black.withValues(alpha: 0.7),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.55),
+                        Colors.black.withValues(alpha: 0.85),
+                      ],
+                    ),
                   ),
                 ),
               ),

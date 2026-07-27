@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'dart:convert';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -25,7 +25,7 @@ class UpdateChecker {
   }
 
   static Future<String?> _getLatestVersion() async {
-    final response = await http.get(Uri.parse(
+    final response = await apiClient.get(Uri.parse(
         'https://api.github.com/repos/mirarr-app/mirarr/releases/latest'));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);

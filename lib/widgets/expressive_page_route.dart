@@ -17,30 +17,16 @@ class ExpressivePageRoute<T> extends PageRouteBuilder<T> {
           reverseTransitionDuration: speed.duration,
           pageBuilder: (context, animation, secondaryAnimation) => page,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final Curve spatialCurve = ExpressiveMotion.getSpatialCurve(speed);
-            final Curve effectsCurve = ExpressiveMotion.getEffectsCurve(speed);
-
-            final CurvedAnimation spatialAnim = CurvedAnimation(
-              parent: animation,
-              curve: spatialCurve,
-              reverseCurve: spatialCurve,
-            );
-
-            final CurvedAnimation effectsAnim = CurvedAnimation(
-              parent: animation,
-              curve: effectsCurve,
-              reverseCurve: effectsCurve,
-            );
-
-            final Animation<double> scaleAnimation = Tween<double>(
-              begin: 0.94,
-              end: 1.0,
-            ).animate(spatialAnim);
-
             return FadeTransition(
-              opacity: effectsAnim,
+              opacity: animation.drive(
+                CurveTween(curve: ExpressiveMotion.getEffectsCurve(speed)),
+              ),
               child: ScaleTransition(
-                scale: scaleAnimation,
+                scale: animation.drive(
+                  Tween(begin: 0.94, end: 1.0).chain(
+                    CurveTween(curve: ExpressiveMotion.getSpatialCurve(speed)),
+                  ),
+                ),
                 child: child,
               ),
             );

@@ -1,55 +1,27 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 
-/// Gets the IMDb score for a given IMDb ID.
-/// Supports fetching via the single endpoint or the batch endpoint.
-///
-/// If [useBatch] is true, it queries the batch endpoint using a single ID.
+/// Gets the IMDb score for a given IMDb ID via the single-ID endpoint.
 /// Returns the rating (averageRating) as a double, or `null` if not found/error.
-Future<double?> getImdbScore(String imdbId, {bool useBatch = false}) async {
+Future<double?> getImdbScore(String imdbId) async {
   if (imdbId.isEmpty) return null;
 
-  if (useBatch) {
-    try {
-      final response = await http.post(
-        Uri.parse('https://imdb-api.mahsaaghaali.ir/batch'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'ids': [imdbId]
-        }),
-      ).timeout(const Duration(seconds: 10));
+  try {
+    final response = await apiClient.get(
+      Uri.parse('https://imdb-api.mahsaaghaali.ir/$imdbId'),
+      timeout: const Duration(seconds: 10),
+    );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final ratings = data['ratings'] as Map<String, dynamic>?;
-        if (ratings != null && ratings.containsKey(imdbId)) {
-          final ratingInfo = ratings[imdbId];
-          if (ratingInfo != null && ratingInfo['averageRating'] != null) {
-            return (ratingInfo['averageRating'] as num).toDouble();
-          }
-        }
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data != null && data['averageRating'] != null) {
+        return (data['averageRating'] as num).toDouble();
       }
-    } catch (_) {
-      // Gracefully return null on network/parsing/timeout error
     }
-    return null;
-  } else {
-    try {
-      final response = await http.get(
-        Uri.parse('https://imdb-api.mahsaaghaali.ir/$imdbId'),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data != null && data['averageRating'] != null) {
-          return (data['averageRating'] as num).toDouble();
-        }
-      }
-    } catch (_) {
-      // Gracefully return null on network/parsing/timeout error
-    }
-    return null;
+  } catch (_) {
+    // Gracefully return null on network/parsing/timeout error
   }
+  return null;
 }
 
 /// Gets IMDb scores for a list of IMDb IDs in a single batch request.
@@ -58,11 +30,12 @@ Future<Map<String, double>> getImdbScoresBatch(List<String> imdbIds) async {
   if (imdbIds.isEmpty) return {};
 
   try {
-    final response = await http.post(
+    final response = await apiClient.post(
       Uri.parse('https://imdb-api.mahsaaghaali.ir/batch'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'ids': imdbIds}),
-    ).timeout(const Duration(seconds: 10));
+      timeout: const Duration(seconds: 10),
+    );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);

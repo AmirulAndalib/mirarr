@@ -2,7 +2,6 @@ import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:Mirarr/functions/platform_helper.dart';
 
 import 'package:Mirarr/database/watch_history_database.dart';
-import 'package:Mirarr/functions/fetchers/fetch_movie_credits.dart';
 import 'package:Mirarr/functions/fetchers/fetch_movie_details.dart';
 import 'package:Mirarr/functions/fetchers/fetch_other_movies_by_director.dart';
 import 'package:Mirarr/functions/get_base_url.dart';
@@ -16,9 +15,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
 import 'package:Mirarr/moviesPage/UI/cast_crew_row.dart';
 import 'package:Mirarr/moviesPage/UI/movie_action_buttons.dart';
@@ -47,14 +43,15 @@ class MovieDetailPage extends StatefulWidget {
 
 class _MovieDetailPageState extends State<MovieDetailPage> {
   Future<List<String>>? _castImagesFuture;
-  bool? isMovieWatchlist;
   Future<dynamic>? _creditsFuture;
   Future<dynamic>? _availabilityFuture;
-  Future<dynamic>? _directorMoviesFuture;
-  bool? isMovieFavorite;
-  bool isUserLoggedIn = false;
-  dynamic isMovieRated;
-  double? userRating;
+  final directorMoviesFuture = ValueNotifier<Future<dynamic>?>(null);
+  String? directorName;
+  final isMovieWatchlist = ValueNotifier<bool?>(null);
+  final isMovieFavorite = ValueNotifier<bool?>(null);
+  final isUserLoggedIn = ValueNotifier<bool>(false);
+  final isMovieRated = ValueNotifier<dynamic>(null);
+  final userRating = ValueNotifier<double?>(null);
   double? userScore;
   final screenshotController = ScreenshotController();
 
@@ -67,8 +64,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
 
   // Watch history variables
   final WatchHistoryDatabase _watchHistoryDb = WatchHistoryDatabase();
-  bool isWatched = false;
-  final apiKey = dotenv.env['TMDB_API_KEY'];
+  final isWatched = ValueNotifier<bool>(false);
 
   Map<String, dynamic>? moviedetails;
   Map<String, dynamic>? movieInfo;
@@ -90,44 +86,41 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   String? posterPath;
 
   String? imdbId;
-  String? imdbRating;
-  String rottenTomatoesRating = 'N/A';
+  final imdbRating = ValueNotifier<String?>(null);
+  final rottenTomatoesRating = ValueNotifier<String>('N/A');
 
   @override
   void initState() {
     super.initState();
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    _availabilityFuture = checkAvailability(widget.movieId, region);
     _initPageData(region);
   }
 
-  void _initPageData(String region) {
-    _creditsFuture = fetchCredits(widget.movieId, region).then((data) {
-      final List<dynamic> crewList = data['crew'] ?? [];
-      for (var crewMember in crewList) {
-        if (crewMember['job'] == 'Director') {
-          if (mounted) {
-            setState(() {
-              _directorMoviesFuture = fetchOtherMoviesByDirector(crewMember['id'], region);
-            });
-          }
-          break;
-        }
-      }
-      return data;
-    });
+  @override
+  void dispose() {
+    directorMoviesFuture.dispose();
+    isMovieWatchlist.dispose();
+    isMovieFavorite.dispose();
+    isUserLoggedIn.dispose();
+    isMovieRated.dispose();
+    userRating.dispose();
+    isWatched.dispose();
+    imdbRating.dispose();
+    rottenTomatoesRating.dispose();
+    super.dispose();
+  }
 
+  void _initPageData(String region) {
     Future.wait([
       checkUserLogin(),
-      _fetchMovieDetails(),
-      checkAccountState(),
+      _fetchMovieDetails(region),
       _checkWatchedStatus(),
     ]).catchError((_) => <dynamic>[]);
   }
 
   Future<void> _openGalleryOnDemand() async {
-    _castImagesFuture ??= _fetchMovieImages(widget.movieId);
+    _castImagesFuture ??= Future.value(const <String>[]);
     try {
       final imageUrls = await _castImagesFuture!;
       if (mounted) {
@@ -154,98 +147,108 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   Future<void> checkUserLogin() async {
     final openbox = Hive.box('sessionBox');
     final sessionData = openbox.get('sessionData');
-    if (sessionData != null) {
-      if (mounted) {
-        setState(() {
-          isUserLoggedIn = true;
-        });
-      }
+    if (sessionData != null && mounted) {
+      isUserLoggedIn.value = true;
     }
   }
 
-  Future<void> checkAccountState() async {
-    final openbox = Hive.box('sessionBox');
-    final sessionId = openbox.get('sessionData');
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final baseUrl = getBaseUrl(region);
-    final response = await http.get(
-      Uri.parse(
-        '${baseUrl}movie/${widget.movieId}/account_states?api_key=$apiKey&session_id=$sessionId',
-      ),
-    );
-
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = json.decode(response.body);
-      if (mounted) {
-        setState(() {
-          isMovieWatchlist = responseData['watchlist'];
-          isMovieFavorite = responseData['favorite'];
-          isMovieRated = responseData['rated'];
-          if (isMovieRated != false) {
-            userRating = responseData['rated']['value'];
-          }
-        });
-      }
-    }
+  Map<String, List<Map<String, dynamic>>> _parseCredits(
+      Map<String, dynamic>? credits) {
+    final castList = credits?['cast'] as List<dynamic>? ?? const [];
+    final crewList = credits?['crew'] as List<dynamic>? ?? const [];
+    return {
+      'cast': castList.cast<Map<String, dynamic>>().toList(),
+      'crew': crewList.cast<Map<String, dynamic>>().toList(),
+    };
   }
 
-  Future<List<String>> _fetchMovieImages(int movieId) async {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final baseUrl = getBaseUrl(region);
-    final response = await http.get(
-      Uri.parse('${baseUrl}movie/$movieId/images?api_key=$apiKey'),
-    );
-    if (response.statusCode == 200) {
-      final List<dynamic> data = json.decode(response.body)['backdrops'];
-      return data.map((image) => image['file_path'] as String).toList();
-    } else {
-      throw Exception('Failed to load cast images');
+  void _applyAccountStates(Map<String, dynamic>? accountStates) {
+    if (accountStates == null) return;
+    isMovieWatchlist.value = accountStates['watchlist'];
+    isMovieFavorite.value = accountStates['favorite'];
+    isMovieRated.value = accountStates['rated'];
+    if (accountStates['rated'] != false && accountStates['rated'] is Map) {
+      userRating.value = accountStates['rated']['value'];
     }
   }
 
   void updateImdbRating(String rating) {
     if (mounted) {
-      setState(() {
-        imdbRating = rating;
-      });
+      imdbRating.value = rating;
     }
   }
 
   void updateRottenTomatoesRating(String rating) {
     if (mounted) {
-      setState(() {
-        rottenTomatoesRating = rating;
-      });
+      rottenTomatoesRating.value = rating;
     }
   }
 
-  Future<void> _fetchMovieDetails() async {
+  Future<void> _fetchMovieDetails(String region) async {
     try {
-      final region =
-          Provider.of<RegionProvider>(context, listen: false).currentRegion;
-      final responseData = await fetchMovieDetails(widget.movieId, region);
-      if (mounted) {
-        setState(() {
-          moviedetails = responseData;
-          budget = responseData['budget'];
-          revenue = responseData['revenue'];
-          genres = responseData['genres'];
-          backdrops = responseData['backdrop_path'];
-          score = responseData['vote_average'];
-          about = responseData['overview'];
-          duration = responseData['runtime'];
-          releaseDate = responseData['release_date'];
-          language = responseData['original_language'];
-          posterPath = responseData['poster_path'];
-  
-          productionCountries = responseData['production_countries'];
-          productionCompanies = responseData['production_companies'];
-          spokenLanguages = responseData['spoken_languages'];
-          imdbId = responseData['imdb_id'];
-        });
+      final sessionId = Hive.box('sessionBox').get('sessionData') as String?;
+      final append = <String>[
+        'credits',
+        'images',
+        'watch/providers',
+        if (sessionId != null) 'account_states',
+      ];
+      final responseData = await fetchMovieDetails(
+        widget.movieId,
+        region,
+        sessionId: sessionId,
+        appendToResponse: append,
+      );
+
+      final credits = _parseCredits(
+          responseData['credits'] as Map<String, dynamic>?);
+      _creditsFuture = Future.value(credits);
+      for (final crewMember in credits['crew'] ?? const []) {
+        if (crewMember['job'] == 'Director') {
+          directorName = crewMember['name'] as String?;
+          directorMoviesFuture.value =
+              fetchOtherMoviesByDirector(crewMember['id'], region);
+          break;
+        }
       }
+
+      final available = availabilityFromProvidersPayload(
+          responseData['watch/providers'] as Map<String, dynamic>?);
+      seedAvailabilityCache(widget.movieId, region, available);
+      _availabilityFuture = Future.value(available);
+
+      final backdropsList =
+          (responseData['images'] as Map<String, dynamic>?)?['backdrops']
+                  as List<dynamic>? ??
+              const [];
+      _castImagesFuture = Future.value(
+        backdropsList
+            .map((image) => image['file_path'] as String)
+            .toList(),
+      );
+
+      _applyAccountStates(
+          responseData['account_states'] as Map<String, dynamic>?);
+
+      if (!mounted) return;
+      setState(() {
+        moviedetails = responseData;
+        budget = responseData['budget'];
+        revenue = responseData['revenue'];
+        genres = responseData['genres'];
+        backdrops = responseData['backdrop_path'];
+        score = responseData['vote_average'];
+        about = responseData['overview'];
+        duration = responseData['runtime'];
+        releaseDate = responseData['release_date'];
+        language = responseData['original_language'];
+        posterPath = responseData['poster_path'];
+        productionCountries = responseData['production_countries'];
+        productionCompanies = responseData['production_companies'];
+        spokenLanguages = responseData['spoken_languages'];
+        imdbId = responseData['imdb_id'];
+      });
+
       if (imdbId != null) {
         await getMovieRatings(
             imdbId, updateImdbRating, updateRottenTomatoesRating);
@@ -258,9 +261,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   Future<void> _checkWatchedStatus() async {
     final watched = await _watchHistoryDb.isWatched(widget.movieId, 'movie');
     if (mounted) {
-      setState(() {
-        isWatched = watched;
-      });
+      isWatched.value = watched;
     }
   }
 
@@ -276,7 +277,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isMobileLayout = MediaQuery.of(context).size.width < 800;
+    final isMobileLayout = MediaQuery.sizeOf(context).width < 800;
     if (isMobileLayout) {
       return _MovieDetailPageMobile(this);
     } else {

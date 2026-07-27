@@ -1,3 +1,5 @@
+import 'package:Mirarr/moviesPage/functions/check_availability.dart';
+import 'package:Mirarr/seriesPage/function/seasons_api_cache.dart';
 import 'package:flutter/material.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,7 +15,10 @@ class RegionProvider extends ChangeNotifier {
   String get currentRegion => _currentRegion;
 
   void setRegion(String region) async {
+    if (_currentRegion == region) return;
     _currentRegion = region;
+    clearAvailabilityCache();
+    clearSeasonsApiCache();
     notifyListeners();
     await _saveRegion();
   }

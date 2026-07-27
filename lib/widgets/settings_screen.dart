@@ -15,11 +15,11 @@ import 'package:Mirarr/database/watch_history_database.dart';
 import 'package:Mirarr/models/watch_history_model.dart';
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:Mirarr/functions/file_saver.dart' as fs;
 
 class SettingsPage extends StatefulWidget {
@@ -106,37 +106,6 @@ class _SettingsPageState extends State<SettingsPage> {
         backgroundColor: Theme.of(context).primaryColor,
       ),
     );
-  }
-
-  void _syncWatchHistory() async {
-    final supabaseProvider = Provider.of<SupabaseProvider>(context, listen: false);
-    if (!supabaseProvider.isConfigured) return;
-
-    setState(() {
-      _isSyncing = true;
-    });
-
-    final syncService = SupabaseSyncService(supabaseProvider.client);
-    final success = await syncService.syncWatchHistory();
-
-    setState(() {
-      _isSyncing = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-            ? 'Watch history synced successfully!'
-            : 'Failed to sync watch history. Check your connection. Make sure you have configured Supabase correctly. Read the documentation for more information.',
-        ),
-        backgroundColor: success ? Colors.green : Colors.red,
-      ),
-    );
-
-    if (success) {
-      _loadSyncStatus();
-    }
   }
 
   void _uploadWatchHistory() async {
@@ -417,27 +386,6 @@ class _SettingsPageState extends State<SettingsPage> {
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              FilledButton.icon(
-                                onPressed: _isSyncing ? null : _syncWatchHistory,
-                                icon: _isSyncing
-                                    ? SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: colorScheme.onPrimary,
-                                        ),
-                                      )
-                                    : const Icon(Icons.sync_rounded, size: 18),
-                                label: Text(_isSyncing ? 'Syncing...' : 'Sync All'),
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: colorScheme.primary,
-                                  foregroundColor: colorScheme.onPrimary,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                ),
-                              ),
                               FilledButton.icon(
                                 onPressed: _isSyncing ? null : _uploadWatchHistory,
                                 icon: const Icon(Icons.cloud_upload_rounded, size: 18),
@@ -959,46 +907,54 @@ class _SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 if (AppPlatform.isAndroid)
-                  ListTile(
-                    title: const Text('Material You (Dynamic Colors)',
-                        style: TextStyle(color: Colors.white, fontSize: 16)),
-                    subtitle: Text(
-                      'Use system wallpaper colors',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.6),
-                        fontSize: 12,
-                      ),
-                    ),
-                    trailing: Icon(
-                      Icons.palette_outlined,
-                      color: Provider.of<ThemeProvider>(context).isDynamicTheme
-                          ? Theme.of(context).primaryColor
-                          : Colors.grey,
-                    ),
-                    onTap: () {
-                      Provider.of<ThemeProvider>(context, listen: false)
-                          .setDynamicTheme();
+                  Consumer<ThemeProvider>(
+                    builder: (context, themeProvider, _) {
+                      return ListTile(
+                        title: const Text('Material You (Dynamic Colors)',
+                            style: TextStyle(color: Colors.white, fontSize: 16)),
+                        subtitle: Text(
+                          'Use system wallpaper colors',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.palette_outlined,
+                          color: themeProvider.isDynamicTheme
+                              ? Theme.of(context).primaryColor
+                              : Colors.grey,
+                        ),
+                        onTap: () {
+                          themeProvider.setDynamicTheme();
+                        },
+                      );
                     },
                   ),
-                if (Provider.of<ThemeProvider>(context).isOmarchyLinux)
-                  ListTile(
-                    title: const Text('Omarchy Theme',
+                Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, _) {
+                    if (!themeProvider.isOmarchyLinux) {
+                      return const SizedBox.shrink();
+                    }
+                    return ListTile(
+                      title: const Text('Omarchy Theme',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          )),
+                      trailing: const Text(
+                        'Omarchy',
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                        )),
-                    trailing: const Text(
-                      'Omarchy',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontFamily: 'RobotoMono',
+                          color: Colors.grey,
+                          fontFamily: 'RobotoMono',
+                        ),
                       ),
-                    ),
-                    onTap: () {
-                      Provider.of<ThemeProvider>(context, listen: false)
-                          .setOmarchyTheme();
-                    },
-                  ),
+                      onTap: () {
+                        themeProvider.setOmarchyTheme();
+                      },
+                    );
+                  },
+                ),
               ],
             ),
           ],
@@ -1075,6 +1031,9 @@ class _SettingsPageState extends State<SettingsPage> {
         type: FileType.custom,
         allowedExtensions: ['csv'],
         withData: true,
+        // On web the default blur handling cancels the pick one second after
+        // the window regains focus, which races the browser's change event.
+        cancelUploadOnWindowBlur: false,
       );
       if (result == null || result.files.isEmpty) return;
 
@@ -1171,6 +1130,7 @@ class _SettingsPageState extends State<SettingsPage> {
         type: FileType.custom,
         allowedExtensions: ['json'],
         withData: true,
+        cancelUploadOnWindowBlur: false,
       );
       if (result == null || result.files.isEmpty) return;
 
@@ -1426,13 +1386,27 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  void _importMoviesJson() async {
+  void _importMoviesJson() => _importWatchHistoryJson(
+        kind: 'movies',
+        progressLabel: 'Importing movie watch history...',
+      );
+
+  void _importShowsJson() => _importWatchHistoryJson(
+        kind: 'TV shows',
+        progressLabel: 'Importing TV shows watch history...',
+      );
+
+  Future<void> _importWatchHistoryJson({
+    required String kind,
+    required String progressLabel,
+  }) async {
     bool isDialogOpen = false;
     try {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['json'],
         withData: true,
+        cancelUploadOnWindowBlur: false,
       );
       if (result == null || result.files.isEmpty) return;
 
@@ -1463,20 +1437,26 @@ class _SettingsPageState extends State<SettingsPage> {
       }
 
       final List<WatchHistoryItem> items = [];
-      for (var rawMap in decoded) {
-        if (rawMap is Map<String, dynamic>) {
-          final Map<String, dynamic> map = Map<String, dynamic>.from(rawMap);
-          if (map['user_rating'] is int) {
-            map['user_rating'] = (map['user_rating'] as int).toDouble();
-          }
-          items.add(WatchHistoryItem.fromMap(map));
+      var skipped = 0;
+      for (final rawMap in decoded) {
+        if (rawMap is! Map) {
+          skipped++;
+          continue;
+        }
+        try {
+          items.add(
+            WatchHistoryItem.fromMap(Map<String, dynamic>.from(rawMap)),
+          );
+        } catch (e) {
+          skipped++;
+          debugPrint('Skipping invalid $kind watch history item: $e');
         }
       }
 
       if (items.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No valid movie watch history items found.')),
+            SnackBar(content: Text('No valid $kind watch history items found.')),
           );
         }
         return;
@@ -1496,11 +1476,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
                 ),
               ),
-              content: const Row(
+              content: Row(
                 children: [
-                  M3ExpressiveSpinner(size: 28),
-                  SizedBox(width: 20),
-                  Expanded(child: Text('Importing movie watch history...')),
+                  const M3ExpressiveSpinner(size: 28),
+                  const SizedBox(width: 20),
+                  Expanded(child: Text(progressLabel)),
                 ],
               ),
             ),
@@ -1518,116 +1498,10 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Successfully imported ${items.length} watched movies!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted && isDialogOpen) {
-        Navigator.of(context).pop();
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error importing movies: $e')),
-        );
-      }
-    }
-  }
-
-  void _importShowsJson() async {
-    bool isDialogOpen = false;
-    try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-        withData: true,
-      );
-      if (result == null || result.files.isEmpty) return;
-
-      final file = result.files.first;
-      String content = '';
-      if (file.bytes != null) {
-        content = utf8.decode(file.bytes!);
-      } else if (!kIsWeb && file.path != null) {
-        final ioFile = File(file.path!);
-        content = await ioFile.readAsString();
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to read file content')),
-          );
-        }
-        return;
-      }
-
-      final dynamic decoded = json.decode(content);
-      if (decoded is! List) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid JSON format. Expected a JSON list.')),
-          );
-        }
-        return;
-      }
-
-      final List<WatchHistoryItem> items = [];
-      for (var rawMap in decoded) {
-        if (rawMap is Map<String, dynamic>) {
-          final Map<String, dynamic> map = Map<String, dynamic>.from(rawMap);
-          if (map['user_rating'] is int) {
-            map['user_rating'] = (map['user_rating'] as int).toDouble();
-          }
-          items.add(WatchHistoryItem.fromMap(map));
-        }
-      }
-
-      if (items.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No valid show watch history items found.')),
-          );
-        }
-        return;
-      }
-
-      if (mounted) {
-        isDialogOpen = true;
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => PopScope(
-            canPop: false,
-            child: AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
-                ),
-              ),
-              content: const Row(
-                children: [
-                  M3ExpressiveSpinner(size: 28),
-                  SizedBox(width: 20),
-                  Expanded(child: Text('Importing TV shows watch history...')),
-                ],
-              ),
+            content: Text(
+              'Successfully imported ${items.length} watched $kind!'
+              '${skipped > 0 ? ' Skipped $skipped unreadable entries.' : ''}',
             ),
-          ),
-        ).then((_) => isDialogOpen = false);
-      }
-
-      final db = WatchHistoryDatabase();
-      await db.importWatchHistory(items);
-
-      if (mounted && isDialogOpen) {
-        Navigator.of(context).pop();
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully imported ${items.length} watched TV shows!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -1638,7 +1512,7 @@ class _SettingsPageState extends State<SettingsPage> {
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error importing TV shows: $e')),
+          SnackBar(content: Text('Error importing $kind: $e')),
         );
       }
     }
@@ -1650,6 +1524,7 @@ class _SettingsPageState extends State<SettingsPage> {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['db'],
+        cancelUploadOnWindowBlur: false,
       );
       if (result == null || result.files.isEmpty) return;
 
@@ -1777,7 +1652,7 @@ class _ImportProgressDialogState extends State<ImportProgressDialog> {
           searchUrl += '&primary_release_year=$yearStr';
         }
 
-        var response = await http.get(Uri.parse(searchUrl));
+        var response = await apiClient.get(Uri.parse(searchUrl));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           final List<dynamic> results = data['results'] ?? [];
@@ -1791,7 +1666,7 @@ class _ImportProgressDialogState extends State<ImportProgressDialog> {
 
         if (tmdbId == null && yearStr.isNotEmpty) {
           final fallbackUrl = '${widget.baseUrl}search/movie?api_key=${widget.apiKey}&query=${Uri.encodeComponent(name)}';
-          response = await http.get(Uri.parse(fallbackUrl));
+          response = await apiClient.get(Uri.parse(fallbackUrl));
           if (response.statusCode == 200) {
             final data = json.decode(response.body);
             final List<dynamic> results = data['results'] ?? [];
@@ -1958,7 +1833,7 @@ class _TvTimeImportProgressDialogState extends State<TvTimeImportProgressDialog>
     if (imdbId != null && imdbId.isNotEmpty) {
       try {
         final findUrl = '${baseUrl}find/$imdbId?api_key=$apiKey&external_source=imdb_id';
-        final response = await http.get(Uri.parse(findUrl));
+        final response = await apiClient.get(Uri.parse(findUrl));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           final List<dynamic> results = data['movie_results'] ?? [];
@@ -1972,7 +1847,7 @@ class _TvTimeImportProgressDialogState extends State<TvTimeImportProgressDialog>
     if (tvdbId != null) {
       try {
         final findUrl = '${baseUrl}find/$tvdbId?api_key=$apiKey&external_source=tvdb_id';
-        final response = await http.get(Uri.parse(findUrl));
+        final response = await apiClient.get(Uri.parse(findUrl));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           final List<dynamic> results = data['movie_results'] ?? [];
@@ -1989,7 +1864,7 @@ class _TvTimeImportProgressDialogState extends State<TvTimeImportProgressDialog>
       if (year != null) {
         searchUrl += '&primary_release_year=$year';
       }
-      var response = await http.get(Uri.parse(searchUrl));
+      var response = await apiClient.get(Uri.parse(searchUrl));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> results = data['results'] ?? [];
@@ -2001,7 +1876,7 @@ class _TvTimeImportProgressDialogState extends State<TvTimeImportProgressDialog>
       if (year != null) {
         // Try search without year
         final searchUrlNoYear = '${baseUrl}search/movie?api_key=$apiKey&query=${Uri.encodeComponent(title)}';
-        response = await http.get(Uri.parse(searchUrlNoYear));
+        response = await apiClient.get(Uri.parse(searchUrlNoYear));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           final List<dynamic> results = data['results'] ?? [];
@@ -2025,7 +1900,7 @@ class _TvTimeImportProgressDialogState extends State<TvTimeImportProgressDialog>
     if (tvdbId != null) {
       try {
         final findUrl = '${baseUrl}find/$tvdbId?api_key=$apiKey&external_source=tvdb_id';
-        final response = await http.get(Uri.parse(findUrl));
+        final response = await apiClient.get(Uri.parse(findUrl));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           final List<dynamic> results = data['tv_results'] ?? [];
@@ -2039,7 +1914,7 @@ class _TvTimeImportProgressDialogState extends State<TvTimeImportProgressDialog>
     if (imdbId != null && imdbId.isNotEmpty) {
       try {
         final findUrl = '${baseUrl}find/$imdbId?api_key=$apiKey&external_source=imdb_id';
-        final response = await http.get(Uri.parse(findUrl));
+        final response = await apiClient.get(Uri.parse(findUrl));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           final List<dynamic> results = data['tv_results'] ?? [];
@@ -2053,7 +1928,7 @@ class _TvTimeImportProgressDialogState extends State<TvTimeImportProgressDialog>
     // Fallback to search
     try {
       final searchUrl = '${baseUrl}search/tv?api_key=$apiKey&query=${Uri.encodeComponent(title)}';
-      final response = await http.get(Uri.parse(searchUrl));
+      final response = await apiClient.get(Uri.parse(searchUrl));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> results = data['results'] ?? [];

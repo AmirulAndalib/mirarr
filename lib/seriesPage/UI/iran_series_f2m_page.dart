@@ -208,6 +208,7 @@ class _IranSeriesF2MPageState extends State<IranSeriesF2MPage> {
                     // Season Filter Dropdown Header
                     if (availableSeasons.length > 2)
                       Padding(
+                        key: const ValueKey('season_filter_dropdown_header'),
                         padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -244,9 +245,13 @@ class _IranSeriesF2MPageState extends State<IranSeriesF2MPage> {
                                     dropdownColor: theme.colorScheme.surfaceContainerHigh,
                                     borderRadius: BorderRadius.circular(14),
                                     onChanged: (String? newValue) {
-                                      if (newValue != null) {
-                                        setState(() {
-                                          _selectedSeasonFilter = newValue;
+                                      if (newValue != null && newValue != _selectedSeasonFilter) {
+                                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                                          if (mounted) {
+                                            setState(() {
+                                              _selectedSeasonFilter = newValue;
+                                            });
+                                          }
                                         });
                                       }
                                     },
@@ -267,7 +272,7 @@ class _IranSeriesF2MPageState extends State<IranSeriesF2MPage> {
                     // Season Dropdown Accordions
                     ...filteredGroups.map((group) {
                       return _SeasonDropdownCard(
-                        key: ValueKey(group.seasonName),
+                        key: ObjectKey(group),
                         group: group,
                         theme: theme,
                         mainColor: mainColor,
@@ -277,7 +282,7 @@ class _IranSeriesF2MPageState extends State<IranSeriesF2MPage> {
                       );
                     }).toList(),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(key: ValueKey('bottom_spacing'), height: 24),
                   ],
                 ),
     );

@@ -21,24 +21,17 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await TvFocusModeManager.init();
-  await dotenv.load(fileName: ".env");
-  await Hive.initFlutter();
-  await Hive.openBox('sessionBox');
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-    await windowManager.ensureInitialized();
-    WindowManager.instance.setMinimumSize(const Size(360, 500));
-  }
 
+  // Only dotenv + Hive are required before first paint; load them in parallel.
+  await Future.wait([
+    dotenv.load(fileName: ".env"),
+    Hive.initFlutter().then((_) => Hive.openBox('sessionBox')),
+  ]);
+
+  // Theme/region load asynchronously in their constructors and notify when ready.
   final themeProvider = ThemeProvider(AppThemes.orangeTheme);
-  await themeProvider.loadTheme();
-
   final regionProvider = RegionProvider('worldwide');
-  await regionProvider.loadRegion();
-
   final supabaseProvider = SupabaseProvider();
-  await supabaseProvider.loadSupabaseConfig();
-  supabaseProvider.prefetchRemoteData();
 
   runApp(
     MultiProvider(
@@ -51,6 +44,25 @@ void main() async {
       child: const MyApp(),
     ),
   );
+
+  // Defer heavier startup work until after the first frame.
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    await Future.wait([
+      TvFocusModeManager.init(),
+      supabaseProvider.loadSupabaseConfig(),
+      _initDesktopWindow(),
+    ]);
+    supabaseProvider.prefetchRemoteData();
+  });
+}
+
+Future<void> _initDesktopWindow() async {
+  if (kIsWeb ||
+      !(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    return;
+  }
+  await windowManager.ensureInitialized();
+  WindowManager.instance.setMinimumSize(const Size(360, 500));
 }
 
 class MyApp extends StatefulWidget {
@@ -107,29 +119,31 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
-      return DynamicColorBuilder(
-        builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-          if (darkDynamic != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              themeProvider.updateSystemDynamicColorScheme(darkDynamic);
-            });
-          }
-          return Listener(
-            onPointerDown: (_) => TvFocusModeManager.onPointerDown(),
-            child: MaterialApp(
-              navigatorKey: navigatorKey,
-              debugShowCheckedModeBanner: false,
-              title: 'Mirarr',
-              theme: themeProvider.currentTheme,
-              home: const Scaffold(
-                body: AppInitWidget(),
+    return DynamicColorBuilder(
+      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+        return Consumer<ThemeProvider>(
+          builder: (context, themeProvider, child) {
+            if (darkDynamic != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                themeProvider.updateSystemDynamicColorScheme(darkDynamic);
+              });
+            }
+            return Listener(
+              onPointerDown: (_) => TvFocusModeManager.onPointerDown(),
+              child: MaterialApp(
+                navigatorKey: navigatorKey,
+                debugShowCheckedModeBanner: false,
+                title: 'Mirarr',
+                theme: themeProvider.currentTheme,
+                home: const Scaffold(
+                  body: AppInitWidget(),
+                ),
               ),
-            ),
-          );
-        },
-      );
-    });
+            );
+          },
+        );
+      },
+    );
   }
 }
 

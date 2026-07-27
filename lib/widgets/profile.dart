@@ -15,11 +15,10 @@ import 'package:Mirarr/widgets/expressive_page_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive/hive.dart';
-import 'package:http/http.dart';
 import 'package:Mirarr/moviesPage/UI/customMovieWidget.dart';
 import 'package:Mirarr/seriesPage/UI/customSeriesWidget.dart';
 import 'package:Mirarr/seriesPage/models/serie.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'package:Mirarr/moviesPage/models/movie.dart';
 import 'package:provider/provider.dart';
 import 'package:Mirarr/moviesPage/movieDetailPage.dart';
@@ -46,9 +45,17 @@ List<Serie> recentEpisodes = [];
 
 final ValueNotifier<int> profileRefreshNotifier = ValueNotifier<int>(0);
 
+/// App-lifetime cache of last-air metadata keyed by TMDB serie id.
+final Map<int, Map<String, dynamic>> _serieAirCache = {};
+
 class _ProfilePageState extends State<ProfilePage> {
   final apiKey = dotenv.env['TMDB_API_KEY'];
   int _lastIndex = -1;
+  late final NavigationProvider _nav;
+  DateTime? _lastSuccessfulFetch;
+  static const _profileStaleDuration = Duration(seconds: 60);
+  static const _detailConcurrency = 8;
+  static const _pageConcurrency = 4;
 
   Map<String, dynamic>? _accountDetails;
 
@@ -87,19 +94,29 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
+    _nav = context.read<NavigationProvider>()..addListener(_onNavChanged);
+    _lastIndex = _nav.currentIndex;
     checkInternetAndFetchData();
     profileRefreshNotifier.addListener(_onProfileRefreshRequest);
   }
 
+  void _onNavChanged() {
+    if (_nav.currentIndex == 4 && _lastIndex != 4) {
+      checkInternetAndFetchData();
+    }
+    _lastIndex = _nav.currentIndex;
+  }
+
   @override
   void dispose() {
+    _nav.removeListener(_onNavChanged);
     profileRefreshNotifier.removeListener(_onProfileRefreshRequest);
     super.dispose();
   }
 
   void _onProfileRefreshRequest() {
     if (mounted) {
-      checkInternetAndFetchData();
+      checkInternetAndFetchData(force: true);
     }
   }
 
@@ -113,7 +130,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final currentFetchId = ++_movieWatchListFetchId;
 
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}account/$accountId/watchlist/movies?api_key=$apiKey&session_id=$sessionData&page=1',
       ),
@@ -150,37 +167,54 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _fetchRemainingMovieWatchList(int fetchId, int totalPages, String baseUrl, String accountId, String sessionData) async {
-    for (int page = 2; page <= totalPages; page++) {
-      if (fetchId != _movieWatchListFetchId || !mounted) return;
+    final extra = await _fetchRemainingMoviePages(
+      totalPages: totalPages,
+      urlForPage: (page) =>
+          '${baseUrl}account/$accountId/watchlist/movies?api_key=$apiKey&session_id=$sessionData&page=$page',
+      isCurrent: () => fetchId == _movieWatchListFetchId,
+    );
+    if (extra.isEmpty || fetchId != _movieWatchListFetchId || !mounted) return;
+    setState(() {
+      moviesWatchList.addAll(extra);
+    });
+  }
 
-      try {
-        final response = await http.get(
-          Uri.parse(
-            '${baseUrl}account/$accountId/watchlist/movies?api_key=$apiKey&session_id=$sessionData&page=$page',
-          ),
-        );
-
-        if (response.statusCode == 200 && fetchId == _movieWatchListFetchId && mounted) {
-          final List<dynamic> results = json.decode(response.body)['results'] ?? [];
-          final List<Movie> pageMovies = [];
-          for (var result in results) {
-            final movie = Movie(
-                title: result['title'],
-                releaseDate: result['release_date'],
-                posterPath: result['poster_path'] ?? '',
-                overView: result['overview'] ?? '',
-                id: result['id'] ?? '',
-                score: result['vote_average'] ?? '');
-            pageMovies.add(movie);
-          }
-          setState(() {
-            moviesWatchList = [...moviesWatchList, ...pageMovies];
-          });
+  Future<List<Movie>> _fetchRemainingMoviePages({
+    required int totalPages,
+    required String Function(int page) urlForPage,
+    required bool Function() isCurrent,
+  }) async {
+    final extra = <Movie>[];
+    for (var start = 2; start <= totalPages; start += _pageConcurrency) {
+      if (!isCurrent() || !mounted) return extra;
+      final end = start + _pageConcurrency - 1 > totalPages
+          ? totalPages
+          : start + _pageConcurrency - 1;
+      final pages = List.generate(end - start + 1, (i) => start + i);
+      final pageResults = await Future.wait(pages.map((page) async {
+        try {
+          final response = await apiClient.get(Uri.parse(urlForPage(page)));
+          if (response.statusCode != 200) return <Movie>[];
+          final results = json.decode(response.body)['results'] as List<dynamic>? ?? [];
+          return results
+              .map((result) => Movie(
+                    title: result['title'],
+                    releaseDate: result['release_date'],
+                    posterPath: result['poster_path'] ?? '',
+                    overView: result['overview'] ?? '',
+                    id: result['id'] ?? '',
+                    score: result['vote_average'] ?? '',
+                  ))
+              .toList();
+        } catch (_) {
+          return <Movie>[];
         }
-      } catch (e) {
-        // Handle silently
+      }));
+      for (final pageMovies in pageResults) {
+        extra.addAll(pageMovies);
       }
     }
+    return extra;
   }
 
   Future<void> fetchFavoriteMovies(BuildContext context) async {
@@ -193,7 +227,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final currentFetchId = ++_movieFavoritesFetchId;
 
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}account/$accountId/favorite/movies?api_key=$apiKey&session_id=$sessionData&page=1',
       ),
@@ -230,35 +264,16 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _fetchRemainingFavoriteMovies(int fetchId, int totalPages, String baseUrl, String accountId, String sessionData) async {
-    for (int page = 2; page <= totalPages; page++) {
-      if (fetchId != _movieFavoritesFetchId || !mounted) return;
-      try {
-        final response = await http.get(
-          Uri.parse(
-            '${baseUrl}account/$accountId/favorite/movies?api_key=$apiKey&session_id=$sessionData&page=$page',
-          ),
-        );
-        if (response.statusCode == 200 && fetchId == _movieFavoritesFetchId && mounted) {
-          final List<dynamic> results = json.decode(response.body)['results'] ?? [];
-          final List<Movie> pageMovies = [];
-          for (var result in results) {
-            final movie = Movie(
-                title: result['title'],
-                releaseDate: result['release_date'],
-                posterPath: result['poster_path'] ?? '',
-                overView: result['overview'] ?? '',
-                id: result['id'] ?? '',
-                score: result['vote_average'] ?? '');
-            pageMovies.add(movie);
-          }
-          setState(() {
-            movieFavorites = [...movieFavorites, ...pageMovies];
-          });
-        }
-      } catch (e) {
-        // Handle silently
-      }
-    }
+    final extra = await _fetchRemainingMoviePages(
+      totalPages: totalPages,
+      urlForPage: (page) =>
+          '${baseUrl}account/$accountId/favorite/movies?api_key=$apiKey&session_id=$sessionData&page=$page',
+      isCurrent: () => fetchId == _movieFavoritesFetchId,
+    );
+    if (extra.isEmpty || fetchId != _movieFavoritesFetchId || !mounted) return;
+    setState(() {
+      movieFavorites.addAll(extra);
+    });
   }
 
   Future<void> fetchRatedMovies(BuildContext context) async {
@@ -271,7 +286,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final currentFetchId = ++_movieRatedFetchId;
 
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}account/$accountId/rated/movies?api_key=$apiKey&session_id=$sessionData&page=1',
       ),
@@ -308,134 +323,16 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _fetchRemainingRatedMovies(int fetchId, int totalPages, String baseUrl, String accountId, String sessionData) async {
-    for (int page = 2; page <= totalPages; page++) {
-      if (fetchId != _movieRatedFetchId || !mounted) return;
-      try {
-        final response = await http.get(
-          Uri.parse(
-            '${baseUrl}account/$accountId/rated/movies?api_key=$apiKey&session_id=$sessionData&page=$page',
-          ),
-        );
-        if (response.statusCode == 200 && fetchId == _movieRatedFetchId && mounted) {
-          final List<dynamic> results = json.decode(response.body)['results'] ?? [];
-          final List<Movie> pageMovies = [];
-          for (var result in results) {
-            final movie = Movie(
-                title: result['title'],
-                releaseDate: result['release_date'],
-                posterPath: result['poster_path'] ?? '',
-                overView: result['overview'] ?? '',
-                id: result['id'] ?? '',
-                score: result['vote_average'] ?? '');
-            pageMovies.add(movie);
-          }
-          setState(() {
-            movieRated = [...movieRated, ...pageMovies];
-          });
-        }
-      } catch (e) {
-        // Handle silently
-      }
-    }
-  }
-
-  void handleNetworkError(ClientException e) {
-    if (e.message.contains('No address associated with hostname')) {
-      // Handle case where there's no internet connection
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          final colorScheme = Theme.of(context).colorScheme;
-          final textTheme = Theme.of(context).textTheme;
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-              side: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-            ),
-            icon: Icon(Icons.wifi_off_rounded, color: colorScheme.error, size: 32),
-            title: Text(
-              'No Internet Connection',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            content: Text(
-              'Please connect to the internet and try again.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            actions: [
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
-    } else {
-      // Handle other network-related errors
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          final colorScheme = Theme.of(context).colorScheme;
-          final textTheme = Theme.of(context).textTheme;
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-              side: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-            ),
-            icon: Icon(Icons.error_outline_rounded, color: colorScheme.error, size: 32),
-            title: Text(
-              'Network Error',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            content: Text(
-              'An error occurred while fetching data. Please try again later.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            actions: [
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  checkInternetAndFetchData();
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
-    }
+    final extra = await _fetchRemainingMoviePages(
+      totalPages: totalPages,
+      urlForPage: (page) =>
+          '${baseUrl}account/$accountId/rated/movies?api_key=$apiKey&session_id=$sessionData&page=$page',
+      isCurrent: () => fetchId == _movieRatedFetchId,
+    );
+    if (extra.isEmpty || fetchId != _movieRatedFetchId || !mounted) return;
+    setState(() {
+      movieRated.addAll(extra);
+    });
   }
 
   Future<void> fetchAccountInfo() async {
@@ -448,7 +345,7 @@ class _ProfilePageState extends State<ProfilePage> {
       final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
       final baseUrl = getBaseUrl(region);
 
-      final response = await http.get(
+      final response = await apiClient.get(
         Uri.parse(
           '${baseUrl}account?api_key=$apiKey&session_id=$sessionData',
         ),
@@ -465,7 +362,14 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> checkInternetAndFetchData() async {
+  Future<void> checkInternetAndFetchData({bool force = false}) async {
+    if (!force &&
+        _lastSuccessfulFetch != null &&
+        DateTime.now().difference(_lastSuccessfulFetch!) <
+            _profileStaleDuration) {
+      return;
+    }
+    _lastSuccessfulFetch = DateTime.now();
     fetchAccountInfo();
     fetchMovieWatchList(context);
     fetchTvWatchList(context);
@@ -473,6 +377,80 @@ class _ProfilePageState extends State<ProfilePage> {
     fetchRatedMovies(context);
     fetchFavoriteSeries(context);
     fetchRatedTv(context);
+  }
+
+  /// Fetch last-air fields for [series] with a concurrency pool and app-lifetime cache.
+  Future<List<Map<String, dynamic>?>> _fetchSerieAirDetailsPooled(
+    List<Serie> series,
+    String region,
+  ) async {
+    final results = List<Map<String, dynamic>?>.filled(series.length, null);
+
+    for (var i = 0; i < series.length; i += _detailConcurrency) {
+      final end = (i + _detailConcurrency < series.length)
+          ? i + _detailConcurrency
+          : series.length;
+      final chunkIndexes = List.generate(end - i, (k) => i + k);
+
+      await Future.wait(chunkIndexes.map((idx) async {
+        final serieId = series[idx].id;
+        final cached = _serieAirCache[serieId];
+        if (cached != null) {
+          results[idx] = cached;
+          return;
+        }
+        try {
+          final details = await fetchSerieDetails(serieId, region);
+          final entry = <String, dynamic>{
+            'last_air_date': details['last_air_date'],
+            'last_episode_to_air': details['last_episode_to_air'],
+          };
+          _serieAirCache[serieId] = entry;
+          results[idx] = entry;
+        } catch (_) {
+          results[idx] = null;
+        }
+      }));
+    }
+
+    return results;
+  }
+
+  List<Serie> _recentEpisodesFromDetails(
+    List<Serie> series,
+    List<Map<String, dynamic>?> allSerieDetails,
+    DateTime today,
+  ) {
+    final pageRecentEpisodes = <Serie>[];
+    for (var i = 0; i < series.length; i++) {
+      final serie = series[i];
+      final serieDetails = allSerieDetails[i];
+      if (serieDetails == null) continue;
+
+      final serieLatestAir = serieDetails['last_air_date'];
+      if (serieLatestAir == null) continue;
+
+      final serieLastEpisodeSeasonNumber =
+          serieDetails['last_episode_to_air']?['season_number'];
+      final serieLastEpisodeEpisodeNumber =
+          serieDetails['last_episode_to_air']?['episode_number'];
+      final serieLatestAirDate = DateTime.parse(serieLatestAir);
+
+      final difference = today.difference(serieLatestAirDate).inDays;
+      if (difference <= 14) {
+        pageRecentEpisodes.add(Serie(
+          name: serie.name,
+          posterPath: serie.posterPath,
+          overView: serie.overView,
+          id: serie.id,
+          score: serie.score,
+          lastAirDate: serieLatestAir,
+          lastEpisodeSeasonNumber: serieLastEpisodeSeasonNumber,
+          lastEpisodeEpisodeNumber: serieLastEpisodeEpisodeNumber,
+        ));
+      }
+    }
+    return pageRecentEpisodes;
   }
 
   Future<void> fetchTvWatchList(BuildContext context) async {
@@ -485,7 +463,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final currentFetchId = ++_tvWatchListFetchId;
 
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}account/$accountId/watchlist/tv?api_key=$apiKey&session_id=$sessionData&page=1',
       ),
@@ -513,46 +491,13 @@ class _ProfilePageState extends State<ProfilePage> {
       });
 
       final today = DateTime.now();
-
-      // Create a list of futures for all series detail requests
-      final List<Future<Map<String, dynamic>>> detailFutures = series.map((serie) =>
-        fetchSerieDetails(serie.id, region)
-      ).toList();
-
-      // Wait for all requests to complete in parallel
-      final List<Map<String, dynamic>> allSerieDetails = await Future.wait(detailFutures);
+      final allSerieDetails =
+          await _fetchSerieAirDetailsPooled(series, region);
 
       if (currentFetchId != _tvWatchListFetchId) return;
 
-      final List<Serie> pageRecentEpisodes = [];
-      // Process the results
-      for (var i = 0; i < series.length; i++) {
-        final serie = series[i];
-        final serieDetails = allSerieDetails[i];
-
-        final serieLatestAir = serieDetails['last_air_date'];
-        if (serieLatestAir == null) continue;
-
-        final serieLastEpisodeSeasonNumber = serieDetails['last_episode_to_air']?['season_number'];
-        final serieLastEpisodeEpisodeNumber = serieDetails['last_episode_to_air']?['episode_number'];
-        final serieLatestAirDate = DateTime.parse(serieLatestAir);
-
-        //check if the serie is aired in the last 14 days
-        final difference = today.difference(serieLatestAirDate).inDays;
-        if (difference <= 14) {
-          final updatedSerie = Serie(
-            name: serie.name,
-            posterPath: serie.posterPath,
-            overView: serie.overView,
-            id: serie.id,
-            score: serie.score,
-            lastAirDate: serieLatestAir,
-            lastEpisodeSeasonNumber: serieLastEpisodeSeasonNumber,
-            lastEpisodeEpisodeNumber: serieLastEpisodeEpisodeNumber,
-          );
-          pageRecentEpisodes.add(updatedSerie);
-        }
-      }
+      final pageRecentEpisodes =
+          _recentEpisodesFromDetails(series, allSerieDetails, today);
 
       // Sort recentEpisodes by lastAirDate in descending order (newest first)
       pageRecentEpisodes.sort((a, b) => DateTime.parse(b.lastAirDate!).compareTo(DateTime.parse(a.lastAirDate!)));
@@ -569,84 +514,71 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void _fetchRemainingTvWatchList(int fetchId, int totalPages, String baseUrl, String accountId, String sessionData, String region) async {
-    final today = DateTime.now();
-    for (int page = 2; page <= totalPages; page++) {
-      if (fetchId != _tvWatchListFetchId || !mounted) return;
-
-      try {
-        final response = await http.get(
-          Uri.parse(
-            '${baseUrl}account/$accountId/watchlist/tv?api_key=$apiKey&session_id=$sessionData&page=$page',
-          ),
-        );
-
-        if (response.statusCode == 200 && fetchId == _tvWatchListFetchId && mounted) {
-          final List<dynamic> results = json.decode(response.body)['results'] ?? [];
-          final List<Serie> pageSeries = [];
-          for (var result in results) {
-            final serie = Serie(
-                name: result['name'],
-                posterPath: result['poster_path'] ?? '',
-                overView: result['overview'] ?? '',
-                id: result['id'],
-                score: result['vote_average'] ?? '');
-            pageSeries.add(serie);
-          }
-
-          setState(() {
-            tvWatchList = [...tvWatchList, ...pageSeries];
-          });
-
-          // Fetch details for this page's series
-          final List<Future<Map<String, dynamic>>> detailFutures = pageSeries.map((serie) =>
-            fetchSerieDetails(serie.id, region)
-          ).toList();
-
-          final List<Map<String, dynamic>> allSerieDetails = await Future.wait(detailFutures);
-
-          if (fetchId != _tvWatchListFetchId || !mounted) return;
-
-          final List<Serie> newRecentEpisodes = [];
-          for (var i = 0; i < pageSeries.length; i++) {
-            final serie = pageSeries[i];
-            final serieDetails = allSerieDetails[i];
-
-            final serieLatestAir = serieDetails['last_air_date'];
-            if (serieLatestAir == null) continue;
-
-            final serieLastEpisodeSeasonNumber = serieDetails['last_episode_to_air']?['season_number'];
-            final serieLastEpisodeEpisodeNumber = serieDetails['last_episode_to_air']?['episode_number'];
-            final serieLatestAirDate = DateTime.parse(serieLatestAir);
-
-            final difference = today.difference(serieLatestAirDate).inDays;
-            if (difference <= 14) {
-              final updatedSerie = Serie(
-                name: serie.name,
-                posterPath: serie.posterPath,
-                overView: serie.overView,
-                id: serie.id,
-                score: serie.score,
-                lastAirDate: serieLatestAir,
-                lastEpisodeSeasonNumber: serieLastEpisodeSeasonNumber,
-                lastEpisodeEpisodeNumber: serieLastEpisodeEpisodeNumber,
-              );
-              newRecentEpisodes.add(updatedSerie);
-            }
-          }
-
-          if (newRecentEpisodes.isNotEmpty) {
-            final List<Serie> updatedRecentEpisodes = [...recentEpisodes, ...newRecentEpisodes];
-            updatedRecentEpisodes.sort((a, b) => DateTime.parse(b.lastAirDate!).compareTo(DateTime.parse(a.lastAirDate!)));
-            setState(() {
-              recentEpisodes = updatedRecentEpisodes;
-            });
-          }
+  Future<List<Serie>> _fetchRemainingSeriePages({
+    required int totalPages,
+    required String Function(int page) urlForPage,
+    required bool Function() isCurrent,
+  }) async {
+    final extra = <Serie>[];
+    for (var start = 2; start <= totalPages; start += _pageConcurrency) {
+      if (!isCurrent() || !mounted) return extra;
+      final end = start + _pageConcurrency - 1 > totalPages
+          ? totalPages
+          : start + _pageConcurrency - 1;
+      final pages = List.generate(end - start + 1, (i) => start + i);
+      final pageResults = await Future.wait(pages.map((page) async {
+        try {
+          final response = await apiClient.get(Uri.parse(urlForPage(page)));
+          if (response.statusCode != 200) return <Serie>[];
+          final results = json.decode(response.body)['results'] as List<dynamic>? ?? [];
+          return results
+              .map((result) => Serie(
+                    name: result['name'],
+                    posterPath: result['poster_path'] ?? '',
+                    overView: result['overview'] ?? '',
+                    id: result['id'],
+                    score: result['vote_average'] ?? '',
+                  ))
+              .toList();
+        } catch (_) {
+          return <Serie>[];
         }
-      } catch (e) {
-        // Handle silently
+      }));
+      for (final pageSeries in pageResults) {
+        extra.addAll(pageSeries);
       }
     }
+    return extra;
+  }
+
+  void _fetchRemainingTvWatchList(int fetchId, int totalPages, String baseUrl, String accountId, String sessionData, String region) async {
+    final today = DateTime.now();
+    final extra = await _fetchRemainingSeriePages(
+      totalPages: totalPages,
+      urlForPage: (page) =>
+          '${baseUrl}account/$accountId/watchlist/tv?api_key=$apiKey&session_id=$sessionData&page=$page',
+      isCurrent: () => fetchId == _tvWatchListFetchId,
+    );
+    if (extra.isEmpty || fetchId != _tvWatchListFetchId || !mounted) return;
+
+    setState(() {
+      tvWatchList.addAll(extra);
+    });
+
+    final allSerieDetails = await _fetchSerieAirDetailsPooled(extra, region);
+    if (fetchId != _tvWatchListFetchId || !mounted) return;
+
+    final newRecentEpisodes =
+        _recentEpisodesFromDetails(extra, allSerieDetails, today);
+    if (newRecentEpisodes.isEmpty) return;
+
+    final updatedRecentEpisodes = List<Serie>.from(recentEpisodes)
+      ..addAll(newRecentEpisodes);
+    updatedRecentEpisodes.sort((a, b) =>
+        DateTime.parse(b.lastAirDate!).compareTo(DateTime.parse(a.lastAirDate!)));
+    setState(() {
+      recentEpisodes = updatedRecentEpisodes;
+    });
   }
 
   Future<void> fetchFavoriteSeries(BuildContext context) async {
@@ -659,7 +591,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final currentFetchId = ++_tvFavoritesFetchId;
 
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}account/$accountId/favorite/tv?api_key=$apiKey&session_id=$sessionData&page=1',
       ),
@@ -695,34 +627,16 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _fetchRemainingFavoriteSeries(int fetchId, int totalPages, String baseUrl, String accountId, String sessionData) async {
-    for (int page = 2; page <= totalPages; page++) {
-      if (fetchId != _tvFavoritesFetchId || !mounted) return;
-      try {
-        final response = await http.get(
-          Uri.parse(
-            '${baseUrl}account/$accountId/favorite/tv?api_key=$apiKey&session_id=$sessionData&page=$page',
-          ),
-        );
-        if (response.statusCode == 200 && fetchId == _tvFavoritesFetchId && mounted) {
-          final List<dynamic> results = json.decode(response.body)['results'] ?? [];
-          final List<Serie> pageSeries = [];
-          for (var result in results) {
-            final serie = Serie(
-                name: result['name'],
-                posterPath: result['poster_path'] ?? '',
-                overView: result['overview'] ?? '',
-                id: result['id'],
-                score: result['vote_average'] ?? '');
-            pageSeries.add(serie);
-          }
-          setState(() {
-            tvFavorites = [...tvFavorites, ...pageSeries];
-          });
-        }
-      } catch (e) {
-        // Handle silently
-      }
-    }
+    final extra = await _fetchRemainingSeriePages(
+      totalPages: totalPages,
+      urlForPage: (page) =>
+          '${baseUrl}account/$accountId/favorite/tv?api_key=$apiKey&session_id=$sessionData&page=$page',
+      isCurrent: () => fetchId == _tvFavoritesFetchId,
+    );
+    if (extra.isEmpty || fetchId != _tvFavoritesFetchId || !mounted) return;
+    setState(() {
+      tvFavorites.addAll(extra);
+    });
   }
 
   Future<void> fetchRatedTv(BuildContext context) async {
@@ -735,7 +649,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final currentFetchId = ++_tvRatedFetchId;
 
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}account/$accountId/rated/tv?api_key=$apiKey&session_id=$sessionData&page=1',
       ),
@@ -771,34 +685,16 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _fetchRemainingRatedTv(int fetchId, int totalPages, String baseUrl, String accountId, String sessionData) async {
-    for (int page = 2; page <= totalPages; page++) {
-      if (fetchId != _tvRatedFetchId || !mounted) return;
-      try {
-        final response = await http.get(
-          Uri.parse(
-            '${baseUrl}account/$accountId/rated/tv?api_key=$apiKey&session_id=$sessionData&page=$page',
-          ),
-        );
-        if (response.statusCode == 200 && fetchId == _tvRatedFetchId && mounted) {
-          final List<dynamic> results = json.decode(response.body)['results'] ?? [];
-          final List<Serie> pageSeries = [];
-          for (var result in results) {
-            final serie = Serie(
-                name: result['name'],
-                posterPath: result['poster_path'] ?? '',
-                overView: result['overview'] ?? '',
-                id: result['id'],
-                score: result['vote_average'] ?? '');
-            pageSeries.add(serie);
-          }
-          setState(() {
-            tvRated = [...tvRated, ...pageSeries];
-          });
-        }
-      } catch (e) {
-        // Handle silently
-      }
-    }
+    final extra = await _fetchRemainingSeriePages(
+      totalPages: totalPages,
+      urlForPage: (page) =>
+          '${baseUrl}account/$accountId/rated/tv?api_key=$apiKey&session_id=$sessionData&page=$page',
+      isCurrent: () => fetchId == _tvRatedFetchId,
+    );
+    if (extra.isEmpty || fetchId != _tvRatedFetchId || !mounted) return;
+    setState(() {
+      tvRated.addAll(extra);
+    });
   }
 
 
@@ -1016,16 +912,6 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
-    final navProvider = Provider.of<NavigationProvider>(context);
-    if (navProvider.currentIndex == 4 && _lastIndex != 4) {
-      _lastIndex = 4;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        checkInternetAndFetchData();
-      });
-    } else if (navProvider.currentIndex != 4) {
-      _lastIndex = navProvider.currentIndex;
-    }
 
     return Scaffold(
       extendBody: true,

@@ -1,21 +1,32 @@
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'dart:convert';
 
 final apiKey = dotenv.env['TMDB_API_KEY'];
 
 Future<Map<String, dynamic>> fetchSerieDetails(
-    int serieId, String region) async {
+  int serieId,
+  String region, {
+  String? sessionId,
+  List<String> appendToResponse = const [],
+}) async {
   final baseUrl = getBaseUrl(region);
   try {
-    final response = await http.get(
-      Uri.parse('${baseUrl}tv/$serieId?api_key=$apiKey'),
+    final queryParameters = <String, String>{
+      'api_key': apiKey ?? '',
+      if (appendToResponse.isNotEmpty)
+        'append_to_response': appendToResponse.join(','),
+      if (sessionId != null) 'session_id': sessionId,
+    };
+    final response = await apiClient.get(
+      Uri.parse('${baseUrl}tv/$serieId').replace(
+        queryParameters: queryParameters,
+      ),
     );
 
     if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = json.decode(response.body);
-      return responseData;
+      return json.decode(response.body) as Map<String, dynamic>;
     } else {
       throw Exception('Failed to load serie details');
     }
