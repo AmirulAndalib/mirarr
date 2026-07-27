@@ -38,6 +38,7 @@ class _SearchScreenState extends State<SearchScreen>
   final apiKey = dotenv.env['TMDB_API_KEY'];
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
+  int _searchFetchId = 0;
 
   late FocusNode _searchFocusNode;
 
@@ -66,118 +67,120 @@ class _SearchScreenState extends State<SearchScreen>
   void _onSearchChanged() {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
-      String query = _searchController.text.trim();
+      final query = _searchController.text.trim();
+      if (!mounted) return;
       if (query.isNotEmpty) {
-        if (mounted) {
-          searchMovies(query, context);
-          searchSeries(query, context);
-          searchPerson(query, context);
-        }
+        _runSearch(query);
       } else {
+        _searchFetchId++;
         setState(() {
-          movieResults.clear();
-          tvResults.clear();
-          personResults.clear();
+          movieResults = [];
+          tvResults = [];
+          personResults = [];
         });
       }
     });
   }
 
-  Future<void> searchMovies(String query, BuildContext context) async {
+  Future<void> _runSearch(String query) async {
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
-    final response = await apiClient.get(
-      Uri.parse(
-        '${baseUrl}search/movie?api_key=$apiKey&query=$query',
-      ),
-    );
-    if (response.statusCode == 200) {
-      final List<Movie> movies = [];
-      final List<dynamic> results = json.decode(response.body)['results'];
+    final encodedQuery = Uri.encodeQueryComponent(query);
+    final currentFetchId = ++_searchFetchId;
 
-      for (var result in results) {
-        final movie = Movie(
-            title: result['title'],
-            releaseDate: result['release_date'] ?? '',
-            posterPath: result['poster_path'] ?? '',
-            overView: result['overview'] ?? '',
-            id: result['id'] ?? '',
-            backdropPath: result['backdrop_path'] ?? '',
-            score: result['vote_average'] ?? 0.0);
-        movies.add(movie);
-      }
+    try {
+      final results = await Future.wait([
+        _fetchMovies(baseUrl, encodedQuery),
+        _fetchSeries(baseUrl, encodedQuery),
+        _fetchPeople(baseUrl, encodedQuery),
+      ]);
+
+      if (!mounted || currentFetchId != _searchFetchId) return;
 
       setState(() {
-        movieResults = movies;
+        movieResults = results[0] as List<Movie>;
+        tvResults = results[1] as List<Serie>;
+        personResults = results[2] as List<Person>;
       });
-    } else {
+    } catch (e) {
+      if (!mounted || currentFetchId != _searchFetchId) return;
+      debugPrint('Search failed for "$query": $e');
+    }
+  }
+
+  Future<List<Movie>> _fetchMovies(String baseUrl, String encodedQuery) async {
+    final response = await apiClient.get(
+      Uri.parse(
+        '${baseUrl}search/movie?api_key=$apiKey&query=$encodedQuery',
+      ),
+    );
+    if (response.statusCode != 200) {
       throw Exception('Failed to load movie data');
     }
+
+    final List<Movie> movies = [];
+    final List<dynamic> results = json.decode(response.body)['results'];
+    for (var result in results) {
+      movies.add(Movie(
+        title: result['title'],
+        releaseDate: result['release_date'] ?? '',
+        posterPath: result['poster_path'] ?? '',
+        overView: result['overview'] ?? '',
+        id: result['id'] ?? '',
+        backdropPath: result['backdrop_path'] ?? '',
+        score: result['vote_average'] ?? 0.0,
+      ));
+    }
+    return movies;
   }
 
-  Future<void> searchSeries(String query, BuildContext context) async {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final baseUrl = getBaseUrl(region);
+  Future<List<Serie>> _fetchSeries(String baseUrl, String encodedQuery) async {
     final response = await apiClient.get(
       Uri.parse(
-        '${baseUrl}search/tv?api_key=$apiKey&query=$query',
+        '${baseUrl}search/tv?api_key=$apiKey&query=$encodedQuery',
       ),
     );
-    if (response.statusCode == 200) {
-      final List<Serie> series = [];
-      final List<dynamic> results = json.decode(response.body)['results'];
-
-      for (var result in results) {
-        final serie = Serie(
-          name: result['name'],
-          posterPath: result['poster_path'] ?? '',
-          overView: result['overview'] ?? '',
-          id: result['id'],
-          backdropPath: result['backdrop_path'] ?? '',
-          score: result['vote_average'] ?? 0.0,
-        );
-        series.add(serie);
-      }
-
-      setState(() {
-        tvResults = series;
-      });
-    } else {
+    if (response.statusCode != 200) {
       throw Exception('Failed to load serie data');
     }
+
+    final List<Serie> series = [];
+    final List<dynamic> results = json.decode(response.body)['results'];
+    for (var result in results) {
+      series.add(Serie(
+        name: result['name'],
+        posterPath: result['poster_path'] ?? '',
+        overView: result['overview'] ?? '',
+        id: result['id'],
+        backdropPath: result['backdrop_path'] ?? '',
+        score: result['vote_average'] ?? 0.0,
+      ));
+    }
+    return series;
   }
 
-  Future<void> searchPerson(String query, BuildContext context) async {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final baseUrl = getBaseUrl(region);
+  Future<List<Person>> _fetchPeople(String baseUrl, String encodedQuery) async {
     final response = await apiClient.get(
       Uri.parse(
-        '${baseUrl}search/person?api_key=$apiKey&query=$query',
+        '${baseUrl}search/person?api_key=$apiKey&query=$encodedQuery',
       ),
     );
-    if (response.statusCode == 200) {
-      final List<Person> persons = [];
-      final List<dynamic> results = json.decode(response.body)['results'];
-
-      for (var result in results) {
-        final person = Person(
-          name: result['name'],
-          profilePath: result['profile_path'] ?? '',
-          id: result['id'],
-          department: result['known_for_department'] ?? '',
-        );
-        persons.add(person);
-      }
-
-      setState(() {
-        personResults = persons;
-      });
-    } else {
+    if (response.statusCode != 200) {
       throw Exception('Failed to load people data');
     }
+
+    final List<Person> persons = [];
+    final List<dynamic> results = json.decode(response.body)['results'];
+    for (var result in results) {
+      persons.add(Person(
+        name: result['name'],
+        profilePath: result['profile_path'] ?? '',
+        id: result['id'],
+        department: result['known_for_department'] ?? '',
+      ));
+    }
+    return persons;
   }
 
   String _getSearchLabelText(int tabIndex) {
@@ -488,10 +491,11 @@ class _SearchScreenState extends State<SearchScreen>
                                       color: colorScheme.onSurfaceVariant),
                                   onPressed: () {
                                     _searchController.clear();
+                                    _searchFetchId++;
                                     setState(() {
-                                      movieResults.clear();
-                                      tvResults.clear();
-                                      personResults.clear();
+                                      movieResults = [];
+                                      tvResults = [];
+                                      personResults = [];
                                     });
                                   },
                                 )
