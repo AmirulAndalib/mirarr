@@ -614,7 +614,7 @@ class _SerieDetailPageDesktop extends StatelessWidget {
       extendBody: true,
       appBar: AppBar(
         toolbarHeight: 40,
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: getSeriesColor(context, widget.serieId),
         iconTheme: const IconThemeData(color: Colors.black),
         actions: [
           Padding(

@@ -521,6 +521,8 @@ class _ShelfPageState extends State<ShelfPage> {
 
   // Desktop Left Sidebar
   Widget _buildDesktopSidebar() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final sections = [
       {'id': 'movies', 'label': 'Movies', 'icon': Icons.movie, 'desc': 'Watched films'},
       {'id': 'shows', 'label': 'TV Shows', 'icon': Icons.tv, 'desc': 'Logged episodes'},
@@ -530,10 +532,10 @@ class _ShelfPageState extends State<ShelfPage> {
     return Container(
       width: 260,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.015),
+        color: colorScheme.surfaceContainerLow,
         border: Border(
           right: BorderSide(
-            color: Colors.white.withValues(alpha: 0.06),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -547,17 +549,17 @@ class _ShelfPageState extends State<ShelfPage> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Row(
               children: [
-                Icon(Icons.shelves, size: 28, color: Theme.of(context).primaryColor),
+                Icon(Icons.shelves, size: 28, color: colorScheme.primary),
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'MY SHELF',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                        color: colorScheme.onSurface,
                         letterSpacing: 1.5,
                       ),
                     ),
@@ -565,7 +567,7 @@ class _ShelfPageState extends State<ShelfPage> {
                       'Local Database',
                       style: TextStyle(
                         fontSize: 10,
-                        color: Theme.of(context).primaryColor,
+                        color: colorScheme.primary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -596,12 +598,12 @@ class _ShelfPageState extends State<ShelfPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? Theme.of(context).primaryColor.withValues(alpha: 0.12)
+                            ? colorScheme.primaryContainer
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isSelected
-                              ? Theme.of(context).primaryColor.withValues(alpha: 0.3)
+                              ? colorScheme.primary.withValues(alpha: 0.35)
                               : Colors.transparent,
                         ),
                       ),
@@ -609,7 +611,9 @@ class _ShelfPageState extends State<ShelfPage> {
                         children: [
                           Icon(
                             sec['icon'] as IconData,
-                            color: isSelected ? Theme.of(context).primaryColor : Colors.white60,
+                            color: isSelected
+                                ? colorScheme.onPrimaryContainer
+                                : colorScheme.onSurfaceVariant,
                             size: 20,
                           ),
                           const SizedBox(width: 14),
@@ -622,15 +626,17 @@ class _ShelfPageState extends State<ShelfPage> {
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                    color: isSelected ? Colors.white : Colors.white70,
+                                    color: isSelected
+                                        ? colorScheme.onPrimaryContainer
+                                        : colorScheme.onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   sec['desc'] as String,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 9,
-                                    color: Colors.white30,
+                                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
@@ -640,8 +646,8 @@ class _ShelfPageState extends State<ShelfPage> {
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
-                                  : Colors.white.withValues(alpha: 0.05),
+                                  ? colorScheme.primary.withValues(alpha: 0.2)
+                                  : colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -649,7 +655,9 @@ class _ShelfPageState extends State<ShelfPage> {
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: isSelected ? Theme.of(context).primaryColor : Colors.white70,
+                                color: isSelected
+                                    ? colorScheme.primary
+                                    : colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ),
@@ -668,23 +676,25 @@ class _ShelfPageState extends State<ShelfPage> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.02),
+                color: colorScheme.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                border: Border.all(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.25),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.analytics_outlined, size: 18, color: Theme.of(context).primaryColor),
+                      Icon(Icons.analytics_outlined, size: 18, color: colorScheme.primary),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'SHELF STATS',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white60,
+                          color: colorScheme.onSurfaceVariant,
                           letterSpacing: 1.0,
                         ),
                       ),
@@ -708,7 +718,10 @@ class _ShelfPageState extends State<ShelfPage> {
                     _formatWatchTime(totalTvMinutes),
                     secondaryValue: _formatWatchTimeYMD(totalTvMinutes),
                   ),
-                  const Divider(color: Colors.white10, height: 16),
+                  Divider(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+                    height: 16,
+                  ),
                   _buildStatItem(
                     'Total Watch Time',
                     _formatWatchTime(totalMovieMinutes + totalTvMinutes),
@@ -718,37 +731,20 @@ class _ShelfPageState extends State<ShelfPage> {
                     const SizedBox(height: 12),
                     LinearProgressIndicator(
                       value: calculationProgress,
-                      backgroundColor: Colors.white10,
-                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+                      backgroundColor: colorScheme.surfaceContainerHighest,
+                      valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Fetching runtimes... ${(calculationProgress * 100).toStringAsFixed(0)}%',
-                      style: const TextStyle(fontSize: 10, color: Colors.white54),
+                      'Fetching... ${(calculationProgress * 100).toStringAsFixed(0)}%',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ] else if (needsCalculation) ...[
                     const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.15),
-                          foregroundColor: Theme.of(context).primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        icon: const Badge(
-                          backgroundColor: Colors.amber,
-                          label: Text('!', style: TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.bold)),
-                          child: Icon(Icons.refresh, size: 14),
-                        ),
-                        label: Text(
-                          'Fetch watch times ($uncachedItemsCount logs)',
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                        ),
-                        onPressed: _showCalculationWarningDialog,
-                      ),
-                    ),
+                    _buildCalculateWatchTimeButton(),
                   ],
                 ],
               ),
@@ -761,30 +757,34 @@ class _ShelfPageState extends State<ShelfPage> {
   }
 
   Widget _buildStatItem(String label, String value, {String? secondaryValue}) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.white30)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+        ),
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: Colors.white70,
+                color: colorScheme.onSurface,
               ),
             ),
             if (secondaryValue != null) ...[
               const SizedBox(height: 2),
               Text(
                 secondaryValue,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 10,
-                  color: Colors.white38,
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
                 ),
               ),
             ],
@@ -794,8 +794,35 @@ class _ShelfPageState extends State<ShelfPage> {
     );
   }
 
+  Widget _buildCalculateWatchTimeButton({bool compact = false}) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: double.infinity,
+      height: compact ? 32 : 36,
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        icon: Icon(Icons.timer_outlined, size: compact ? 14 : 16),
+        label: Text(
+          'Calc. times ($uncachedItemsCount)',
+          style: TextStyle(
+            fontSize: compact ? 11 : 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        onPressed: _showCalculationWarningDialog,
+      ),
+    );
+  }
+
   // Desktop Header
   Widget _buildDesktopHeader() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final activeController = _activeSection == 'movies'
         ? _movieSearchController
         : _activeSection == 'shows'
@@ -810,14 +837,18 @@ class _ShelfPageState extends State<ShelfPage> {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05))),
+        border: Border(
+          bottom: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.25),
+          ),
+        ),
       ),
       child: Row(
         children: [
           Text(
             sectionTitle,
             style: TextStyle(
-              color: Theme.of(context).primaryColor,
+              color: colorScheme.onSurface,
               fontSize: 24,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.5,
@@ -828,8 +859,8 @@ class _ShelfPageState extends State<ShelfPage> {
             width: 300,
             child: TextField(
               controller: activeController,
-              style: TextStyle(color: Theme.of(context).primaryColor),
-              cursorColor: Theme.of(context).primaryColor,
+              style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface),
+              cursorColor: colorScheme.primary,
               onChanged: (value) => _debouncedSetState(() {
                 if (_activeSection == 'movies') _movieQuery = value;
                 if (_activeSection == 'shows') {
@@ -839,23 +870,31 @@ class _ShelfPageState extends State<ShelfPage> {
                 if (_activeSection == 'diary') _diaryQuery = value;
               }),
               decoration: InputDecoration(
-                prefixIcon: Icon(Icons.search, color: Theme.of(context).primaryColor, size: 20),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: colorScheme.onSurfaceVariant,
+                  size: 20,
+                ),
                 hintText: 'Search logs...',
-                hintStyle: TextStyle(color: Theme.of(context).primaryColor.withValues(alpha: 0.5)),
+                hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
                 filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.03),
+                fillColor: colorScheme.surfaceContainerHigh,
                 isDense: true,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor.withValues(alpha: 0.3)),
+                  borderSide: BorderSide.none,
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor.withValues(alpha: 0.2)),
+                  borderSide: BorderSide(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  borderSide: BorderSide(color: colorScheme.primary, width: 2),
                 ),
               ),
             ),
@@ -1078,38 +1117,19 @@ class _ShelfPageState extends State<ShelfPage> {
             const SizedBox(height: 8),
             LinearProgressIndicator(
               value: calculationProgress,
-              backgroundColor: Colors.white10,
-              valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+              backgroundColor: colorScheme.surfaceContainerHighest,
+              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
             ),
             const SizedBox(height: 4),
             Text(
-              'Fetching runtimes... ${(calculationProgress * 100).toStringAsFixed(0)}%',
-              style: const TextStyle(fontSize: 9, color: Colors.white54),
+              'Fetching... ${(calculationProgress * 100).toStringAsFixed(0)}%',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
           ] else if (needsCalculation) ...[
             const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              height: 28,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.15),
-                  foregroundColor: Theme.of(context).primaryColor,
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                icon: const Badge(
-                  backgroundColor: Colors.amber,
-                  label: Text('!', style: TextStyle(color: Colors.black, fontSize: 7, fontWeight: FontWeight.bold)),
-                  child: Icon(Icons.refresh, size: 12),
-                ),
-                label: Text(
-                  'Update watch times ($uncachedItemsCount logs pending)',
-                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
-                ),
-                onPressed: _showCalculationWarningDialog,
-              ),
-            ),
+            _buildCalculateWatchTimeButton(compact: true),
           ],
         ],
       ),
@@ -1150,15 +1170,22 @@ class _ShelfPageState extends State<ShelfPage> {
   }
 
   Widget _buildViewOptionButton(String mode, IconData icon, String currentMode, Function(String) onTap) {
+    final colorScheme = Theme.of(context).colorScheme;
     final isSelected = mode == currentMode;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 2),
       decoration: BoxDecoration(
-        color: isSelected ? Theme.of(context).primaryColor.withValues(alpha: 0.2) : Colors.transparent,
+        color: isSelected ? colorScheme.primaryContainer : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
       child: IconButton(
-        icon: Icon(icon, size: 18, color: isSelected ? Theme.of(context).primaryColor : Colors.white54),
+        icon: Icon(
+          icon,
+          size: 18,
+          color: isSelected
+              ? colorScheme.onPrimaryContainer
+              : colorScheme.onSurfaceVariant,
+        ),
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         onPressed: () => onTap(mode),

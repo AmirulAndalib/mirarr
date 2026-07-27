@@ -935,7 +935,7 @@ class _SerieDetailPageMobile extends StatelessWidget {
       AppBar(
         automaticallyImplyLeading: true,
          toolbarHeight: 40,
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: getSeriesColor(context, widget.serieId),
         iconTheme: const IconThemeData(color: Colors.black),
         actions: [
           Padding(
