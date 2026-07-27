@@ -59,15 +59,8 @@ class _SearchScreenState extends State<SearchScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _tabController.addListener(_onTabChanged);
     _searchController.addListener(_onSearchChanged);
     _searchFocusNode = FocusNode(onKeyEvent: _handleSearchFocusKey);
-  }
-
-  void _onTabChanged() {
-    if (mounted) {
-      setState(() {});
-    }
   }
 
   void _onSearchChanged() {
@@ -187,8 +180,8 @@ class _SearchScreenState extends State<SearchScreen>
     }
   }
 
-  String _getSearchLabelText() {
-    switch (_tabController.index) {
+  String _getSearchLabelText(int tabIndex) {
+    switch (tabIndex) {
       case 0:
         return 'Search for movies...';
       case 1:
@@ -434,7 +427,6 @@ class _SearchScreenState extends State<SearchScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isDiscoverTab = _tabController.index == 3;
 
     return Scaffold(
       extendBody: true,
@@ -442,62 +434,75 @@ class _SearchScreenState extends State<SearchScreen>
       body: SafeArea(
         child: Column(
           children: [
-            // Unified search bar at top
-            if (!isDiscoverTab)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: Align(
-                  alignment: Alignment.center,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600),
-                    child: TextField(
-                      focusNode: _searchFocusNode,
-                      autocorrect: false,
-                      style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
-                      cursorColor: colorScheme.primary,
-                      controller: _searchController,
-                      keyboardType: TextInputType.text,
-                      decoration: InputDecoration(
-                        hintText: _getSearchLabelText(),
-                        hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                        ),
-                        prefixIcon: Icon(
-                          Icons.search_rounded,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                        filled: true,
-                        fillColor: colorScheme.surfaceContainerHigh,
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: colorScheme.primary, width: 2),
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: colorScheme.outlineVariant.withValues(alpha: 0.2),
-                            width: 1,
+            // Hint + visibility depend on tab index; rebuild only this bar, not the grids.
+            ValueListenableBuilder<double>(
+              valueListenable: _tabController.animation!,
+              builder: (context, animationValue, _) {
+                final tabIndex = animationValue.round().clamp(0, 3);
+                if (tabIndex == 3) return const SizedBox.shrink();
+
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: TextField(
+                        focusNode: _searchFocusNode,
+                        autocorrect: false,
+                        style: theme.textTheme.bodyLarge
+                            ?.copyWith(color: colorScheme.onSurface),
+                        cursorColor: colorScheme.primary,
+                        controller: _searchController,
+                        keyboardType: TextInputType.text,
+                        decoration: InputDecoration(
+                          hintText: _getSearchLabelText(tabIndex),
+                          hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.6),
                           ),
-                          borderRadius: BorderRadius.circular(28),
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerHigh,
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                                color: colorScheme.primary, width: 2),
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(
+                              color: colorScheme.outlineVariant
+                                  .withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 14, horizontal: 20),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.close_rounded,
+                                      color: colorScheme.onSurfaceVariant),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {
+                                      movieResults.clear();
+                                      tvResults.clear();
+                                      personResults.clear();
+                                    });
+                                  },
+                                )
+                              : null,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: Icon(Icons.close_rounded, color: colorScheme.onSurfaceVariant),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() {
-                                    movieResults.clear();
-                                    tvResults.clear();
-                                    personResults.clear();
-                                  });
-                                },
-                              )
-                            : null,
                       ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
+            ),
 
             // Material 3 Expressive Segmented TabBar
             LayoutBuilder(
@@ -589,7 +594,6 @@ class _SearchScreenState extends State<SearchScreen>
   @override
   void dispose() {
     _debounce?.cancel();
-    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
