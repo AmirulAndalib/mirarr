@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:Mirarr/functions/platform_helper.dart';
 import 'dart:ui';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -216,7 +216,7 @@ class _ShelfPageState extends State<ShelfPage> {
       // 2. Fetch movies runtimes
       for (final movie in uncachedMovies) {
         try {
-          final response = await http.get(Uri.parse('${baseUrl}movie/${movie.tmdbId}?api_key=$apiKey'));
+          final response = await apiClient.get(Uri.parse('${baseUrl}movie/${movie.tmdbId}?api_key=$apiKey'));
           if (response.statusCode == 200) {
             final Map<String, dynamic> data = json.decode(response.body);
             final runtime = data['runtime'] as int? ?? 100;
@@ -244,7 +244,7 @@ class _ShelfPageState extends State<ShelfPage> {
         final eps = entry.value;
 
         try {
-          final response = await http.get(Uri.parse('${baseUrl}tv/$tvId/season/$seasonNum?api_key=$apiKey'));
+          final response = await apiClient.get(Uri.parse('${baseUrl}tv/$tvId/season/$seasonNum?api_key=$apiKey'));
           if (response.statusCode == 200) {
             final Map<String, dynamic> data = json.decode(response.body);
             final List<dynamic>? episodesList = data['episodes'] as List<dynamic>?;

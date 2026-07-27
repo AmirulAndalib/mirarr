@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive/hive.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -60,7 +60,7 @@ class _WatchlistCalendarScreenState extends State<WatchlistCalendarScreen> {
       List<Serie> basicSeries = [];
 
       while (page <= totalPages) {
-        final response = await http.get(
+        final response = await apiClient.get(
           Uri.parse('${baseUrl}account/$accountId/watchlist/tv?api_key=$apiKey&session_id=$sessionData&page=$page'),
         );
 

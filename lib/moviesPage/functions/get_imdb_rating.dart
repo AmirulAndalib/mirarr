@@ -1,14 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'package:Mirarr/functions/get_imdb_score.dart';
 
 final apiOmdbKey = dotenv.env['OMDB_API_KEY'];
 Future<void> getMovieRatings(String? imdbId, Function(String) updateImdbRating,
     Function(String) updateRottenTomatoesRating) async {
   try {
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse('http://www.omdbapi.com/?i=$imdbId&apikey=$apiOmdbKey'),
     );
     if (response.statusCode == 200) {

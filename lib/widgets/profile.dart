@@ -15,11 +15,11 @@ import 'package:Mirarr/widgets/expressive_page_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive/hive.dart';
-import 'package:http/http.dart';
+import 'package:http/http.dart' show ClientException;
 import 'package:Mirarr/moviesPage/UI/customMovieWidget.dart';
 import 'package:Mirarr/seriesPage/UI/customSeriesWidget.dart';
 import 'package:Mirarr/seriesPage/models/serie.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'package:Mirarr/moviesPage/models/movie.dart';
 import 'package:provider/provider.dart';
 import 'package:Mirarr/moviesPage/movieDetailPage.dart';
@@ -113,7 +113,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final currentFetchId = ++_movieWatchListFetchId;
 
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}account/$accountId/watchlist/movies?api_key=$apiKey&session_id=$sessionData&page=1',
       ),
@@ -154,7 +154,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (fetchId != _movieWatchListFetchId || !mounted) return;
 
       try {
-        final response = await http.get(
+        final response = await apiClient.get(
           Uri.parse(
             '${baseUrl}account/$accountId/watchlist/movies?api_key=$apiKey&session_id=$sessionData&page=$page',
           ),
@@ -193,7 +193,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final currentFetchId = ++_movieFavoritesFetchId;
 
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}account/$accountId/favorite/movies?api_key=$apiKey&session_id=$sessionData&page=1',
       ),
@@ -233,7 +233,7 @@ class _ProfilePageState extends State<ProfilePage> {
     for (int page = 2; page <= totalPages; page++) {
       if (fetchId != _movieFavoritesFetchId || !mounted) return;
       try {
-        final response = await http.get(
+        final response = await apiClient.get(
           Uri.parse(
             '${baseUrl}account/$accountId/favorite/movies?api_key=$apiKey&session_id=$sessionData&page=$page',
           ),
@@ -271,7 +271,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final currentFetchId = ++_movieRatedFetchId;
 
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}account/$accountId/rated/movies?api_key=$apiKey&session_id=$sessionData&page=1',
       ),
@@ -311,7 +311,7 @@ class _ProfilePageState extends State<ProfilePage> {
     for (int page = 2; page <= totalPages; page++) {
       if (fetchId != _movieRatedFetchId || !mounted) return;
       try {
-        final response = await http.get(
+        final response = await apiClient.get(
           Uri.parse(
             '${baseUrl}account/$accountId/rated/movies?api_key=$apiKey&session_id=$sessionData&page=$page',
           ),
@@ -448,7 +448,7 @@ class _ProfilePageState extends State<ProfilePage> {
       final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
       final baseUrl = getBaseUrl(region);
 
-      final response = await http.get(
+      final response = await apiClient.get(
         Uri.parse(
           '${baseUrl}account?api_key=$apiKey&session_id=$sessionData',
         ),
@@ -485,7 +485,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final currentFetchId = ++_tvWatchListFetchId;
 
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}account/$accountId/watchlist/tv?api_key=$apiKey&session_id=$sessionData&page=1',
       ),
@@ -575,7 +575,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (fetchId != _tvWatchListFetchId || !mounted) return;
 
       try {
-        final response = await http.get(
+        final response = await apiClient.get(
           Uri.parse(
             '${baseUrl}account/$accountId/watchlist/tv?api_key=$apiKey&session_id=$sessionData&page=$page',
           ),
@@ -659,7 +659,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final currentFetchId = ++_tvFavoritesFetchId;
 
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}account/$accountId/favorite/tv?api_key=$apiKey&session_id=$sessionData&page=1',
       ),
@@ -698,7 +698,7 @@ class _ProfilePageState extends State<ProfilePage> {
     for (int page = 2; page <= totalPages; page++) {
       if (fetchId != _tvFavoritesFetchId || !mounted) return;
       try {
-        final response = await http.get(
+        final response = await apiClient.get(
           Uri.parse(
             '${baseUrl}account/$accountId/favorite/tv?api_key=$apiKey&session_id=$sessionData&page=$page',
           ),
@@ -735,7 +735,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final currentFetchId = ++_tvRatedFetchId;
 
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}account/$accountId/rated/tv?api_key=$apiKey&session_id=$sessionData&page=1',
       ),
@@ -774,7 +774,7 @@ class _ProfilePageState extends State<ProfilePage> {
     for (int page = 2; page <= totalPages; page++) {
       if (fetchId != _tvRatedFetchId || !mounted) return;
       try {
-        final response = await http.get(
+        final response = await apiClient.get(
           Uri.parse(
             '${baseUrl}account/$accountId/rated/tv?api_key=$apiKey&session_id=$sessionData&page=$page',
           ),

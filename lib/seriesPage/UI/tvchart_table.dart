@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:Mirarr/functions/get_imdb_score.dart';
 import 'package:Mirarr/functions/get_base_url.dart';
@@ -39,9 +40,10 @@ class _TvChartTableState extends State<TvChartTable> {
       }
 
       // 1. Fetch main series metadata to get show title and total seasons
-      final metadataResponse = await http.get(
+      final metadataResponse = await apiClient.get(
         Uri.parse('http://www.omdbapi.com/?i=${widget.imdbId}&apikey=$omdbApiKey'),
-      ).timeout(const Duration(seconds: 5));
+        timeout: const Duration(seconds: 5),
+      );
 
       if (metadataResponse.statusCode != 200) {
         throw Exception('Failed to fetch metadata: ${metadataResponse.statusCode}');
@@ -67,9 +69,10 @@ class _TvChartTableState extends State<TvChartTable> {
       final List<Future<http.Response>> seasonFutures = [];
       for (int season = 1; season <= totalSeasons; season++) {
         seasonFutures.add(
-          http.get(
+          apiClient.get(
             Uri.parse('http://www.omdbapi.com/?i=${widget.imdbId}&Season=$season&apikey=$omdbApiKey'),
-          ).timeout(const Duration(seconds: 5)),
+            timeout: const Duration(seconds: 5),
+          ),
         );
       }
 

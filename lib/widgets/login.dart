@@ -8,7 +8,7 @@ import 'package:Mirarr/widgets/bottom_bar.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:tmdb_api/tmdb_api.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 
 import 'package:hive/hive.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -49,7 +49,7 @@ class _LoginPageState extends State<LoginPage> {
         var sessionData = await tmdb.v3.auth.createSession(requestToken);
 
         if (sessionData != null) {
-          var accountData = await http.get(Uri.parse(
+          var accountData = await apiClient.get(Uri.parse(
               'https://api.themoviedb.org/3/account?api_key=$apiKey&session_id=$sessionData'));
           if (accountData.statusCode == 200) {
             final String accountId =

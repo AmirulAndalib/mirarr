@@ -20,7 +20,7 @@ import 'package:Mirarr/seriesPage/UI/iran_series_f2m_page.dart';
 import 'package:Mirarr/widgets/expressive_page_route.dart';
 import 'package:Mirarr/widgets/m3_expressive_rating_bar.dart';
 import 'package:hive/hive.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:Mirarr/moviesPage/UI/cast_crew_row.dart';
@@ -148,7 +148,7 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
           '${baseUrl}tv/${widget.serieId}/account_states?api_key=$apiKey&session_id=$sessionId'),
     );
@@ -216,7 +216,7 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
       final region =
           Provider.of<RegionProvider>(context, listen: false).currentRegion;
       final baseUrl = getBaseUrl(region);
-      final response = await http.get(
+      final response = await apiClient.get(
         Uri.parse(
             '${baseUrl}tv/${widget.serieId}/external_ids?api_key=$apiKey'),
       );
@@ -309,7 +309,7 @@ class _ShowWatchToggleState extends State<ShowWatchToggle> {
         final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
         final baseUrl = getBaseUrl(region);
         final apiKey = dotenv.env['TMDB_API_KEY'];
-        final response = await http.get(
+        final response = await apiClient.get(
           Uri.parse('${baseUrl}tv/${widget.serieId}?api_key=$apiKey'),
         );
 
@@ -408,7 +408,7 @@ class _ShowWatchToggleState extends State<ShowWatchToggle> {
     
     try {
       // Fetch all seasons
-      final seasonsResponse = await http.get(
+      final seasonsResponse = await apiClient.get(
         Uri.parse('${baseUrl}tv/${widget.serieId}?api_key=$apiKey'),
       );
       
@@ -421,7 +421,7 @@ class _ShowWatchToggleState extends State<ShowWatchToggle> {
           if (seasonNumber == 0) continue; // Skip specials
           
           // Fetch episodes for this season
-          final episodesResponse = await http.get(
+          final episodesResponse = await apiClient.get(
             Uri.parse('${baseUrl}tv/${widget.serieId}/season/$seasonNumber?api_key=$apiKey'),
           );
           

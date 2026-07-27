@@ -15,7 +15,7 @@ import 'package:Mirarr/widgets/m3_expressive_spinner.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:provider/provider.dart';
@@ -43,7 +43,7 @@ Future<String?> fetchEpisodeImdbId(
     try {
       final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
       final baseUrl = getBaseUrl(region);
-      final response = await http.get(
+      final response = await apiClient.get(
         Uri.parse('${baseUrl}tv/$serieId/season/$seasonNumber/episode/$episodeNumber/external_ids?api_key=$apiKey'),
       );
       if (response.statusCode == 200) {
@@ -62,7 +62,7 @@ Future<String?> fetchImdbRating(
   return _cachedApiCall('imdb_rating_${serieId}_${seasonNumber}_$episodeNumber',
       () async {
     try {
-      final response = await http.get(
+      final response = await apiClient.get(
         Uri.parse(
             'http://www.omdbapi.com/?i=$imdbId&season=$seasonNumber&Episode=$episodeNumber&apikey=$apiOmdbKey'),
       );
@@ -107,7 +107,7 @@ Future<Map<int, String>> fetchSeasonImdbRatings(
     final Set<int> episodesFetchedFromOmdb = {};
 
     try {
-      final response = await http.get(
+      final response = await apiClient.get(
         Uri.parse(
             'http://www.omdbapi.com/?i=$imdbId&Season=$seasonNumber&apikey=$apiOmdbKey'),
       );
@@ -196,7 +196,7 @@ Future<List<dynamic>> fetchSeasons(int serieId, BuildContext context) async {
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse('${baseUrl}tv/$serieId?api_key=$apiKey'),
     );
 
@@ -449,7 +449,7 @@ Future<List<dynamic>> fetchEpisodesGuide(BuildContext context, int seasonNumber,
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
-    final episodesResponse = await http.get(
+    final episodesResponse = await apiClient.get(
       Uri.parse('${baseUrl}tv/$serieId/season/$seasonNumber?api_key=$apiKey'),
     );
 
@@ -741,7 +741,7 @@ Future<Map<String, dynamic>> fetchEpisodesDetails(BuildContext context,
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
           '${baseUrl}tv/$serieId/season/$seasonNumber/episode/$episodeNumber?api_key=$apiKey'),
     );
@@ -986,7 +986,7 @@ Future<bool> isSeasonWatched(int serieId, int seasonNumber, BuildContext context
     if (totalEpisodes == 0) {
       final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
       final baseUrl = getBaseUrl(region);
-      final episodesResponse = await http.get(
+      final episodesResponse = await apiClient.get(
         Uri.parse('${baseUrl}tv/$serieId/season/$seasonNumber?api_key=$apiKey'),
       );
       
@@ -1034,7 +1034,7 @@ Future<void> toggleSeasonWatched(int serieId, String serieName, int seasonNumber
   } else {
     // Mark all episodes of this season as watched
     try {
-      final episodesResponse = await http.get(
+      final episodesResponse = await apiClient.get(
         Uri.parse('${baseUrl}tv/$serieId/season/$seasonNumber?api_key=$apiKey'),
       );
       

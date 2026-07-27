@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 
 /// Gets the IMDb score for a given IMDb ID.
 /// Supports fetching via the single endpoint or the batch endpoint.
@@ -11,13 +11,14 @@ Future<double?> getImdbScore(String imdbId, {bool useBatch = false}) async {
 
   if (useBatch) {
     try {
-      final response = await http.post(
+      final response = await apiClient.post(
         Uri.parse('https://imdb-api.mahsaaghaali.ir/batch'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'ids': [imdbId]
         }),
-      ).timeout(const Duration(seconds: 10));
+        timeout: const Duration(seconds: 10),
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -35,9 +36,10 @@ Future<double?> getImdbScore(String imdbId, {bool useBatch = false}) async {
     return null;
   } else {
     try {
-      final response = await http.get(
+      final response = await apiClient.get(
         Uri.parse('https://imdb-api.mahsaaghaali.ir/$imdbId'),
-      ).timeout(const Duration(seconds: 10));
+        timeout: const Duration(seconds: 10),
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -58,11 +60,12 @@ Future<Map<String, double>> getImdbScoresBatch(List<String> imdbIds) async {
   if (imdbIds.isEmpty) return {};
 
   try {
-    final response = await http.post(
+    final response = await apiClient.post(
       Uri.parse('https://imdb-api.mahsaaghaali.ir/batch'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'ids': imdbIds}),
-    ).timeout(const Duration(seconds: 10));
+      timeout: const Duration(seconds: 10),
+    );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);

@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'dart:convert';
 
 final apiKey = dotenv.env['TMDB_API_KEY'];
@@ -31,7 +31,7 @@ Future<Map<String, List<Map<String, dynamic>>>> fetchCredits(
     int movieId, String region) async {
   final baseUrl = getBaseUrl(region);
   try {
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}movie/$movieId/credits?api_key=$apiKey',
       ),

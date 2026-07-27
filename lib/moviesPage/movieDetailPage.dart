@@ -16,7 +16,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
@@ -169,7 +169,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}movie/${widget.movieId}/account_states?api_key=$apiKey&session_id=$sessionId',
       ),
@@ -194,7 +194,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse('${baseUrl}movie/$movieId/images?api_key=$apiKey'),
     );
     if (response.statusCode == 200) {

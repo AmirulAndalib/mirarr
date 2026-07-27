@@ -15,7 +15,7 @@ import 'package:Mirarr/database/watch_history_database.dart';
 import 'package:Mirarr/models/watch_history_model.dart';
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -1777,7 +1777,7 @@ class _ImportProgressDialogState extends State<ImportProgressDialog> {
           searchUrl += '&primary_release_year=$yearStr';
         }
 
-        var response = await http.get(Uri.parse(searchUrl));
+        var response = await apiClient.get(Uri.parse(searchUrl));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           final List<dynamic> results = data['results'] ?? [];
@@ -1791,7 +1791,7 @@ class _ImportProgressDialogState extends State<ImportProgressDialog> {
 
         if (tmdbId == null && yearStr.isNotEmpty) {
           final fallbackUrl = '${widget.baseUrl}search/movie?api_key=${widget.apiKey}&query=${Uri.encodeComponent(name)}';
-          response = await http.get(Uri.parse(fallbackUrl));
+          response = await apiClient.get(Uri.parse(fallbackUrl));
           if (response.statusCode == 200) {
             final data = json.decode(response.body);
             final List<dynamic> results = data['results'] ?? [];
@@ -1958,7 +1958,7 @@ class _TvTimeImportProgressDialogState extends State<TvTimeImportProgressDialog>
     if (imdbId != null && imdbId.isNotEmpty) {
       try {
         final findUrl = '${baseUrl}find/$imdbId?api_key=$apiKey&external_source=imdb_id';
-        final response = await http.get(Uri.parse(findUrl));
+        final response = await apiClient.get(Uri.parse(findUrl));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           final List<dynamic> results = data['movie_results'] ?? [];
@@ -1972,7 +1972,7 @@ class _TvTimeImportProgressDialogState extends State<TvTimeImportProgressDialog>
     if (tvdbId != null) {
       try {
         final findUrl = '${baseUrl}find/$tvdbId?api_key=$apiKey&external_source=tvdb_id';
-        final response = await http.get(Uri.parse(findUrl));
+        final response = await apiClient.get(Uri.parse(findUrl));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           final List<dynamic> results = data['movie_results'] ?? [];
@@ -1989,7 +1989,7 @@ class _TvTimeImportProgressDialogState extends State<TvTimeImportProgressDialog>
       if (year != null) {
         searchUrl += '&primary_release_year=$year';
       }
-      var response = await http.get(Uri.parse(searchUrl));
+      var response = await apiClient.get(Uri.parse(searchUrl));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> results = data['results'] ?? [];
@@ -2001,7 +2001,7 @@ class _TvTimeImportProgressDialogState extends State<TvTimeImportProgressDialog>
       if (year != null) {
         // Try search without year
         final searchUrlNoYear = '${baseUrl}search/movie?api_key=$apiKey&query=${Uri.encodeComponent(title)}';
-        response = await http.get(Uri.parse(searchUrlNoYear));
+        response = await apiClient.get(Uri.parse(searchUrlNoYear));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           final List<dynamic> results = data['results'] ?? [];
@@ -2025,7 +2025,7 @@ class _TvTimeImportProgressDialogState extends State<TvTimeImportProgressDialog>
     if (tvdbId != null) {
       try {
         final findUrl = '${baseUrl}find/$tvdbId?api_key=$apiKey&external_source=tvdb_id';
-        final response = await http.get(Uri.parse(findUrl));
+        final response = await apiClient.get(Uri.parse(findUrl));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           final List<dynamic> results = data['tv_results'] ?? [];
@@ -2039,7 +2039,7 @@ class _TvTimeImportProgressDialogState extends State<TvTimeImportProgressDialog>
     if (imdbId != null && imdbId.isNotEmpty) {
       try {
         final findUrl = '${baseUrl}find/$imdbId?api_key=$apiKey&external_source=imdb_id';
-        final response = await http.get(Uri.parse(findUrl));
+        final response = await apiClient.get(Uri.parse(findUrl));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           final List<dynamic> results = data['tv_results'] ?? [];
@@ -2053,7 +2053,7 @@ class _TvTimeImportProgressDialogState extends State<TvTimeImportProgressDialog>
     // Fallback to search
     try {
       final searchUrl = '${baseUrl}search/tv?api_key=$apiKey&query=${Uri.encodeComponent(title)}';
-      final response = await http.get(Uri.parse(searchUrl));
+      final response = await apiClient.get(Uri.parse(searchUrl));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final List<dynamic> results = data['results'] ?? [];

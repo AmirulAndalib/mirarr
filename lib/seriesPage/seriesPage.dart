@@ -12,7 +12,7 @@ import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:Mirarr/utils/expressive_motion.dart';
 import 'package:Mirarr/widgets/expressive_interactive_container.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart';
+import 'package:http/http.dart' show ClientException;
 import 'package:Mirarr/seriesPage/models/serie.dart';
 import 'dart:async';
 import 'package:Mirarr/seriesPage/UI/customSeriesWidget.dart';

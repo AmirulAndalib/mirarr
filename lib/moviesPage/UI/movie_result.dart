@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:Mirarr/moviesPage/models/movie.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'dart:convert';
 import 'package:provider/provider.dart';
 
@@ -16,7 +16,7 @@ class MovieSearchResult extends StatelessWidget {
   Future<bool> checkAvailability(int movieId, String region) async {
     final baseUrl = getBaseUrl(region);
     final apiKey = dotenv.env['TMDB_API_KEY'];
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse('${baseUrl}movie/$movieId/watch/providers?api_key=$apiKey'),
     );
 

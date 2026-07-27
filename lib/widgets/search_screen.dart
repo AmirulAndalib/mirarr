@@ -15,7 +15,7 @@ import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'package:Mirarr/moviesPage/models/movie.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:Mirarr/seriesPage/models/serie.dart';
@@ -94,7 +94,7 @@ class _SearchScreenState extends State<SearchScreen>
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}search/movie?api_key=$apiKey&query=$query',
       ),
@@ -127,7 +127,7 @@ class _SearchScreenState extends State<SearchScreen>
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}search/tv?api_key=$apiKey&query=$query',
       ),
@@ -160,7 +160,7 @@ class _SearchScreenState extends State<SearchScreen>
     final region =
         Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
-    final response = await http.get(
+    final response = await apiClient.get(
       Uri.parse(
         '${baseUrl}search/person?api_key=$apiKey&query=$query',
       ),

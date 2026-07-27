@@ -11,7 +11,7 @@ import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
+import 'package:Mirarr/services/api_client.dart';
 import 'dart:convert';
 
 import 'package:provider/provider.dart';
@@ -78,7 +78,7 @@ class _DiscoverMoviesPageState extends State<DiscoverMoviesPage> {
     final url = Uri.parse('${baseUrl}genre/movie/list?api_key=$apiKey');
 
     try {
-      final response = await http.get(url);
+      final response = await apiClient.get(url);
 
       if (response.statusCode == 200) {
         final List<dynamic> genreList = json.decode(response.body)['genres'];
@@ -129,7 +129,7 @@ class _DiscoverMoviesPageState extends State<DiscoverMoviesPage> {
         '&without_genres=$withoutGenres');
 
     try {
-      final response = await http.get(url);
+      final response = await apiClient.get(url);
 
       if (response.statusCode == 200) {
         final List<Movie> fetchedMovies = [];
@@ -172,7 +172,7 @@ class _DiscoverMoviesPageState extends State<DiscoverMoviesPage> {
         Uri.parse('${baseUrl}search/person?api_key=$apiKey&query=$query');
 
     try {
-      final response = await http.get(url);
+      final response = await apiClient.get(url);
       if (response.statusCode == 200) {
         final List<dynamic> results = json.decode(response.body)['results'];
         return results
