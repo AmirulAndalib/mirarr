@@ -14,6 +14,17 @@ void clearAvailabilityCache() {
   _availabilityFutures.clear();
 }
 
+/// Seed the shared cache from an already-fetched `watch/providers` payload.
+void seedAvailabilityCache(int movieId, String region, bool available) {
+  if (movieId < 0) return;
+  _availabilityFutures[_cacheKey(movieId, region)] = Future.value(available);
+}
+
+bool availabilityFromProvidersPayload(Map<String, dynamic>? providers) {
+  final results = providers?['results'];
+  return results is Map && results.isNotEmpty;
+}
+
 Future<bool> checkAvailability(int movieId, String region) {
   if (movieId < 0) return Future.value(false);
   return _availabilityFutures.putIfAbsent(

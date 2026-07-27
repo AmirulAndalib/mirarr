@@ -560,6 +560,7 @@ class _SerieDetailPageMobile extends StatelessWidget {
                             serieName: widget.serieName,
                             posterPath: posterPath,
                             numberOfEpisodes: episodes,
+                            seasons: state.seasonsList,
                             onToggle: () {
                               // The widget handles its own state, no need to call _checkShowWatchedStatus
                             },
@@ -750,6 +751,7 @@ class _SerieDetailPageMobile extends StatelessWidget {
                           ),
                           onPressed: () => seasonsAndEpisodes(context,
                               widget.serieId, widget.serieName, imdbId!,
+                              seasons: state.seasonsList ?? const [],
                               imagePath: backdrops,
                               onWatchStatusChanged:
                                   state._refreshShowWatchStatus),

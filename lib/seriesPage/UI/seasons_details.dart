@@ -180,26 +180,22 @@ Future<Map<int, String>> fetchSeasonImdbRatings(
 }
 
 
-Future<List<dynamic>> fetchSeasons(int serieId, BuildContext context) async {
-  final region =
-      Provider.of<RegionProvider>(context, listen: false).currentRegion;
-  return cachedSeasonsApiCall('seasons_${region}_$serieId', () async {
-    final baseUrl = getBaseUrl(region);
-    final response = await apiClient.get(
-      Uri.parse('${baseUrl}tv/$serieId?api_key=$apiKey'),
-    );
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return data['seasons'];
-    } else {
-      throw Exception('Failed to load seasons');
-    }
-  });
-}
-
 void seasonsAndEpisodes(
-    BuildContext context, int serieId, String serieName, String imdbId, {String? imagePath, VoidCallback? onWatchStatusChanged}) {
+  BuildContext context,
+  int serieId,
+  String serieName,
+  String imdbId, {
+  required List<dynamic> seasons,
+  String? imagePath,
+  VoidCallback? onWatchStatusChanged,
+}) {
+  final sortedSeasons = List<dynamic>.from(seasons)
+    ..sort((a, b) {
+      if (a['season_number'] == 0) return 1;
+      if (b['season_number'] == 0) return -1;
+      return a['season_number'].compareTo(b['season_number']);
+    });
+
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -210,37 +206,19 @@ void seasonsAndEpisodes(
     builder: (BuildContext context) {
       return StatefulBuilder(
         builder: (BuildContext context, StateSetter setModalState) {
-          return FutureBuilder<List<dynamic>>(
-            future: fetchSeasons(serieId, context),
-            builder: (context, snapshot) {
-              final isLargeScreen = MediaQuery.sizeOf(context).width >= 800;
-              final double sheetHeight = MediaQuery.sizeOf(context).height * (isLargeScreen ? 0.75 : 0.60);
+          final isLargeScreen = MediaQuery.sizeOf(context).width >= 800;
+          final double sheetHeight =
+              MediaQuery.sizeOf(context).height * (isLargeScreen ? 0.75 : 0.60);
 
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Container(
-                  height: sheetHeight,
-                  alignment: Alignment.center,
-                  child: const M3ExpressiveSpinner(),
-                );
-              } else if (snapshot.hasError) {
-                return Container(
-                  height: sheetHeight,
-                  alignment: Alignment.center,
-                  child: Text('Error: ${snapshot.error}'),
-                );
-              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return Container(
-                  height: sheetHeight,
-                  alignment: Alignment.center,
-                  child: const Text('No seasons found.'),
-                );
-              } else {
-                final seasons = snapshot.data!;
-                seasons.sort((a, b) {
-                  if (a['season_number'] == 0) return 1;
-                  if (b['season_number'] == 0) return -1;
-                  return a['season_number'].compareTo(b['season_number']);
-                });
+          if (sortedSeasons.isEmpty) {
+            return Container(
+              height: sheetHeight,
+              alignment: Alignment.center,
+              child: const Text('No seasons found.'),
+            );
+          }
+
+          final seasons = sortedSeasons;
 
                 return Container(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -423,9 +401,7 @@ void seasonsAndEpisodes(
                     ],
                   ),
                 );
-              }
-            },
-          );
+
         },
       );
     },

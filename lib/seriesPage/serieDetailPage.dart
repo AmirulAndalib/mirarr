@@ -4,7 +4,6 @@ import 'package:Mirarr/functions/platform_helper.dart';
 
 import 'package:Mirarr/database/watch_history_database.dart';
 import 'package:Mirarr/functions/fetchers/fetch_serie_details.dart';
-import 'package:Mirarr/functions/fetchers/fetch_series_credits.dart';
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:Mirarr/functions/share_content.dart';
@@ -78,6 +77,7 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
   String? language;
   int? seasons;
   int? episodes;
+  List<dynamic>? seasonsList;
   String? imdbId;
   final imdbRating = ValueNotifier<String?>(null);
   final rottenTomatoesRating = ValueNotifier<String>('N/A');
@@ -94,14 +94,7 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
   void initState() {
     super.initState();
     checkUserLogin();
-
-    checkAccountState();
     _fetchSerieDetails();
-
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    _creditsFuture = fetchCredits(widget.serieId, region);
-    fetchExternalId();
   }
 
   @override
@@ -145,26 +138,23 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
     }
   }
 
-  Future<void> checkAccountState() async {
-    final openbox = Hive.box('sessionBox');
-    final sessionId = openbox.get('sessionData');
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final baseUrl = getBaseUrl(region);
-    final response = await apiClient.get(
-      Uri.parse(
-          '${baseUrl}tv/${widget.serieId}/account_states?api_key=$apiKey&session_id=$sessionId'),
-    );
+  Map<String, List<Map<String, dynamic>>> _parseCredits(
+      Map<String, dynamic>? credits) {
+    final castList = credits?['cast'] as List<dynamic>? ?? const [];
+    final crewList = credits?['crew'] as List<dynamic>? ?? const [];
+    return {
+      'cast': castList.cast<Map<String, dynamic>>().toList(),
+      'crew': crewList.cast<Map<String, dynamic>>().toList(),
+    };
+  }
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseData = json.decode(response.body);
-      if (!mounted) return;
-      isSerieWatchlist.value = responseData['watchlist'];
-      isSerieFavorite.value = responseData['favorite'];
-      isSerieRated.value = responseData['rated'];
-      if (responseData['rated'] != false) {
-        userRating.value = responseData['rated']['value'];
-      }
+  void _applyAccountStates(Map<String, dynamic>? accountStates) {
+    if (accountStates == null) return;
+    isSerieWatchlist.value = accountStates['watchlist'];
+    isSerieFavorite.value = accountStates['favorite'];
+    isSerieRated.value = accountStates['rated'];
+    if (accountStates['rated'] != false && accountStates['rated'] is Map) {
+      userRating.value = accountStates['rated']['value'];
     }
   }
 
@@ -172,23 +162,54 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
     try {
       final region =
           Provider.of<RegionProvider>(context, listen: false).currentRegion;
-      final responseData = await fetchSerieDetails(widget.serieId, region);
-      if (mounted) {
-        setState(() {
-          serieDetails = responseData;
-          budget = responseData['budget'];
-          genres = responseData['genres'];
-          backdrops = responseData['backdrop_path'];
-          score = responseData['vote_average'];
-          about = responseData['overview'];
-          duration = responseData['runtime'];
-          posterPath = responseData['poster_path'];
-  
-          releaseDate = responseData['release_date'];
-          language = responseData['original_language'];
-          seasons = responseData['number_of_seasons'];
-          episodes = responseData['number_of_episodes'];
-        });
+      final sessionId = Hive.box('sessionBox').get('sessionData') as String?;
+      final append = <String>[
+        'credits',
+        'external_ids',
+        if (sessionId != null) 'account_states',
+      ];
+      final responseData = await fetchSerieDetails(
+        widget.serieId,
+        region,
+        sessionId: sessionId,
+        appendToResponse: append,
+      );
+
+      _creditsFuture = Future.value(
+        _parseCredits(responseData['credits'] as Map<String, dynamic>?),
+      );
+      _applyAccountStates(
+          responseData['account_states'] as Map<String, dynamic>?);
+
+      final external = responseData['external_ids'] as Map<String, dynamic>?;
+      final fetchedImdbId = external?['imdb_id'] as String?;
+
+      if (!mounted) return;
+      setState(() {
+        serieDetails = responseData;
+        externalIds = external;
+        budget = responseData['budget'];
+        genres = responseData['genres'];
+        backdrops = responseData['backdrop_path'];
+        score = responseData['vote_average'];
+        about = responseData['overview'];
+        duration = responseData['runtime'];
+        posterPath = responseData['poster_path'];
+        releaseDate = responseData['release_date'] ??
+            responseData['first_air_date'];
+        language = responseData['original_language'];
+        seasons = responseData['number_of_seasons'];
+        episodes = responseData['number_of_episodes'];
+        seasonsList = responseData['seasons'] as List<dynamic>?;
+        imdbId = fetchedImdbId;
+      });
+
+      if (fetchedImdbId != null) {
+        if (region == 'iran') {
+          _checkF2M(fetchedImdbId);
+        }
+        await getSerieRatings(
+            fetchedImdbId, updateImdbRating, updateRottenTomatoesRating);
       }
     } catch (e) {
       throw Exception('Failed to load serie details');
@@ -204,39 +225,6 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
   void updateRottenTomatoesRating(String rating) {
     if (mounted) {
       rottenTomatoesRating.value = rating;
-    }
-  }
-
-  Future<void> fetchExternalId() async {
-    try {
-      final region =
-          Provider.of<RegionProvider>(context, listen: false).currentRegion;
-      final baseUrl = getBaseUrl(region);
-      final response = await apiClient.get(
-        Uri.parse(
-            '${baseUrl}tv/${widget.serieId}/external_ids?api_key=$apiKey'),
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
-        if (mounted) {
-          setState(() {
-            externalIds = responseData;
-            imdbId = responseData['imdb_id'];
-          });
-        }
-        if (imdbId != null) {
-          if (region == 'iran') {
-            _checkF2M(imdbId!);
-          }
-          await getSerieRatings(
-              imdbId, updateImdbRating, updateRottenTomatoesRating);
-        }
-      } else {
-        throw Exception('Failed to load serie details');
-      }
-    } catch (e) {
-      throw Exception('Failed to load external Id');
     }
   }
 
@@ -271,6 +259,7 @@ class ShowWatchToggle extends StatefulWidget {
   final String serieName;
   final String? posterPath;
   final int? numberOfEpisodes;
+  final List<dynamic>? seasons;
   final VoidCallback? onToggle;
 
   const ShowWatchToggle({
@@ -279,6 +268,7 @@ class ShowWatchToggle extends StatefulWidget {
     required this.serieName,
     required this.posterPath,
     this.numberOfEpisodes,
+    this.seasons,
     this.onToggle,
   }) : super(key: key);
 
@@ -297,24 +287,17 @@ class _ShowWatchToggleState extends State<ShowWatchToggle> {
     _loadWatchStatus();
   }
 
+  @override
+  void didUpdateWidget(covariant ShowWatchToggle oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.numberOfEpisodes != widget.numberOfEpisodes) {
+      _loadWatchStatus();
+    }
+  }
+
   Future<void> _loadWatchStatus() async {
     try {
-      int totalEpisodes = widget.numberOfEpisodes ?? 0;
-
-      if (totalEpisodes == 0) {
-        final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
-        final baseUrl = getBaseUrl(region);
-        final apiKey = dotenv.env['TMDB_API_KEY'];
-        final response = await apiClient.get(
-          Uri.parse('${baseUrl}tv/${widget.serieId}?api_key=$apiKey'),
-        );
-
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          totalEpisodes = data['number_of_episodes'] ?? 0;
-        }
-      }
-
+      final totalEpisodes = widget.numberOfEpisodes ?? 0;
       final watchHistory = await _watchHistoryDb.getWatchHistoryByTmdbId(widget.serieId, 'tv');
       final watchedEpisodes = watchHistory.where((item) => item.seasonNumber != null && item.seasonNumber != 0).length;
 
@@ -401,40 +384,31 @@ class _ShowWatchToggleState extends State<ShowWatchToggle> {
     final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
     final apiKey = dotenv.env['TMDB_API_KEY'];
+    final seasonsList = widget.seasons ?? const [];
     
     try {
-      // Fetch all seasons
-      final seasonsResponse = await apiClient.get(
-        Uri.parse('${baseUrl}tv/${widget.serieId}?api_key=$apiKey'),
-      );
-      
-      if (seasonsResponse.statusCode == 200) {
-        final data = json.decode(seasonsResponse.body);
-        final seasonsList = data['seasons'] as List<dynamic>;
+      for (final season in seasonsList) {
+        final seasonNumber = season['season_number'];
+        if (seasonNumber == 0) continue; // Skip specials
         
-        for (final season in seasonsList) {
-          final seasonNumber = season['season_number'];
-          if (seasonNumber == 0) continue; // Skip specials
+        // Fetch episodes for this season
+        final episodesResponse = await apiClient.get(
+          Uri.parse('${baseUrl}tv/${widget.serieId}/season/$seasonNumber?api_key=$apiKey'),
+        );
+        
+        if (episodesResponse.statusCode == 200) {
+          final episodeData = json.decode(episodesResponse.body);
+          final episodesList = episodeData['episodes'] as List<dynamic>;
           
-          // Fetch episodes for this season
-          final episodesResponse = await apiClient.get(
-            Uri.parse('${baseUrl}tv/${widget.serieId}/season/$seasonNumber?api_key=$apiKey'),
-          );
-          
-          if (episodesResponse.statusCode == 200) {
-            final episodeData = json.decode(episodesResponse.body);
-            final episodesList = episodeData['episodes'] as List<dynamic>;
-            
-            for (final episode in episodesList) {
-              await _watchHistoryDb.addShowToHistory(
-                tmdbId: widget.serieId,
-                title: widget.serieName,
-                posterPath: widget.posterPath,
-                seasonNumber: seasonNumber,
-                episodeNumber: episode['episode_number'],
-                episodeTitle: episode['name'],
-              );
-            }
+          for (final episode in episodesList) {
+            await _watchHistoryDb.addShowToHistory(
+              tmdbId: widget.serieId,
+              title: widget.serieName,
+              posterPath: widget.posterPath,
+              seasonNumber: seasonNumber,
+              episodeNumber: episode['episode_number'],
+              episodeTitle: episode['name'],
+            );
           }
         }
       }

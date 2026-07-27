@@ -261,6 +261,7 @@ class _SerieDetailPageDesktop extends StatelessWidget {
                                             serieName: widget.serieName,
                                             posterPath: posterPath,
                                             numberOfEpisodes: episodes,
+                                            seasons: state.seasonsList,
                                             onToggle: () {
                                               // The widget handles its own state
                                             },
@@ -402,6 +403,7 @@ class _SerieDetailPageDesktop extends StatelessWidget {
                                               widget.serieId,
                                               widget.serieName,
                                               imdbId!,
+                                              seasons: state.seasonsList ?? const [],
                                               imagePath: backdrops,
                                               onWatchStatusChanged:
                                                   state._refreshShowWatchStatus,
