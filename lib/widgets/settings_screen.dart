@@ -907,46 +907,54 @@ class _SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 if (AppPlatform.isAndroid)
-                  ListTile(
-                    title: const Text('Material You (Dynamic Colors)',
-                        style: TextStyle(color: Colors.white, fontSize: 16)),
-                    subtitle: Text(
-                      'Use system wallpaper colors',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.6),
-                        fontSize: 12,
-                      ),
-                    ),
-                    trailing: Icon(
-                      Icons.palette_outlined,
-                      color: Provider.of<ThemeProvider>(context).isDynamicTheme
-                          ? Theme.of(context).primaryColor
-                          : Colors.grey,
-                    ),
-                    onTap: () {
-                      Provider.of<ThemeProvider>(context, listen: false)
-                          .setDynamicTheme();
+                  Consumer<ThemeProvider>(
+                    builder: (context, themeProvider, _) {
+                      return ListTile(
+                        title: const Text('Material You (Dynamic Colors)',
+                            style: TextStyle(color: Colors.white, fontSize: 16)),
+                        subtitle: Text(
+                          'Use system wallpaper colors',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.palette_outlined,
+                          color: themeProvider.isDynamicTheme
+                              ? Theme.of(context).primaryColor
+                              : Colors.grey,
+                        ),
+                        onTap: () {
+                          themeProvider.setDynamicTheme();
+                        },
+                      );
                     },
                   ),
-                if (Provider.of<ThemeProvider>(context).isOmarchyLinux)
-                  ListTile(
-                    title: const Text('Omarchy Theme',
+                Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, _) {
+                    if (!themeProvider.isOmarchyLinux) {
+                      return const SizedBox.shrink();
+                    }
+                    return ListTile(
+                      title: const Text('Omarchy Theme',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          )),
+                      trailing: const Text(
+                        'Omarchy',
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                        )),
-                    trailing: const Text(
-                      'Omarchy',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontFamily: 'RobotoMono',
+                          color: Colors.grey,
+                          fontFamily: 'RobotoMono',
+                        ),
                       ),
-                    ),
-                    onTap: () {
-                      Provider.of<ThemeProvider>(context, listen: false)
-                          .setOmarchyTheme();
-                    },
-                  ),
+                      onTap: () {
+                        themeProvider.setOmarchyTheme();
+                      },
+                    );
+                  },
+                ),
               ],
             ),
           ],
