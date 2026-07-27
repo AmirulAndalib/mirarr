@@ -717,10 +717,15 @@ class _MovieDetailPageMobile extends StatelessWidget {
                                     List<dynamic> movies =
                                         snapshot.data as List<dynamic>;
 
-                                    return SingleChildScrollView(
-                                      scrollDirection: Axis.horizontal,
-                                      child: Row(
-                                        children: movies.map((movie) {
+                                    return SizedBox(
+                                      height: 250,
+                                      child: ListView.builder(
+                                        scrollDirection: Axis.horizontal,
+                                        physics: const BouncingScrollPhysics(),
+                                        itemExtent: 116,
+                                        itemCount: movies.length,
+                                        itemBuilder: (context, index) {
+                                          final movie = movies[index];
                                           return Padding(
                                               padding:
                                                   const EdgeInsets.all(8.0),
@@ -781,7 +786,7 @@ class _MovieDetailPageMobile extends StatelessWidget {
                                                   ),
                                                 ],
                                               ));
-                                        }).toList(),
+                                        },
                                       ),
                                     );
                                   }
