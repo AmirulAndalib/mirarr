@@ -63,16 +63,16 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   Future<bool> _checkOmarchyLinux() async {
-    if (kIsWeb) return false;
-    if (!io.Platform.isLinux) return false;
+    if (kIsWeb || !io.Platform.isLinux) return false;
     try {
-      final result = await io.Process.run('omarchy', ['version']);
-      if (result.exitCode == 0) {
-        final stdout = result.stdout.toString().trim();
-        return stdout.isNotEmpty;
-      }
-    } catch (_) {}
-    return false;
+      final home = io.Platform.environment['HOME'];
+      if (home == null) return false;
+      return await io.File(
+        '$home/.config/omarchy/current/theme/colors.toml',
+      ).exists();
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<Map<String, Color>> _loadOmarchyColors() async {

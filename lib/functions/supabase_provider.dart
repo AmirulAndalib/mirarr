@@ -8,9 +8,7 @@ class SupabaseProvider extends ChangeNotifier {
   bool _isConfigured = false;
   SharedPreferences? _prefs;
 
-  SupabaseProvider() {
-    loadSupabaseConfig();
-  }
+  SupabaseProvider();
 
   String? get supabaseUrl => _supabaseUrl;
   String? get supabaseAnonKey => _supabaseAnonKey;
