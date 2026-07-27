@@ -46,10 +46,16 @@ List<Serie> recentEpisodes = [];
 
 final ValueNotifier<int> profileRefreshNotifier = ValueNotifier<int>(0);
 
+/// App-lifetime cache of last-air metadata keyed by TMDB serie id.
+final Map<int, Map<String, dynamic>> _serieAirCache = {};
+
 class _ProfilePageState extends State<ProfilePage> {
   final apiKey = dotenv.env['TMDB_API_KEY'];
   int _lastIndex = -1;
   late final NavigationProvider _nav;
+  DateTime? _lastSuccessfulFetch;
+  static const _profileStaleDuration = Duration(seconds: 60);
+  static const _detailConcurrency = 8;
 
   Map<String, dynamic>? _accountDetails;
 
@@ -110,7 +116,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   void _onProfileRefreshRequest() {
     if (mounted) {
-      checkInternetAndFetchData();
+      checkInternetAndFetchData(force: true);
     }
   }
 
@@ -431,7 +437,7 @@ class _ProfilePageState extends State<ProfilePage> {
               FilledButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  checkInternetAndFetchData();
+                  checkInternetAndFetchData(force: true);
                 },
                 style: FilledButton.styleFrom(
                   backgroundColor: colorScheme.primary,
@@ -476,7 +482,14 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> checkInternetAndFetchData() async {
+  Future<void> checkInternetAndFetchData({bool force = false}) async {
+    if (!force &&
+        _lastSuccessfulFetch != null &&
+        DateTime.now().difference(_lastSuccessfulFetch!) <
+            _profileStaleDuration) {
+      return;
+    }
+    _lastSuccessfulFetch = DateTime.now();
     fetchAccountInfo();
     fetchMovieWatchList(context);
     fetchTvWatchList(context);
@@ -484,6 +497,80 @@ class _ProfilePageState extends State<ProfilePage> {
     fetchRatedMovies(context);
     fetchFavoriteSeries(context);
     fetchRatedTv(context);
+  }
+
+  /// Fetch last-air fields for [series] with a concurrency pool and app-lifetime cache.
+  Future<List<Map<String, dynamic>?>> _fetchSerieAirDetailsPooled(
+    List<Serie> series,
+    String region,
+  ) async {
+    final results = List<Map<String, dynamic>?>.filled(series.length, null);
+
+    for (var i = 0; i < series.length; i += _detailConcurrency) {
+      final end = (i + _detailConcurrency < series.length)
+          ? i + _detailConcurrency
+          : series.length;
+      final chunkIndexes = List.generate(end - i, (k) => i + k);
+
+      await Future.wait(chunkIndexes.map((idx) async {
+        final serieId = series[idx].id;
+        final cached = _serieAirCache[serieId];
+        if (cached != null) {
+          results[idx] = cached;
+          return;
+        }
+        try {
+          final details = await fetchSerieDetails(serieId, region);
+          final entry = <String, dynamic>{
+            'last_air_date': details['last_air_date'],
+            'last_episode_to_air': details['last_episode_to_air'],
+          };
+          _serieAirCache[serieId] = entry;
+          results[idx] = entry;
+        } catch (_) {
+          results[idx] = null;
+        }
+      }));
+    }
+
+    return results;
+  }
+
+  List<Serie> _recentEpisodesFromDetails(
+    List<Serie> series,
+    List<Map<String, dynamic>?> allSerieDetails,
+    DateTime today,
+  ) {
+    final pageRecentEpisodes = <Serie>[];
+    for (var i = 0; i < series.length; i++) {
+      final serie = series[i];
+      final serieDetails = allSerieDetails[i];
+      if (serieDetails == null) continue;
+
+      final serieLatestAir = serieDetails['last_air_date'];
+      if (serieLatestAir == null) continue;
+
+      final serieLastEpisodeSeasonNumber =
+          serieDetails['last_episode_to_air']?['season_number'];
+      final serieLastEpisodeEpisodeNumber =
+          serieDetails['last_episode_to_air']?['episode_number'];
+      final serieLatestAirDate = DateTime.parse(serieLatestAir);
+
+      final difference = today.difference(serieLatestAirDate).inDays;
+      if (difference <= 14) {
+        pageRecentEpisodes.add(Serie(
+          name: serie.name,
+          posterPath: serie.posterPath,
+          overView: serie.overView,
+          id: serie.id,
+          score: serie.score,
+          lastAirDate: serieLatestAir,
+          lastEpisodeSeasonNumber: serieLastEpisodeSeasonNumber,
+          lastEpisodeEpisodeNumber: serieLastEpisodeEpisodeNumber,
+        ));
+      }
+    }
+    return pageRecentEpisodes;
   }
 
   Future<void> fetchTvWatchList(BuildContext context) async {
@@ -524,46 +611,13 @@ class _ProfilePageState extends State<ProfilePage> {
       });
 
       final today = DateTime.now();
-
-      // Create a list of futures for all series detail requests
-      final List<Future<Map<String, dynamic>>> detailFutures = series.map((serie) =>
-        fetchSerieDetails(serie.id, region)
-      ).toList();
-
-      // Wait for all requests to complete in parallel
-      final List<Map<String, dynamic>> allSerieDetails = await Future.wait(detailFutures);
+      final allSerieDetails =
+          await _fetchSerieAirDetailsPooled(series, region);
 
       if (currentFetchId != _tvWatchListFetchId) return;
 
-      final List<Serie> pageRecentEpisodes = [];
-      // Process the results
-      for (var i = 0; i < series.length; i++) {
-        final serie = series[i];
-        final serieDetails = allSerieDetails[i];
-
-        final serieLatestAir = serieDetails['last_air_date'];
-        if (serieLatestAir == null) continue;
-
-        final serieLastEpisodeSeasonNumber = serieDetails['last_episode_to_air']?['season_number'];
-        final serieLastEpisodeEpisodeNumber = serieDetails['last_episode_to_air']?['episode_number'];
-        final serieLatestAirDate = DateTime.parse(serieLatestAir);
-
-        //check if the serie is aired in the last 14 days
-        final difference = today.difference(serieLatestAirDate).inDays;
-        if (difference <= 14) {
-          final updatedSerie = Serie(
-            name: serie.name,
-            posterPath: serie.posterPath,
-            overView: serie.overView,
-            id: serie.id,
-            score: serie.score,
-            lastAirDate: serieLatestAir,
-            lastEpisodeSeasonNumber: serieLastEpisodeSeasonNumber,
-            lastEpisodeEpisodeNumber: serieLastEpisodeEpisodeNumber,
-          );
-          pageRecentEpisodes.add(updatedSerie);
-        }
-      }
+      final pageRecentEpisodes =
+          _recentEpisodesFromDetails(series, allSerieDetails, today);
 
       // Sort recentEpisodes by lastAirDate in descending order (newest first)
       pageRecentEpisodes.sort((a, b) => DateTime.parse(b.lastAirDate!).compareTo(DateTime.parse(a.lastAirDate!)));
@@ -609,42 +663,13 @@ class _ProfilePageState extends State<ProfilePage> {
             tvWatchList = [...tvWatchList, ...pageSeries];
           });
 
-          // Fetch details for this page's series
-          final List<Future<Map<String, dynamic>>> detailFutures = pageSeries.map((serie) =>
-            fetchSerieDetails(serie.id, region)
-          ).toList();
-
-          final List<Map<String, dynamic>> allSerieDetails = await Future.wait(detailFutures);
+          final allSerieDetails =
+              await _fetchSerieAirDetailsPooled(pageSeries, region);
 
           if (fetchId != _tvWatchListFetchId || !mounted) return;
 
-          final List<Serie> newRecentEpisodes = [];
-          for (var i = 0; i < pageSeries.length; i++) {
-            final serie = pageSeries[i];
-            final serieDetails = allSerieDetails[i];
-
-            final serieLatestAir = serieDetails['last_air_date'];
-            if (serieLatestAir == null) continue;
-
-            final serieLastEpisodeSeasonNumber = serieDetails['last_episode_to_air']?['season_number'];
-            final serieLastEpisodeEpisodeNumber = serieDetails['last_episode_to_air']?['episode_number'];
-            final serieLatestAirDate = DateTime.parse(serieLatestAir);
-
-            final difference = today.difference(serieLatestAirDate).inDays;
-            if (difference <= 14) {
-              final updatedSerie = Serie(
-                name: serie.name,
-                posterPath: serie.posterPath,
-                overView: serie.overView,
-                id: serie.id,
-                score: serie.score,
-                lastAirDate: serieLatestAir,
-                lastEpisodeSeasonNumber: serieLastEpisodeSeasonNumber,
-                lastEpisodeEpisodeNumber: serieLastEpisodeEpisodeNumber,
-              );
-              newRecentEpisodes.add(updatedSerie);
-            }
-          }
+          final newRecentEpisodes =
+              _recentEpisodesFromDetails(pageSeries, allSerieDetails, today);
 
           if (newRecentEpisodes.isNotEmpty) {
             final List<Serie> updatedRecentEpisodes = [...recentEpisodes, ...newRecentEpisodes];
