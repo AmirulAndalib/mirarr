@@ -11,17 +11,9 @@ class _MovieDetailPageDesktop extends StatelessWidget {
     final moviedetails = state.moviedetails;
     final duration = state.duration;
     final releaseDate = state.releaseDate;
-    final imdbRating = state.imdbRating;
-    final rottenTomatoesRating = state.rottenTomatoesRating;
-    final isWatched = state.isWatched;
     final posterPath = state.posterPath;
     final score = state.score;
     final backdrops = state.backdrops;
-    final isUserLoggedIn = state.isUserLoggedIn;
-    final isMovieWatchlist = state.isMovieWatchlist;
-    final isMovieFavorite = state.isMovieFavorite;
-    final isMovieRated = state.isMovieRated;
-    final userRating = state.userRating;
     final genres = state.genres;
     final about = state.about;
     final budget = state.budget;
@@ -32,7 +24,6 @@ class _MovieDetailPageDesktop extends StatelessWidget {
     final imdbId = state.imdbId;
     final availabilityFuture = state._availabilityFuture;
     final creditsFuture = state._creditsFuture;
-    final directorMoviesFuture = state._directorMoviesFuture;
     final language = state.language;
 
     final region =
@@ -184,34 +175,64 @@ class _MovieDetailPageDesktop extends StatelessWidget {
                                                 icon: const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
                                                 context: context,
                                               ),
-                                            if (imdbRating != null && imdbRating.isNotEmpty)
-                                              _buildRatingBadge(
-                                                label: 'IMDb',
-                                                score: imdbRating,
-                                                icon: const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
-                                                context: context,
-                                              ),
-                                            if (rottenTomatoesRating != 'N/A')
-                                              _buildRatingBadge(
-                                                label: 'Rotten Tomatoes',
-                                                score: rottenTomatoesRating,
-                                                icon: const Text('🍅', style: TextStyle(fontSize: 14)),
-                                                context: context,
-                                              ),
-                                            MovieRatingButton(
-                                              movieId: widget.movieId,
-                                              isUserLoggedIn: isUserLoggedIn,
-                                              initialIsRated: isMovieRated,
-                                              initialUserRating: userRating,
-                                              isDesktop: true,
+                                            ValueListenableBuilder<String?>(
+                                              valueListenable: state.imdbRating,
+                                              builder: (_, rating, __) {
+                                                if (rating == null || rating.isEmpty) {
+                                                  return const SizedBox.shrink();
+                                                }
+                                                return _buildRatingBadge(
+                                                  label: 'IMDb',
+                                                  score: rating,
+                                                  icon: const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
+                                                  context: context,
+                                                );
+                                              },
                                             ),
-                                            MovieWatchedButton(
-                                              movieId: widget.movieId,
-                                              movieTitle: widget.movieTitle,
-                                              posterPath: posterPath,
-                                              userRating: userRating,
-                                              initialIsWatched: isWatched,
-                                              isDesktop: true,
+                                            ValueListenableBuilder<String>(
+                                              valueListenable: state.rottenTomatoesRating,
+                                              builder: (_, rating, __) {
+                                                if (rating == 'N/A') {
+                                                  return const SizedBox.shrink();
+                                                }
+                                                return _buildRatingBadge(
+                                                  label: 'Rotten Tomatoes',
+                                                  score: rating,
+                                                  icon: const Text('🍅', style: TextStyle(fontSize: 14)),
+                                                  context: context,
+                                                );
+                                              },
+                                            ),
+                                            AnimatedBuilder(
+                                              animation: Listenable.merge([
+                                                state.isUserLoggedIn,
+                                                state.isMovieRated,
+                                                state.userRating,
+                                                state.isWatched,
+                                              ]),
+                                              builder: (context, _) {
+                                                return Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    MovieRatingButton(
+                                                      movieId: widget.movieId,
+                                                      isUserLoggedIn: state.isUserLoggedIn.value,
+                                                      initialIsRated: state.isMovieRated.value,
+                                                      initialUserRating: state.userRating.value,
+                                                      isDesktop: true,
+                                                    ),
+                                                    const SizedBox(width: 12),
+                                                    MovieWatchedButton(
+                                                      movieId: widget.movieId,
+                                                      movieTitle: widget.movieTitle,
+                                                      posterPath: posterPath,
+                                                      userRating: state.userRating.value,
+                                                      initialIsWatched: state.isWatched.value,
+                                                      isDesktop: true,
+                                                    ),
+                                                  ],
+                                                );
+                                              },
                                             ),
                                           ],
                                         ),
@@ -227,17 +248,32 @@ class _MovieDetailPageDesktop extends StatelessWidget {
                                                 state._openGalleryOnDemand();
                                               },
                                             ),
-                                            MovieWatchlistButton(
-                                              movieId: widget.movieId,
-                                              initialIsWatchlist: isMovieWatchlist,
-                                              isUserLoggedIn: isUserLoggedIn,
-                                              isDesktop: true,
-                                            ),
-                                            MovieFavoriteButton(
-                                              movieId: widget.movieId,
-                                              initialIsFavorite: isMovieFavorite,
-                                              isUserLoggedIn: isUserLoggedIn,
-                                              isDesktop: true,
+                                            AnimatedBuilder(
+                                              animation: Listenable.merge([
+                                                state.isUserLoggedIn,
+                                                state.isMovieWatchlist,
+                                                state.isMovieFavorite,
+                                              ]),
+                                              builder: (context, _) {
+                                                return Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    MovieWatchlistButton(
+                                                      movieId: widget.movieId,
+                                                      initialIsWatchlist: state.isMovieWatchlist.value,
+                                                      isUserLoggedIn: state.isUserLoggedIn.value,
+                                                      isDesktop: true,
+                                                    ),
+                                                    const SizedBox(width: 12),
+                                                    MovieFavoriteButton(
+                                                      movieId: widget.movieId,
+                                                      initialIsFavorite: state.isMovieFavorite.value,
+                                                      isUserLoggedIn: state.isUserLoggedIn.value,
+                                                      isDesktop: true,
+                                                    ),
+                                                  ],
+                                                );
+                                              },
                                             ),
                                           ],
                                         ),
@@ -440,9 +476,14 @@ class _MovieDetailPageDesktop extends StatelessWidget {
                                             widget.movieId)),
                                   ),
                                 ),
-                              directorMoviesFuture == null
-                                  ? const Center(child: CircularProgressIndicator())
-                                  : FutureBuilder(
+                              ValueListenableBuilder<Future<dynamic>?>(
+                                valueListenable: state.directorMoviesFuture,
+                                builder: (context, directorMoviesFuture, _) {
+                                  if (directorMoviesFuture == null) {
+                                    return const Center(
+                                        child: CircularProgressIndicator());
+                                  }
+                                  return FutureBuilder(
                                       future: directorMoviesFuture,
                                   builder: (context, snapshot) {
                                     if (snapshot.connectionState ==
@@ -526,7 +567,9 @@ class _MovieDetailPageDesktop extends StatelessWidget {
                                       );
                                     }
                                   },
-                                ),
+                                );
+                                },
+                              ),
                               ],
                             );
                           } else {

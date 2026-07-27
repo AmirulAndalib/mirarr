@@ -51,12 +51,12 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
   Map<String, dynamic>? externalIds;
 
   Map<String, dynamic>? serieInfo;
-  bool? isSerieWatchlist;
-  bool? isSerieFavorite;
+  final isSerieWatchlist = ValueNotifier<bool?>(null);
+  final isSerieFavorite = ValueNotifier<bool?>(null);
   Future<dynamic>? _creditsFuture;
-  bool isUserLoggedIn = false;
-  dynamic isSerieRated;
-  double? userRating;
+  final isUserLoggedIn = ValueNotifier<bool>(false);
+  final isSerieRated = ValueNotifier<dynamic>(null);
+  final userRating = ValueNotifier<double?>(null);
   double? userScore;
   String? posterPath;
   final screenShotController = ScreenshotController();
@@ -79,13 +79,13 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
   int? seasons;
   int? episodes;
   String? imdbId;
-  String? imdbRating;
-  String rottenTomatoesRating = 'N/A';
+  final imdbRating = ValueNotifier<String?>(null);
+  final rottenTomatoesRating = ValueNotifier<String>('N/A');
   
   // F2M Iran background check variables
-  List<F2MSeasonGroup> f2mGroups = [];
-  bool hasF2MResults = false;
-  bool isCheckingF2M = false;
+  final f2mGroups = ValueNotifier<List<F2MSeasonGroup>>([]);
+  final hasF2MResults = ValueNotifier<bool>(false);
+  final isCheckingF2M = ValueNotifier<bool>(false);
 
   // Key to force refresh of ShowWatchToggle
   final GlobalKey<_ShowWatchToggleState> _showWatchToggleKey = GlobalKey<_ShowWatchToggleState>();
@@ -104,41 +104,44 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
     fetchExternalId();
   }
 
+  @override
+  void dispose() {
+    isSerieWatchlist.dispose();
+    isSerieFavorite.dispose();
+    isUserLoggedIn.dispose();
+    isSerieRated.dispose();
+    userRating.dispose();
+    imdbRating.dispose();
+    rottenTomatoesRating.dispose();
+    f2mGroups.dispose();
+    hasF2MResults.dispose();
+    isCheckingF2M.dispose();
+    super.dispose();
+  }
+
   Future<void> _checkF2M(String id) async {
-    if (isCheckingF2M) return;
-    setState(() {
-      isCheckingF2M = true;
-    });
+    if (isCheckingF2M.value) return;
+    isCheckingF2M.value = true;
 
     try {
       final groups = await fetchF2MDownloadLinks(id);
-      if (mounted) {
-        setState(() {
-          f2mGroups = groups;
-          hasF2MResults = groups.isNotEmpty;
-          isCheckingF2M = false;
-        });
-      }
+      if (!mounted) return;
+      f2mGroups.value = groups;
+      hasF2MResults.value = groups.isNotEmpty;
+      isCheckingF2M.value = false;
     } catch (_) {
-      if (mounted) {
-        setState(() {
-          f2mGroups = [];
-          hasF2MResults = false;
-          isCheckingF2M = false;
-        });
-      }
+      if (!mounted) return;
+      f2mGroups.value = [];
+      hasF2MResults.value = false;
+      isCheckingF2M.value = false;
     }
   }
 
   Future<void> checkUserLogin() async {
     final openbox = Hive.box('sessionBox');
     final sessionData = openbox.get('sessionData');
-    if (sessionData != null) {
-      if (mounted) {
-        setState(() {
-          isUserLoggedIn = true;
-        });
-      }
+    if (sessionData != null && mounted) {
+      isUserLoggedIn.value = true;
     }
   }
 
@@ -155,15 +158,12 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> responseData = json.decode(response.body);
-      if (mounted) {
-        setState(() {
-          isSerieWatchlist = responseData['watchlist'];
-          isSerieFavorite = responseData['favorite'];
-          isSerieRated = responseData['rated'];
-          if (isSerieRated != false) {
-            userRating = responseData['rated']['value'];
-          }
-        });
+      if (!mounted) return;
+      isSerieWatchlist.value = responseData['watchlist'];
+      isSerieFavorite.value = responseData['favorite'];
+      isSerieRated.value = responseData['rated'];
+      if (responseData['rated'] != false) {
+        userRating.value = responseData['rated']['value'];
       }
     }
   }
@@ -197,17 +197,13 @@ class _SerieDetailPageState extends State<SerieDetailPage> {
 
   void updateImdbRating(String rating) {
     if (mounted) {
-      setState(() {
-        imdbRating = rating;
-      });
+      imdbRating.value = rating;
     }
   }
 
   void updateRottenTomatoesRating(String rating) {
     if (mounted) {
-      setState(() {
-        rottenTomatoesRating = rating;
-      });
+      rottenTomatoesRating.value = rating;
     }
   }
 

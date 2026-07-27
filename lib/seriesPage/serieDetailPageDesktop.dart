@@ -12,13 +12,6 @@ class _SerieDetailPageDesktop extends StatelessWidget {
     final backdrops = state.backdrops;
     final posterPath = state.posterPath;
     final score = state.score;
-    final imdbRating = state.imdbRating;
-    final rottenTomatoesRating = state.rottenTomatoesRating;
-    final isUserLoggedIn = state.isUserLoggedIn;
-    final isSerieWatchlist = state.isSerieWatchlist;
-    final isSerieFavorite = state.isSerieFavorite;
-    final isSerieRated = state.isSerieRated;
-    final userRating = state.userRating;
     final genres = state.genres;
     final about = state.about;
     final seasons = state.seasons;
@@ -158,84 +151,110 @@ class _SerieDetailPageDesktop extends StatelessWidget {
                                               icon: const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
                                               context: context,
                                             ),
-                                          if (imdbRating != null && imdbRating.isNotEmpty)
-                                            _buildRatingBadge(
-                                              label: 'IMDb',
-                                              score: imdbRating,
-                                              icon: const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
-                                              context: context,
-                                            ),
-                                          if (rottenTomatoesRating != 'N/A')
-                                            _buildRatingBadge(
-                                              label: 'Rotten Tomatoes',
-                                              score: rottenTomatoesRating,
-                                              icon: const Text('🍅', style: TextStyle(fontSize: 14)),
-                                              context: context,
-                                            ),
-                                          if (isUserLoggedIn == true && isSerieRated != false && userRating != null)
-                                            GestureDetector(
-                                              onTap: () => showModalBottomSheet(
+                                          ValueListenableBuilder<String?>(
+                                            valueListenable: state.imdbRating,
+                                            builder: (_, rating, __) {
+                                              if (rating == null || rating.isEmpty) {
+                                                return const SizedBox.shrink();
+                                              }
+                                              return _buildRatingBadge(
+                                                label: 'IMDb',
+                                                score: rating,
+                                                icon: const Icon(Icons.star_rounded, color: Colors.amber, size: 18),
                                                 context: context,
-                                                builder: (BuildContext context) {
-                                                  return Column(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      const SizedBox(height: 20),
-                                                      Padding(
-                                                        padding: const EdgeInsets.all(8.0),
-                                                        child: ExpressiveRatingBar(
-                                                          initialRating: userRating,
-                                                          minRating: 1,
-                                                          maxRating: 10,
-                                                          itemSize: 35,
-                                                          allowHalfRating: true,
-                                                          itemCount: 10,
-                                                          onRatingUpdate: (rating) async {
-                                                            final serieId = widget.serieId;
+                                              );
+                                            },
+                                          ),
+                                          ValueListenableBuilder<String>(
+                                            valueListenable: state.rottenTomatoesRating,
+                                            builder: (_, rating, __) {
+                                              if (rating == 'N/A') {
+                                                return const SizedBox.shrink();
+                                              }
+                                              return _buildRatingBadge(
+                                                label: 'Rotten Tomatoes',
+                                                score: rating,
+                                                icon: const Text('🍅', style: TextStyle(fontSize: 14)),
+                                                context: context,
+                                              );
+                                            },
+                                          ),
+                                          AnimatedBuilder(
+                                            animation: Listenable.merge([
+                                              state.isUserLoggedIn,
+                                              state.isSerieRated,
+                                              state.userRating,
+                                            ]),
+                                            builder: (context, _) {
+                                              final loggedIn = state.isUserLoggedIn.value;
+                                              final isSerieRated = state.isSerieRated.value;
+                                              final userRating = state.userRating.value;
+                                              if (loggedIn != true ||
+                                                  isSerieRated == false ||
+                                                  userRating == null) {
+                                                return const SizedBox.shrink();
+                                              }
+                                              return GestureDetector(
+                                                onTap: () => showModalBottomSheet(
+                                                  context: context,
+                                                  builder: (BuildContext context) {
+                                                    return Column(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        const SizedBox(height: 20),
+                                                        Padding(
+                                                          padding: const EdgeInsets.all(8.0),
+                                                          child: ExpressiveRatingBar(
+                                                            initialRating: userRating,
+                                                            minRating: 1,
+                                                            maxRating: 10,
+                                                            itemSize: 35,
+                                                            allowHalfRating: true,
+                                                            itemCount: 10,
+                                                            onRatingUpdate: (rating) async {
+                                                              final serieId = widget.serieId;
+                                                              final openbox = Hive.box('sessionBox');
+                                                              final String sessionData = openbox.get('sessionData');
+                                                              addRating(sessionData, serieId, rating, context);
+                                                              state.isSerieRated.value = {'value': rating};
+                                                              state.userRating.value = rating;
+                                                              profileRefreshNotifier.value++;
+                                                            },
+                                                          ),
+                                                        ),
+                                                        const CustomDivider(),
+                                                        const SizedBox(height: 10),
+                                                        GestureDetector(
+                                                          onTap: () async {
                                                             final openbox = Hive.box('sessionBox');
                                                             final String sessionData = openbox.get('sessionData');
-                                                            addRating(sessionData, serieId, rating, context);
-                                                            state.updateState(() {
-                                                              state.isSerieRated = {'value': rating};
-                                                              state.userRating = rating;
-                                                              profileRefreshNotifier.value++;
-                                                            });
+                                                            removeRating(sessionData, widget.serieId, context);
+                                                            Navigator.of(context).pop();
+                                                            state.isSerieRated.value = false;
+                                                            state.userRating.value = null;
                                                           },
+                                                          child: const Text(
+                                                            ' 🗑️ Delete Rating',
+                                                            style: TextStyle(
+                                                                color: Colors.white,
+                                                                fontWeight: FontWeight.bold,
+                                                                fontSize: 18),
+                                                          ),
                                                         ),
-                                                      ),
-                                                      const CustomDivider(),
-                                                      const SizedBox(height: 10),
-                                                      GestureDetector(
-                                                        onTap: () async {
-                                                          final openbox = Hive.box('sessionBox');
-                                                          final String sessionData = openbox.get('sessionData');
-                                                          removeRating(sessionData, widget.serieId, context);
-                                                          Navigator.of(context).pop();
-                                                          state.updateState(() {
-                                                            state.isSerieRated = false;
-                                                            state.userRating = null;
-                                                          });
-                                                        },
-                                                        child: const Text(
-                                                          ' 🗑️ Delete Rating',
-                                                          style: TextStyle(
-                                                              color: Colors.white,
-                                                              fontWeight: FontWeight.bold,
-                                                              fontSize: 18),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 20),
-                                                    ],
-                                                  );
-                                                },
-                                              ),
-                                              child: _buildRatingBadge(
-                                                label: 'User',
-                                                score: userRating.toStringAsFixed(1),
-                                                icon: const Icon(Icons.person_rounded, color: Colors.blueAccent, size: 18),
-                                                context: context,
-                                              ),
-                                            ),
+                                                        const SizedBox(height: 20),
+                                                      ],
+                                                    );
+                                                  },
+                                                ),
+                                                child: _buildRatingBadge(
+                                                  label: 'User',
+                                                  score: userRating.toStringAsFixed(1),
+                                                  icon: const Icon(Icons.person_rounded, color: Colors.blueAccent, size: 18),
+                                                  context: context,
+                                                ),
+                                              );
+                                            },
+                                          ),
                                           ShowWatchToggle(
                                             key: showWatchToggleKey,
                                             serieId: widget.serieId,
@@ -249,114 +268,127 @@ class _SerieDetailPageDesktop extends StatelessWidget {
                                         ],
                                       ),
                                       const SizedBox(height: 12),
-                                      if (isUserLoggedIn == true) ...[
-                                        Row(
-                                          spacing: 12,
-                                          children: [
-                                            _buildActionButton(
-                                              icon: isSerieWatchlist == true ? Icons.bookmark : Icons.bookmark_border,
-                                              iconColor: isSerieWatchlist == true ? Theme.of(context).primaryColor : Colors.white,
-                                              tooltip: isSerieWatchlist == true ? 'Remove from Watchlist' : 'Add to Watchlist',
-                                              onTap: () async {
-                                                if (isSerieWatchlist == null) return;
-                                                final serieId = widget.serieId;
-                                                final openbox = Hive.box('sessionBox');
-                                                final String accountId = openbox.get('accountId');
-                                                final String sessionData = openbox.get('sessionData');
-                                                if (isSerieWatchlist) {
-                                                  state.updateState(() {
-                                                    state.isSerieWatchlist = false;
-                                                  });
-                                                  await removeFromWatchList(accountId, sessionData, serieId, context);
-                                                  profileRefreshNotifier.value++;
-                                                } else {
-                                                  state.updateState(() {
-                                                    state.isSerieWatchlist = true;
-                                                  });
-                                                  await addWatchList(accountId, sessionData, serieId, context);
-                                                  profileRefreshNotifier.value++;
-                                                }
-                                              },
-                                            ),
-                                            _buildActionButton(
-                                              icon: isSerieFavorite == true ? Icons.favorite : Icons.favorite_border,
-                                              iconColor: isSerieFavorite == true ? Colors.redAccent : Colors.white,
-                                              tooltip: isSerieFavorite == true ? 'Remove from Favorites' : 'Add to Favorites',
-                                              onTap: () async {
-                                                if (isSerieFavorite == null) return;
-                                                final serieId = widget.serieId;
-                                                final openbox = Hive.box('sessionBox');
-                                                final String accountId = openbox.get('accountId');
-                                                final String sessionData = openbox.get('sessionData');
-                                                if (isSerieFavorite) {
-                                                  state.updateState(() {
-                                                    state.isSerieFavorite = false;
-                                                  });
-                                                  await removeFromFavorite(accountId, sessionData, serieId, context);
-                                                  profileRefreshNotifier.value++;
-                                                } else {
-                                                  state.updateState(() {
-                                                    state.isSerieFavorite = true;
-                                                  });
-                                                  await addFavorite(accountId, sessionData, serieId, context);
-                                                  profileRefreshNotifier.value++;
-                                                }
-                                              },
-                                            ),
-                                            if (isSerieRated == false && userRating == null)
-                                              _buildActionButton(
-                                                icon: Icons.add_reaction_rounded,
-                                                iconColor: Colors.white,
-                                                tooltip: 'Rate Show',
-                                                onTap: () {
-                                                  showModalBottomSheet(
-                                                    context: context,
-                                                    builder: (BuildContext context) {
-                                                      return Column(
-                                                        mainAxisSize: MainAxisSize.min,
-                                                        children: [
-                                                          const SizedBox(height: 20),
-                                                          Padding(
-                                                            padding: const EdgeInsets.all(8.0),
-                                                            child: ExpressiveRatingBar(
-                                                              initialRating: userRating ?? 5.0,
-                                                              minRating: 1.0,
-                                                              maxRating: 10.0,
-                                                              itemCount: 10,
-                                                              itemSize: 32.0,
-                                                              allowHalfRating: true,
-                                                              onRatingUpdate: (rating) {
-                                                                state.updateState(() {
-                                                                  state.isSerieRated = {'value': rating};
-                                                                  state.userRating = rating;
-                                                                });
-                                                              },
-                                                              onRatingEnd: (rating) async {
-                                                                final serieId = widget.serieId;
-                                                                final openbox = Hive.box('sessionBox');
-                                                                final String sessionData = openbox.get('sessionData');
-                                                                await addRating(sessionData, serieId, rating, context);
-                                                                profileRefreshNotifier.value++;
-                                                              },
-                                                            ),
-                                                          ),
-                                                          const SizedBox(height: 40),
-                                                        ],
-                                                      );
+                                      AnimatedBuilder(
+                                        animation: Listenable.merge([
+                                          state.isUserLoggedIn,
+                                          state.isSerieWatchlist,
+                                          state.isSerieFavorite,
+                                          state.isSerieRated,
+                                          state.userRating,
+                                        ]),
+                                        builder: (context, _) {
+                                          final loggedIn = state.isUserLoggedIn.value;
+                                          if (loggedIn != true) {
+                                            return const SizedBox.shrink();
+                                          }
+                                          final isSerieWatchlist = state.isSerieWatchlist.value;
+                                          final isSerieFavorite = state.isSerieFavorite.value;
+                                          final isSerieRated = state.isSerieRated.value;
+                                          final userRating = state.userRating.value;
+                                          return Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                spacing: 12,
+                                                children: [
+                                                  _buildActionButton(
+                                                    icon: isSerieWatchlist == true ? Icons.bookmark : Icons.bookmark_border,
+                                                    iconColor: isSerieWatchlist == true ? Theme.of(context).primaryColor : Colors.white,
+                                                    tooltip: isSerieWatchlist == true ? 'Remove from Watchlist' : 'Add to Watchlist',
+                                                    onTap: () async {
+                                                      if (isSerieWatchlist == null) return;
+                                                      final serieId = widget.serieId;
+                                                      final openbox = Hive.box('sessionBox');
+                                                      final String accountId = openbox.get('accountId');
+                                                      final String sessionData = openbox.get('sessionData');
+                                                      if (isSerieWatchlist) {
+                                                        state.isSerieWatchlist.value = false;
+                                                        await removeFromWatchList(accountId, sessionData, serieId, context);
+                                                        profileRefreshNotifier.value++;
+                                                      } else {
+                                                        state.isSerieWatchlist.value = true;
+                                                        await addWatchList(accountId, sessionData, serieId, context);
+                                                        profileRefreshNotifier.value++;
+                                                      }
                                                     },
-                                                  );
-                                                },
+                                                  ),
+                                                  _buildActionButton(
+                                                    icon: isSerieFavorite == true ? Icons.favorite : Icons.favorite_border,
+                                                    iconColor: isSerieFavorite == true ? Colors.redAccent : Colors.white,
+                                                    tooltip: isSerieFavorite == true ? 'Remove from Favorites' : 'Add to Favorites',
+                                                    onTap: () async {
+                                                      if (isSerieFavorite == null) return;
+                                                      final serieId = widget.serieId;
+                                                      final openbox = Hive.box('sessionBox');
+                                                      final String accountId = openbox.get('accountId');
+                                                      final String sessionData = openbox.get('sessionData');
+                                                      if (isSerieFavorite) {
+                                                        state.isSerieFavorite.value = false;
+                                                        await removeFromFavorite(accountId, sessionData, serieId, context);
+                                                        profileRefreshNotifier.value++;
+                                                      } else {
+                                                        state.isSerieFavorite.value = true;
+                                                        await addFavorite(accountId, sessionData, serieId, context);
+                                                        profileRefreshNotifier.value++;
+                                                      }
+                                                    },
+                                                  ),
+                                                  if (isSerieRated == false && userRating == null)
+                                                    _buildActionButton(
+                                                      icon: Icons.add_reaction_rounded,
+                                                      iconColor: Colors.white,
+                                                      tooltip: 'Rate Show',
+                                                      onTap: () {
+                                                        showModalBottomSheet(
+                                                          context: context,
+                                                          builder: (BuildContext context) {
+                                                            return Column(
+                                                              mainAxisSize: MainAxisSize.min,
+                                                              children: [
+                                                                const SizedBox(height: 20),
+                                                                Padding(
+                                                                  padding: const EdgeInsets.all(8.0),
+                                                                  child: ExpressiveRatingBar(
+                                                                    initialRating: userRating ?? 5.0,
+                                                                    minRating: 1.0,
+                                                                    maxRating: 10.0,
+                                                                    itemCount: 10,
+                                                                    itemSize: 32.0,
+                                                                    allowHalfRating: true,
+                                                                    onRatingUpdate: (rating) {
+                                                                      state.isSerieRated.value = {'value': rating};
+                                                                      state.userRating.value = rating;
+                                                                    },
+                                                                    onRatingEnd: (rating) async {
+                                                                      final serieId = widget.serieId;
+                                                                      final openbox = Hive.box('sessionBox');
+                                                                      final String sessionData = openbox.get('sessionData');
+                                                                      await addRating(sessionData, serieId, rating, context);
+                                                                      profileRefreshNotifier.value++;
+                                                                    },
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(height: 40),
+                                                              ],
+                                                            );
+                                                          },
+                                                        );
+                                                      },
+                                                    ),
+                                                ],
                                               ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 20),
-                                      ],
-                                      Builder(
-                                        builder: (context) {
+                                              const SizedBox(height: 20),
+                                            ],
+                                          );
+                                        },
+                                      ),
+                                      ValueListenableBuilder<bool>(
+                                        valueListenable: state.hasF2MResults,
+                                        builder: (context, hasF2MResults, _) {
                                           final region =
                                               Provider.of<RegionProvider>(context).currentRegion;
                                           final showF2MDownload =
-                                              region == 'iran' && state.hasF2MResults;
+                                              region == 'iran' && hasF2MResults;
 
                                           final detailsBtn = _buildPrimaryButton(
                                             text: 'Details',
@@ -396,7 +428,7 @@ class _SerieDetailPageDesktop extends StatelessWidget {
                                                     serieId: widget.serieId,
                                                     serieName: widget.serieName,
                                                     imdbId: imdbId!,
-                                                    f2mGroups: state.f2mGroups,
+                                                    f2mGroups: state.f2mGroups.value,
                                                   ),
                                                 ),
                                               );

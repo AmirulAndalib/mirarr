@@ -47,14 +47,14 @@ class MovieDetailPage extends StatefulWidget {
 
 class _MovieDetailPageState extends State<MovieDetailPage> {
   Future<List<String>>? _castImagesFuture;
-  bool? isMovieWatchlist;
   Future<dynamic>? _creditsFuture;
   Future<dynamic>? _availabilityFuture;
-  Future<dynamic>? _directorMoviesFuture;
-  bool? isMovieFavorite;
-  bool isUserLoggedIn = false;
-  dynamic isMovieRated;
-  double? userRating;
+  final directorMoviesFuture = ValueNotifier<Future<dynamic>?>(null);
+  final isMovieWatchlist = ValueNotifier<bool?>(null);
+  final isMovieFavorite = ValueNotifier<bool?>(null);
+  final isUserLoggedIn = ValueNotifier<bool>(false);
+  final isMovieRated = ValueNotifier<dynamic>(null);
+  final userRating = ValueNotifier<double?>(null);
   double? userScore;
   final screenshotController = ScreenshotController();
 
@@ -67,7 +67,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
 
   // Watch history variables
   final WatchHistoryDatabase _watchHistoryDb = WatchHistoryDatabase();
-  bool isWatched = false;
+  final isWatched = ValueNotifier<bool>(false);
   final apiKey = dotenv.env['TMDB_API_KEY'];
 
   Map<String, dynamic>? moviedetails;
@@ -90,8 +90,8 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   String? posterPath;
 
   String? imdbId;
-  String? imdbRating;
-  String rottenTomatoesRating = 'N/A';
+  final imdbRating = ValueNotifier<String?>(null);
+  final rottenTomatoesRating = ValueNotifier<String>('N/A');
 
   @override
   void initState() {
@@ -102,15 +102,28 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
     _initPageData(region);
   }
 
+  @override
+  void dispose() {
+    directorMoviesFuture.dispose();
+    isMovieWatchlist.dispose();
+    isMovieFavorite.dispose();
+    isUserLoggedIn.dispose();
+    isMovieRated.dispose();
+    userRating.dispose();
+    isWatched.dispose();
+    imdbRating.dispose();
+    rottenTomatoesRating.dispose();
+    super.dispose();
+  }
+
   void _initPageData(String region) {
     _creditsFuture = fetchCredits(widget.movieId, region).then((data) {
       final List<dynamic> crewList = data['crew'] ?? [];
       for (var crewMember in crewList) {
         if (crewMember['job'] == 'Director') {
           if (mounted) {
-            setState(() {
-              _directorMoviesFuture = fetchOtherMoviesByDirector(crewMember['id'], region);
-            });
+            directorMoviesFuture.value =
+                fetchOtherMoviesByDirector(crewMember['id'], region);
           }
           break;
         }
@@ -154,12 +167,8 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   Future<void> checkUserLogin() async {
     final openbox = Hive.box('sessionBox');
     final sessionData = openbox.get('sessionData');
-    if (sessionData != null) {
-      if (mounted) {
-        setState(() {
-          isUserLoggedIn = true;
-        });
-      }
+    if (sessionData != null && mounted) {
+      isUserLoggedIn.value = true;
     }
   }
 
@@ -177,15 +186,12 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> responseData = json.decode(response.body);
-      if (mounted) {
-        setState(() {
-          isMovieWatchlist = responseData['watchlist'];
-          isMovieFavorite = responseData['favorite'];
-          isMovieRated = responseData['rated'];
-          if (isMovieRated != false) {
-            userRating = responseData['rated']['value'];
-          }
-        });
+      if (!mounted) return;
+      isMovieWatchlist.value = responseData['watchlist'];
+      isMovieFavorite.value = responseData['favorite'];
+      isMovieRated.value = responseData['rated'];
+      if (responseData['rated'] != false) {
+        userRating.value = responseData['rated']['value'];
       }
     }
   }
@@ -207,17 +213,13 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
 
   void updateImdbRating(String rating) {
     if (mounted) {
-      setState(() {
-        imdbRating = rating;
-      });
+      imdbRating.value = rating;
     }
   }
 
   void updateRottenTomatoesRating(String rating) {
     if (mounted) {
-      setState(() {
-        rottenTomatoesRating = rating;
-      });
+      rottenTomatoesRating.value = rating;
     }
   }
 
@@ -258,9 +260,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
   Future<void> _checkWatchedStatus() async {
     final watched = await _watchHistoryDb.isWatched(widget.movieId, 'movie');
     if (mounted) {
-      setState(() {
-        isWatched = watched;
-      });
+      isWatched.value = watched;
     }
   }
 

@@ -11,16 +11,8 @@ class _MovieDetailPageMobile extends StatelessWidget {
     final moviedetails = state.moviedetails;
     final duration = state.duration;
     final releaseDate = state.releaseDate;
-    final imdbRating = state.imdbRating;
-    final rottenTomatoesRating = state.rottenTomatoesRating;
-    final isWatched = state.isWatched;
     final score = state.score;
     final backdrops = state.backdrops;
-    final isUserLoggedIn = state.isUserLoggedIn;
-    final isMovieWatchlist = state.isMovieWatchlist;
-    final isMovieFavorite = state.isMovieFavorite;
-    final isMovieRated = state.isMovieRated;
-    final userRating = state.userRating;
     final genres = state.genres;
     final about = state.about;
     final budget = state.budget;
@@ -31,7 +23,6 @@ class _MovieDetailPageMobile extends StatelessWidget {
     final imdbId = state.imdbId;
     final availabilityFuture = state._availabilityFuture;
     final creditsFuture = state._creditsFuture;
-    final directorMoviesFuture = state._directorMoviesFuture;
     final screenshotController = state.screenshotController;
     final language = state.language;
 
@@ -126,47 +117,53 @@ class _MovieDetailPageMobile extends StatelessWidget {
                             ),
                           ),
                         ),
-                        Visibility(
-                          visible: imdbRating != null && imdbRating.isNotEmpty,
-                          child: Positioned(
-                            bottom: 70,
-                            left: 110,
-                            child: Container(
-                              margin: const EdgeInsets.all(10),
-                              padding: const EdgeInsets.all(10),
-                              decoration: const BoxDecoration(
-                                  color: Colors.black38,
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(30))),
-                              child: Text(
-                                'IMDB⭐ $imdbRating',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w300,
-                                  fontSize: 12,
-                                  color: Colors.white,
+                        ValueListenableBuilder<String?>(
+                          valueListenable: state.imdbRating,
+                          builder: (_, rating, __) => Visibility(
+                            visible: rating != null && rating.isNotEmpty,
+                            child: Positioned(
+                              bottom: 70,
+                              left: 110,
+                              child: Container(
+                                margin: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(10),
+                                decoration: const BoxDecoration(
+                                    color: Colors.black38,
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(30))),
+                                child: Text(
+                                  'IMDB⭐ $rating',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w300,
+                                    fontSize: 12,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                        Visibility(
-                          visible: rottenTomatoesRating != 'N/A',
-                          child: Positioned(
-                            bottom: 70,
-                            left: 210,
-                            child: Container(
-                              margin: const EdgeInsets.all(10),
-                              padding: const EdgeInsets.all(10),
-                              decoration: const BoxDecoration(
-                                  color: Colors.black38,
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(30))),
-                              child: Text(
-                                'Rotten Tomatoes🍅 $rottenTomatoesRating',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w300,
-                                  fontSize: 12,
-                                  color: Colors.white,
+                        ValueListenableBuilder<String>(
+                          valueListenable: state.rottenTomatoesRating,
+                          builder: (_, rating, __) => Visibility(
+                            visible: rating != 'N/A',
+                            child: Positioned(
+                              bottom: 70,
+                              left: 210,
+                              child: Container(
+                                margin: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(10),
+                                decoration: const BoxDecoration(
+                                    color: Colors.black38,
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(30))),
+                                child: Text(
+                                  'Rotten Tomatoes🍅 $rating',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w300,
+                                    fontSize: 12,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
@@ -296,55 +293,71 @@ class _MovieDetailPageMobile extends StatelessWidget {
                             ),
                           ),
 
-                        if (isUserLoggedIn == true)
-                          Positioned(
-                            top: 140,
-                            right: 24,
-                            child: MovieWatchlistButton(
-                              movieId: widget.movieId,
-                              initialIsWatchlist: isMovieWatchlist,
-                              isUserLoggedIn: isUserLoggedIn,
-                              isDesktop: false,
-                            ),
-                          ),
-
-                        if (isUserLoggedIn == true)
-                          Positioned(
-                            top: 90,
-                            right: 24,
-                            child: MovieFavoriteButton(
-                              movieId: widget.movieId,
-                              initialIsFavorite: isMovieFavorite,
-                              isUserLoggedIn: isUserLoggedIn,
-                              isDesktop: false,
-                            ),
-                          ),
-
-                        Positioned(
-                          top: 40,
-                          left: 20,
-                          child: MovieWatchedButton(
-                            movieId: widget.movieId,
-                            movieTitle: widget.movieTitle,
-                            posterPath: state.posterPath,
-                            userRating: userRating,
-                            initialIsWatched: isWatched,
-                            isDesktop: false,
-                          ),
+                        AnimatedBuilder(
+                          animation: Listenable.merge([
+                            state.isUserLoggedIn,
+                            state.isMovieWatchlist,
+                            state.isMovieFavorite,
+                            state.isMovieRated,
+                            state.userRating,
+                            state.isWatched,
+                          ]),
+                          builder: (context, _) {
+                            final loggedIn = state.isUserLoggedIn.value;
+                            return Stack(
+                              children: [
+                                if (loggedIn)
+                                  Positioned(
+                                    top: 140,
+                                    right: 24,
+                                    child: MovieWatchlistButton(
+                                      movieId: widget.movieId,
+                                      initialIsWatchlist:
+                                          state.isMovieWatchlist.value,
+                                      isUserLoggedIn: loggedIn,
+                                      isDesktop: false,
+                                    ),
+                                  ),
+                                if (loggedIn)
+                                  Positioned(
+                                    top: 90,
+                                    right: 24,
+                                    child: MovieFavoriteButton(
+                                      movieId: widget.movieId,
+                                      initialIsFavorite:
+                                          state.isMovieFavorite.value,
+                                      isUserLoggedIn: loggedIn,
+                                      isDesktop: false,
+                                    ),
+                                  ),
+                                Positioned(
+                                  top: 40,
+                                  left: 20,
+                                  child: MovieWatchedButton(
+                                    movieId: widget.movieId,
+                                    movieTitle: widget.movieTitle,
+                                    posterPath: state.posterPath,
+                                    userRating: state.userRating.value,
+                                    initialIsWatched: state.isWatched.value,
+                                    isDesktop: false,
+                                  ),
+                                ),
+                                if (loggedIn)
+                                  Positioned(
+                                    top: 40,
+                                    right: 24,
+                                    child: MovieRatingButton(
+                                      movieId: widget.movieId,
+                                      isUserLoggedIn: loggedIn,
+                                      initialIsRated: state.isMovieRated.value,
+                                      initialUserRating: state.userRating.value,
+                                      isDesktop: false,
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
                         ),
-
-                        if (isUserLoggedIn == true)
-                          Positioned(
-                            top: 40,
-                            right: 24,
-                            child: MovieRatingButton(
-                              movieId: widget.movieId,
-                              isUserLoggedIn: isUserLoggedIn,
-                              initialIsRated: isMovieRated,
-                              initialUserRating: userRating,
-                              isDesktop: false,
-                            ),
-                          ),
                       ],
                     ),
                   Center(
@@ -683,9 +696,14 @@ class _MovieDetailPageMobile extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              directorMoviesFuture == null
-                                  ? const Center(child: CircularProgressIndicator())
-                                  : FutureBuilder(
+                              ValueListenableBuilder<Future<dynamic>?>(
+                                valueListenable: state.directorMoviesFuture,
+                                builder: (context, directorMoviesFuture, _) {
+                                  if (directorMoviesFuture == null) {
+                                    return const Center(
+                                        child: CircularProgressIndicator());
+                                  }
+                                  return FutureBuilder(
                                       future: directorMoviesFuture,
                                 builder: (context, snapshot) {
                                   if (snapshot.connectionState ==
@@ -767,6 +785,8 @@ class _MovieDetailPageMobile extends StatelessWidget {
                                       ),
                                     );
                                   }
+                                },
+                              );
                                 },
                               ),
                             ],
