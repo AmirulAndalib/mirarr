@@ -65,7 +65,8 @@ Future<String?> fetchImdbRating(
           episodeImdbId = await fetchEpisodeImdbId(context, serieId, seasonNumber, episodeNumber);
         }
         if (episodeImdbId != null && episodeImdbId.isNotEmpty) {
-          final score = await getImdbScore(episodeImdbId);
+          final scores = await getImdbScoresBatch([episodeImdbId]);
+          final score = scores[episodeImdbId];
           if (score != null) {
             return score.toStringAsFixed(1);
           }
@@ -76,7 +77,8 @@ Future<String?> fetchImdbRating(
       try {
         final episodeImdbId = await fetchEpisodeImdbId(context, serieId, seasonNumber, episodeNumber);
         if (episodeImdbId != null && episodeImdbId.isNotEmpty) {
-          final score = await getImdbScore(episodeImdbId);
+          final scores = await getImdbScoresBatch([episodeImdbId]);
+          final score = scores[episodeImdbId];
           if (score != null) {
             return score.toStringAsFixed(1);
           }

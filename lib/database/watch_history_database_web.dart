@@ -44,7 +44,7 @@ class WatchHistoryDatabase {
     int? seasonNumber,
     int? episodeNumber,
   ) =>
-      '${type}_${tmdbId}_${seasonNumber}_${episodeNumber}';
+      '${type}_${tmdbId}_${seasonNumber}_$episodeNumber';
 
   static String _itemKey(WatchHistoryItem item) => _itemKeyFromParts(
         item.tmdbId,
