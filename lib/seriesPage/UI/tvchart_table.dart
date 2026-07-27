@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -270,7 +269,7 @@ class _TvChartTableState extends State<TvChartTable> {
   Widget build(BuildContext context) {
     final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final imageUrl = widget.imagePath != null && widget.imagePath!.isNotEmpty
-        ? '${getImageBaseUrl(region)}/t/p/original${widget.imagePath}'
+        ? '${getImageBaseUrl(region)}/t/p/w780${widget.imagePath}'
         : null;
 
     return Scaffold(
@@ -278,7 +277,7 @@ class _TvChartTableState extends State<TvChartTable> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Blurred background image
+          // Dimmed background image
           if (imageUrl != null)
             Positioned.fill(
               child: Container(
@@ -288,11 +287,8 @@ class _TvChartTableState extends State<TvChartTable> {
                     fit: BoxFit.cover,
                   ),
                 ),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: Container(
-                    color: Colors.black.withValues(alpha: 0.7),
-                  ),
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.7),
                 ),
               ),
             ),

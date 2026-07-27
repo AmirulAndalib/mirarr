@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:flutter/material.dart';
@@ -70,35 +69,29 @@ class SerieSearchResult extends StatelessWidget {
               Positioned(
                 top: 10,
                 left: 10,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surface.withValues(alpha: 0.65),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface.withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
+                      const SizedBox(width: 3),
+                      Text(
+                        serie.score!.toStringAsFixed(1),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
-                          const SizedBox(width: 3),
-                          Text(
-                            serie.score!.toStringAsFixed(1),
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ),

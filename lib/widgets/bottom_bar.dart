@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:Mirarr/functions/navigation_provider.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:Mirarr/utils/expressive_motion.dart';
@@ -81,39 +80,39 @@ class BottomBar extends StatelessWidget {
       heightFactor: 1.0,
       child: Padding(
         padding: EdgeInsets.fromLTRB(16.0, 8.0, 16.0, bottomPadding > 0 ? bottomPadding : 16.0),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(36.0),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
-            child: Container(
-              height: 66,
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHigh.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(36.0),
-                border: Border.all(
-                  color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-                  width: 1.0,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+        child: RepaintBoundary(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(36.0),
+              border: Border.all(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                width: 1.0,
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(items.length, (index) {
-                  return _buildM3ExpressiveItem(
-                    context,
-                    navProvider,
-                    index,
-                    items[index],
-                  );
-                }),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: SizedBox(
+              height: 66,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: List.generate(items.length, (index) {
+                    return _buildM3ExpressiveItem(
+                      context,
+                      navProvider,
+                      index,
+                      items[index],
+                    );
+                  }),
+                ),
               ),
             ),
           ),

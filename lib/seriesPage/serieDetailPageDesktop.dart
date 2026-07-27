@@ -58,13 +58,13 @@ class _SerieDetailPageDesktop extends StatelessWidget {
                         decoration: BoxDecoration(
                           image: DecorationImage(
                               image: CachedNetworkImageProvider(
-                                '${getImageBaseUrl(region)}/t/p/w1280$backdrops',
+                                '${getImageBaseUrl(region)}/t/p/w780$backdrops',
                               ),
                               fit: BoxFit.fitWidth,
                               opacity: 0.5),
                         ),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          color: Colors.black.withValues(alpha: 0.4),
                           child: Padding(
                             padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
                             child: Row(

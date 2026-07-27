@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:flutter/material.dart';
@@ -88,35 +87,29 @@ class MovieSearchResult extends StatelessWidget {
             Positioned(
               top: 10,
               left: 10,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface.withValues(alpha: 0.65),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: colorScheme.surface.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
+                    const SizedBox(width: 3),
+                    Text(
+                      movie.score != null ? movie.score!.toStringAsFixed(1) : '0.0',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
-                        const SizedBox(width: 3),
-                        Text(
-                          movie.score != null ? movie.score!.toStringAsFixed(1) : '0.0',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -124,37 +117,31 @@ class MovieSearchResult extends StatelessWidget {
             Positioned(
               top: 10,
               right: 10,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface.withValues(alpha: 0.65),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: colorScheme.outlineVariant.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    child: FutureBuilder<bool>(
-                      future: checkAvailability(movie.id, region),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const SizedBox(
-                            height: 14,
-                            width: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          );
-                        }
-                        return Icon(
-                          snapshot.data == true ? Icons.download_rounded : Icons.cloud_off_rounded,
-                          color: snapshot.data == true ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                          size: 14,
-                        );
-                      },
-                    ),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: colorScheme.surface.withValues(alpha: 0.85),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.2),
                   ),
+                ),
+                child: FutureBuilder<bool>(
+                  future: checkAvailability(movie.id, region),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const SizedBox(
+                        height: 14,
+                        width: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      );
+                    }
+                    return Icon(
+                      snapshot.data == true ? Icons.download_rounded : Icons.cloud_off_rounded,
+                      color: snapshot.data == true ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                      size: 14,
+                    );
+                  },
                 ),
               ),
             ),
