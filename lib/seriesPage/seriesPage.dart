@@ -11,7 +11,6 @@ import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:Mirarr/utils/expressive_motion.dart';
 import 'package:Mirarr/widgets/expressive_interactive_container.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' show ClientException;
 import 'package:Mirarr/seriesPage/models/serie.dart';
 import 'dart:async';
 import 'package:Mirarr/seriesPage/UI/customSeriesWidget.dart';
@@ -127,9 +126,6 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
       }
     } catch (e) {
       debugPrint('Error fetching primary series data: $e');
-      if (mounted && e is ClientException) {
-        handleNetworkError(e);
-      }
     }
   }
 
@@ -174,106 +170,6 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
       }
     } catch (e) {
       debugPrint('Error fetching genres: $e');
-    }
-  }
-
-  void handleNetworkError(ClientException e) {
-    if (e.message.contains('No address associated with hostname')) {
-      // Handle case where there's no internet connection
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          final colorScheme = Theme.of(context).colorScheme;
-          final textTheme = Theme.of(context).textTheme;
-
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-              side: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-            ),
-            icon: Icon(Icons.wifi_off_rounded, color: colorScheme.error, size: 32),
-            title: Text(
-              'No Internet Connection',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            content: Text(
-              'Please connect to the internet and try again.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            actions: [
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
-    } else {
-      // Handle other network-related errors
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          final colorScheme = Theme.of(context).colorScheme;
-          final textTheme = Theme.of(context).textTheme;
-
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-              side: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-            ),
-            icon: Icon(Icons.error_outline_rounded, color: colorScheme.error, size: 32),
-            title: Text(
-              'Network Error',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            content: Text(
-              'An error occurred while fetching data. Please try again later.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            actions: [
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
     }
   }
 

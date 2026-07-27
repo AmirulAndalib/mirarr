@@ -15,7 +15,6 @@ import 'package:Mirarr/widgets/expressive_page_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive/hive.dart';
-import 'package:http/http.dart' show ClientException;
 import 'package:Mirarr/moviesPage/UI/customMovieWidget.dart';
 import 'package:Mirarr/seriesPage/UI/customSeriesWidget.dart';
 import 'package:Mirarr/seriesPage/models/serie.dart';
@@ -334,105 +333,6 @@ class _ProfilePageState extends State<ProfilePage> {
     setState(() {
       movieRated.addAll(extra);
     });
-  }
-
-  void handleNetworkError(ClientException e) {
-    if (e.message.contains('No address associated with hostname')) {
-      // Handle case where there's no internet connection
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          final colorScheme = Theme.of(context).colorScheme;
-          final textTheme = Theme.of(context).textTheme;
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-              side: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-            ),
-            icon: Icon(Icons.wifi_off_rounded, color: colorScheme.error, size: 32),
-            title: Text(
-              'No Internet Connection',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            content: Text(
-              'Please connect to the internet and try again.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            actions: [
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
-    } else {
-      // Handle other network-related errors
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          final colorScheme = Theme.of(context).colorScheme;
-          final textTheme = Theme.of(context).textTheme;
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-              side: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-            ),
-            icon: Icon(Icons.error_outline_rounded, color: colorScheme.error, size: 32),
-            title: Text(
-              'Network Error',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
-              ),
-            ),
-            content: Text(
-              'An error occurred while fetching data. Please try again later.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            actions: [
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  checkInternetAndFetchData(force: true);
-                },
-                style: FilledButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
-    }
   }
 
   Future<void> fetchAccountInfo() async {

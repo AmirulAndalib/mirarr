@@ -295,6 +295,8 @@ class _MovieDetailPageMobile extends StatelessWidget {
                             ),
                           ),
 
+                        // Positioned.fill gives this Stack bounded constraints
+                        // (non-positioned Stack-of-Positioneds breaks in scroll views).
                         AnimatedBuilder(
                           animation: Listenable.merge([
                             state.isUserLoggedIn,
@@ -306,57 +308,61 @@ class _MovieDetailPageMobile extends StatelessWidget {
                           ]),
                           builder: (context, _) {
                             final loggedIn = state.isUserLoggedIn.value;
-                            return Stack(
-                              children: [
-                                if (loggedIn)
-                                  Positioned(
-                                    top: 140,
-                                    right: 24,
-                                    child: MovieWatchlistButton(
-                                      movieId: widget.movieId,
-                                      initialIsWatchlist:
-                                          state.isMovieWatchlist.value,
-                                      isUserLoggedIn: loggedIn,
-                                      isDesktop: false,
+                            return Positioned.fill(
+                              child: Stack(
+                                children: [
+                                  if (loggedIn)
+                                    Positioned(
+                                      top: 140,
+                                      right: 24,
+                                      child: MovieWatchlistButton(
+                                        movieId: widget.movieId,
+                                        initialIsWatchlist:
+                                            state.isMovieWatchlist.value,
+                                        isUserLoggedIn: loggedIn,
+                                        isDesktop: false,
+                                      ),
                                     ),
-                                  ),
-                                if (loggedIn)
-                                  Positioned(
-                                    top: 90,
-                                    right: 24,
-                                    child: MovieFavoriteButton(
-                                      movieId: widget.movieId,
-                                      initialIsFavorite:
-                                          state.isMovieFavorite.value,
-                                      isUserLoggedIn: loggedIn,
-                                      isDesktop: false,
+                                  if (loggedIn)
+                                    Positioned(
+                                      top: 90,
+                                      right: 24,
+                                      child: MovieFavoriteButton(
+                                        movieId: widget.movieId,
+                                        initialIsFavorite:
+                                            state.isMovieFavorite.value,
+                                        isUserLoggedIn: loggedIn,
+                                        isDesktop: false,
+                                      ),
                                     ),
-                                  ),
-                                Positioned(
-                                  top: 40,
-                                  left: 20,
-                                  child: MovieWatchedButton(
-                                    movieId: widget.movieId,
-                                    movieTitle: widget.movieTitle,
-                                    posterPath: state.posterPath,
-                                    userRating: state.userRating.value,
-                                    initialIsWatched: state.isWatched.value,
-                                    isDesktop: false,
-                                  ),
-                                ),
-                                if (loggedIn)
                                   Positioned(
                                     top: 40,
-                                    right: 24,
-                                    child: MovieRatingButton(
+                                    left: 20,
+                                    child: MovieWatchedButton(
                                       movieId: widget.movieId,
-                                      isUserLoggedIn: loggedIn,
-                                      initialIsRated: state.isMovieRated.value,
-                                      initialUserRating: state.userRating.value,
+                                      movieTitle: widget.movieTitle,
+                                      posterPath: state.posterPath,
+                                      userRating: state.userRating.value,
+                                      initialIsWatched: state.isWatched.value,
                                       isDesktop: false,
                                     ),
                                   ),
-                              ],
+                                  if (loggedIn)
+                                    Positioned(
+                                      top: 40,
+                                      right: 24,
+                                      child: MovieRatingButton(
+                                        movieId: widget.movieId,
+                                        isUserLoggedIn: loggedIn,
+                                        initialIsRated:
+                                            state.isMovieRated.value,
+                                        initialUserRating:
+                                            state.userRating.value,
+                                        isDesktop: false,
+                                      ),
+                                    ),
+                                ],
+                              ),
                             );
                           },
                         ),

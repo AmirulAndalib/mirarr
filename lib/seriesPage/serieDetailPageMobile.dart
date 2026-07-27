@@ -278,6 +278,8 @@ class _SerieDetailPageMobile extends StatelessWidget {
                           ),
                         ),
 
+                      // Positioned.fill gives this Stack bounded constraints
+                      // when logged-in action buttons are present.
                       AnimatedBuilder(
                         animation: Listenable.merge([
                           state.isUserLoggedIn,
@@ -292,7 +294,8 @@ class _SerieDetailPageMobile extends StatelessWidget {
                           final isSerieFavorite = state.isSerieFavorite.value;
                           final isSerieRated = state.isSerieRated.value;
                           final userRating = state.userRating.value;
-                          return Stack(
+                          return Positioned.fill(
+                            child: Stack(
                             children: [
                               if (loggedIn == true)
                                 Positioned(
@@ -547,6 +550,7 @@ class _SerieDetailPageMobile extends StatelessWidget {
                                   ),
                                 ),
                             ],
+                            ),
                           );
                         },
                       ),
