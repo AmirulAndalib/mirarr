@@ -304,10 +304,11 @@ class _SerieDetailPageMobile extends StatelessWidget {
                                   child: _buildM3FloatingActionButton(
                                     context: context,
                                     backgroundColor: isSerieWatchlist == true
-                                        ? colorScheme.primaryContainer
+                                        ? Colors.lightBlueAccent
+                                            .withValues(alpha: 0.25)
                                         : null,
                                     borderColor: isSerieWatchlist == true
-                                        ? colorScheme.primary
+                                        ? Colors.lightBlueAccent
                                             .withValues(alpha: 0.6)
                                         : null,
                                     onTap: () async {
@@ -335,7 +336,7 @@ class _SerieDetailPageMobile extends StatelessWidget {
                                           ? Icons.bookmark_rounded
                                           : Icons.bookmark_border_rounded,
                                       color: isSerieWatchlist == true
-                                          ? colorScheme.primary
+                                          ? Colors.lightBlueAccent
                                           : Colors.white,
                                       size: 22,
                                     ),

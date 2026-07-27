@@ -9,9 +9,11 @@ import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:Mirarr/functions/share_content.dart';
 import 'package:Mirarr/seriesPage/UI/seasons_details.dart';
+import 'package:Mirarr/seriesPage/UI/serie_action_buttons.dart';
 import 'package:Mirarr/seriesPage/checkers/custom_tmdb_ids_effects_series.dart';
 import 'package:Mirarr/seriesPage/function/get_imdb_rating_series.dart';
 import 'package:Mirarr/seriesPage/function/series_tmdb_actions.dart';
+import 'package:Mirarr/moviesPage/UI/movie_action_buttons.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -446,31 +448,29 @@ class _ShowWatchToggleState extends State<ShowWatchToggle> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     if (_isWatched == null) {
-      return Container(
-        padding: const EdgeInsets.all(10),
-        decoration: const BoxDecoration(
-          color: Colors.black38,
-          borderRadius: BorderRadius.all(Radius.circular(30)),
-        ),
-        child: const Row(
+      return buildM3FloatingPillButton(
+        context: context,
+        onTap: () {},
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              width: 16,
-              height: 16,
+              width: 14,
+              height: 14,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.white,
+                color: theme.colorScheme.onSurface,
               ),
             ),
-            SizedBox(width: 4),
+            const SizedBox(width: 6),
             Text(
               'Loading...',
-              style: TextStyle(
-                fontWeight: FontWeight.w300,
-                fontSize: 13,
+              style: theme.textTheme.labelMedium?.copyWith(
                 color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
@@ -478,42 +478,28 @@ class _ShowWatchToggleState extends State<ShowWatchToggle> {
       );
     }
 
-    return TvFocusWrapper(
-      borderRadius: 30.0,
+    return buildM3FloatingPillButton(
+      context: context,
+      backgroundColor: _isWatched! ? Colors.green.withValues(alpha: 0.25) : null,
+      borderColor: _isWatched! ? Colors.green.withValues(alpha: 0.6) : null,
       onTap: _toggleWatchStatus,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: _isWatched! ? Colors.green.withValues(alpha: 0.7) : Colors.black38,
-          borderRadius: const BorderRadius.all(Radius.circular(30)),
-        ),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          transitionBuilder: (Widget child, Animation<double> animation) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          child: Row(
-            key: ValueKey(_isWatched),
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                _isWatched! ? Icons.check_circle : Icons.visibility,
-                color: Colors.white,
-                size: 16,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                _isWatched! ? 'Show Watched' : 'Mark Show as Watched',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w300,
-                  fontSize: 13,
-                  color: Colors.white,
-                ),
-              ),
-            ],
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            _isWatched! ? Icons.check_circle_rounded : Icons.visibility_outlined,
+            color: _isWatched! ? Colors.greenAccent : Colors.white,
+            size: 18,
           ),
-        ),
+          const SizedBox(width: 6),
+          Text(
+            _isWatched! ? 'Watched' : 'Mark as Watched',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: _isWatched! ? Colors.greenAccent : Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

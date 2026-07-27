@@ -186,203 +186,68 @@ class _SerieDetailPageDesktop extends StatelessWidget {
                                               state.userRating,
                                             ]),
                                             builder: (context, _) {
-                                              final loggedIn = state.isUserLoggedIn.value;
-                                              final isSerieRated = state.isSerieRated.value;
-                                              final userRating = state.userRating.value;
-                                              if (loggedIn != true ||
-                                                  isSerieRated == false ||
-                                                  userRating == null) {
-                                                return const SizedBox.shrink();
-                                              }
-                                              return GestureDetector(
-                                                onTap: () => showModalBottomSheet(
-                                                  context: context,
-                                                  builder: (BuildContext context) {
-                                                    return Column(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        const SizedBox(height: 20),
-                                                        Padding(
-                                                          padding: const EdgeInsets.all(8.0),
-                                                          child: ExpressiveRatingBar(
-                                                            initialRating: userRating,
-                                                            minRating: 1,
-                                                            maxRating: 10,
-                                                            itemSize: 35,
-                                                            allowHalfRating: true,
-                                                            itemCount: 10,
-                                                            onRatingUpdate: (rating) async {
-                                                              final serieId = widget.serieId;
-                                                              final openbox = Hive.box('sessionBox');
-                                                              final String sessionData = openbox.get('sessionData');
-                                                              addRating(sessionData, serieId, rating, context);
-                                                              state.isSerieRated.value = {'value': rating};
-                                                              state.userRating.value = rating;
-                                                              profileRefreshNotifier.value++;
-                                                            },
-                                                          ),
-                                                        ),
-                                                        const CustomDivider(),
-                                                        const SizedBox(height: 10),
-                                                        GestureDetector(
-                                                          onTap: () async {
-                                                            final openbox = Hive.box('sessionBox');
-                                                            final String sessionData = openbox.get('sessionData');
-                                                            removeRating(sessionData, widget.serieId, context);
-                                                            Navigator.of(context).pop();
-                                                            state.isSerieRated.value = false;
-                                                            state.userRating.value = null;
-                                                          },
-                                                          child: const Text(
-                                                            ' 🗑️ Delete Rating',
-                                                            style: TextStyle(
-                                                                color: Colors.white,
-                                                                fontWeight: FontWeight.bold,
-                                                                fontSize: 18),
-                                                          ),
-                                                        ),
-                                                        const SizedBox(height: 20),
-                                                      ],
-                                                    );
-                                                  },
-                                                ),
-                                                child: _buildRatingBadge(
-                                                  label: 'User',
-                                                  score: userRating.toStringAsFixed(1),
-                                                  icon: const Icon(Icons.person_rounded, color: Colors.blueAccent, size: 18),
-                                                  context: context,
-                                                ),
+                                              return Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  SerieRatingButton(
+                                                    serieId: widget.serieId,
+                                                    isUserLoggedIn: state.isUserLoggedIn.value == true,
+                                                    initialIsRated: state.isSerieRated.value,
+                                                    initialUserRating: state.userRating.value,
+                                                    isDesktop: true,
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  ShowWatchToggle(
+                                                    key: showWatchToggleKey,
+                                                    serieId: widget.serieId,
+                                                    serieName: widget.serieName,
+                                                    posterPath: posterPath,
+                                                    numberOfEpisodes: episodes,
+                                                    seasons: state.seasonsList,
+                                                    onToggle: () {
+                                                      // The widget handles its own state
+                                                    },
+                                                  ),
+                                                ],
                                               );
-                                            },
-                                          ),
-                                          ShowWatchToggle(
-                                            key: showWatchToggleKey,
-                                            serieId: widget.serieId,
-                                            serieName: widget.serieName,
-                                            posterPath: posterPath,
-                                            numberOfEpisodes: episodes,
-                                            seasons: state.seasonsList,
-                                            onToggle: () {
-                                              // The widget handles its own state
                                             },
                                           ),
                                         ],
                                       ),
                                       const SizedBox(height: 12),
-                                      AnimatedBuilder(
-                                        animation: Listenable.merge([
-                                          state.isUserLoggedIn,
-                                          state.isSerieWatchlist,
-                                          state.isSerieFavorite,
-                                          state.isSerieRated,
-                                          state.userRating,
-                                        ]),
-                                        builder: (context, _) {
-                                          final loggedIn = state.isUserLoggedIn.value;
-                                          if (loggedIn != true) {
-                                            return const SizedBox.shrink();
-                                          }
-                                          final isSerieWatchlist = state.isSerieWatchlist.value;
-                                          final isSerieFavorite = state.isSerieFavorite.value;
-                                          final isSerieRated = state.isSerieRated.value;
-                                          final userRating = state.userRating.value;
-                                          return Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                spacing: 12,
+                                      Row(
+                                        spacing: 12,
+                                        children: [
+                                          AnimatedBuilder(
+                                            animation: Listenable.merge([
+                                              state.isUserLoggedIn,
+                                              state.isSerieWatchlist,
+                                              state.isSerieFavorite,
+                                            ]),
+                                            builder: (context, _) {
+                                              return Row(
+                                                mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  _buildActionButton(
-                                                    icon: isSerieWatchlist == true ? Icons.bookmark : Icons.bookmark_border,
-                                                    iconColor: isSerieWatchlist == true ? Theme.of(context).primaryColor : Colors.white,
-                                                    tooltip: isSerieWatchlist == true ? 'Remove from Watchlist' : 'Add to Watchlist',
-                                                    onTap: () async {
-                                                      if (isSerieWatchlist == null) return;
-                                                      final serieId = widget.serieId;
-                                                      final openbox = Hive.box('sessionBox');
-                                                      final String accountId = openbox.get('accountId');
-                                                      final String sessionData = openbox.get('sessionData');
-                                                      if (isSerieWatchlist) {
-                                                        state.isSerieWatchlist.value = false;
-                                                        await removeFromWatchList(accountId, sessionData, serieId, context);
-                                                        profileRefreshNotifier.value++;
-                                                      } else {
-                                                        state.isSerieWatchlist.value = true;
-                                                        await addWatchList(accountId, sessionData, serieId, context);
-                                                        profileRefreshNotifier.value++;
-                                                      }
-                                                    },
+                                                  SerieWatchlistButton(
+                                                    serieId: widget.serieId,
+                                                    initialIsWatchlist: state.isSerieWatchlist.value,
+                                                    isUserLoggedIn: state.isUserLoggedIn.value == true,
+                                                    isDesktop: true,
                                                   ),
-                                                  _buildActionButton(
-                                                    icon: isSerieFavorite == true ? Icons.favorite : Icons.favorite_border,
-                                                    iconColor: isSerieFavorite == true ? Colors.redAccent : Colors.white,
-                                                    tooltip: isSerieFavorite == true ? 'Remove from Favorites' : 'Add to Favorites',
-                                                    onTap: () async {
-                                                      if (isSerieFavorite == null) return;
-                                                      final serieId = widget.serieId;
-                                                      final openbox = Hive.box('sessionBox');
-                                                      final String accountId = openbox.get('accountId');
-                                                      final String sessionData = openbox.get('sessionData');
-                                                      if (isSerieFavorite) {
-                                                        state.isSerieFavorite.value = false;
-                                                        await removeFromFavorite(accountId, sessionData, serieId, context);
-                                                        profileRefreshNotifier.value++;
-                                                      } else {
-                                                        state.isSerieFavorite.value = true;
-                                                        await addFavorite(accountId, sessionData, serieId, context);
-                                                        profileRefreshNotifier.value++;
-                                                      }
-                                                    },
+                                                  const SizedBox(width: 12),
+                                                  SerieFavoriteButton(
+                                                    serieId: widget.serieId,
+                                                    initialIsFavorite: state.isSerieFavorite.value,
+                                                    isUserLoggedIn: state.isUserLoggedIn.value == true,
+                                                    isDesktop: true,
                                                   ),
-                                                  if (isSerieRated == false && userRating == null)
-                                                    _buildActionButton(
-                                                      icon: Icons.add_reaction_rounded,
-                                                      iconColor: Colors.white,
-                                                      tooltip: 'Rate Show',
-                                                      onTap: () {
-                                                        showModalBottomSheet(
-                                                          context: context,
-                                                          builder: (BuildContext context) {
-                                                            return Column(
-                                                              mainAxisSize: MainAxisSize.min,
-                                                              children: [
-                                                                const SizedBox(height: 20),
-                                                                Padding(
-                                                                  padding: const EdgeInsets.all(8.0),
-                                                                  child: ExpressiveRatingBar(
-                                                                    initialRating: userRating ?? 5.0,
-                                                                    minRating: 1.0,
-                                                                    maxRating: 10.0,
-                                                                    itemCount: 10,
-                                                                    itemSize: 32.0,
-                                                                    allowHalfRating: true,
-                                                                    onRatingUpdate: (rating) {
-                                                                      state.isSerieRated.value = {'value': rating};
-                                                                      state.userRating.value = rating;
-                                                                    },
-                                                                    onRatingEnd: (rating) async {
-                                                                      final serieId = widget.serieId;
-                                                                      final openbox = Hive.box('sessionBox');
-                                                                      final String sessionData = openbox.get('sessionData');
-                                                                      await addRating(sessionData, serieId, rating, context);
-                                                                      profileRefreshNotifier.value++;
-                                                                    },
-                                                                  ),
-                                                                ),
-                                                                const SizedBox(height: 40),
-                                                              ],
-                                                            );
-                                                          },
-                                                        );
-                                                      },
-                                                    ),
                                                 ],
-                                              ),
-                                              const SizedBox(height: 20),
-                                            ],
-                                          );
-                                        },
+                                              );
+                                            },
+                                          ),
+                                        ],
                                       ),
+                                      const SizedBox(height: 20),
                                       ValueListenableBuilder<bool>(
                                         valueListenable: state.hasF2MResults,
                                         builder: (context, hasF2MResults, _) {
@@ -412,37 +277,29 @@ class _SerieDetailPageDesktop extends StatelessWidget {
 
                                           if (!showF2MDownload) return detailsBtn;
 
-                                          final downloadBtn = _buildPrimaryButton(
-                                            text: 'Download',
-                                            backgroundColor:
-                                                Theme.of(context).colorScheme.primaryContainer,
-                                            textStyle: TextStyle(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onPrimaryContainer,
-                                            ),
-                                            icon: Icons.download_rounded,
-                                            onPressed: () {
-                                              Navigator.push(
-                                                context,
-                                                ExpressivePageRoute(
-                                                  page: IranSeriesF2MPage(
-                                                    serieId: widget.serieId,
-                                                    serieName: widget.serieName,
-                                                    imdbId: imdbId!,
-                                                    f2mGroups: state.f2mGroups.value,
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                          );
-
                                           return Wrap(
                                             spacing: 16,
                                             runSpacing: 16,
                                             children: [
                                               detailsBtn,
-                                              downloadBtn,
+                                              _buildSecondaryButton(
+                                                text: 'Download',
+                                                textStyle: getSeriesButtonTextStyle(widget.serieId),
+                                                icon: Icons.download_rounded,
+                                                onPressed: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    ExpressivePageRoute(
+                                                      page: IranSeriesF2MPage(
+                                                        serieId: widget.serieId,
+                                                        serieName: widget.serieName,
+                                                        imdbId: imdbId!,
+                                                        f2mGroups: state.f2mGroups.value,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
                                             ],
                                           );
                                         },
@@ -669,51 +526,6 @@ class _SerieDetailPageDesktop extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required Color iconColor,
-    required VoidCallback onTap,
-    String? tooltip,
-  }) {
-    return Tooltip(
-      message: tooltip ?? '',
-      child: TvFocusWrapper(
-        borderRadius: 23.0,
-        onTap: onTap,
-        child: Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: iconColor != Colors.white
-                ? iconColor.withValues(alpha: 0.2)
-                : Colors.white.withValues(alpha: 0.1),
-            border: Border.all(
-              color: iconColor != Colors.white
-                  ? iconColor.withValues(alpha: 0.5)
-                  : Colors.white.withValues(alpha: 0.2),
-              width: 1.2,
-            ),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 8,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Center(
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 22,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildPrimaryButton({
     required String text,
     required Color backgroundColor,
@@ -748,6 +560,44 @@ class _SerieDetailPageDesktop extends StatelessWidget {
               text,
               style: textStyle.copyWith(
                 fontSize: 16,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSecondaryButton({
+    required String text,
+    required TextStyle textStyle,
+    required VoidCallback onPressed,
+    required IconData icon,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.5,
               ),
