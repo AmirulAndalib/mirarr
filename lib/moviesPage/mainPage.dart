@@ -464,17 +464,19 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
                         : moviesByGenre[genre.id];
 
                 final loading = genres.isEmpty || genreLoading;
+                final header = _buildSectionHeader(
+                  genre.name,
+                  loading || moviesByGenre[genre.id] == null
+                      ? null
+                      : () => onTapGridMovie(
+                          moviesByGenre[genre.id]!, context),
+                );
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 16),
-                    _buildSectionHeader(
-                      genre.name,
-                      loading || moviesByGenre[genre.id] == null
-                          ? null
-                          : () => onTapGridMovie(
-                              moviesByGenre[genre.id]!, context),
-                    ),
+                    // Skeletonize title until real genre names arrive.
+                    genres.isEmpty ? _skeletonCard(child: header) : header,
                     const SizedBox(height: 12),
                     SizedBox(
                       height: 320,

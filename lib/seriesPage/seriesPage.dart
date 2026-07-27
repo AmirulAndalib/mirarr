@@ -430,17 +430,19 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
                         : seriesByGenre[genre.id];
 
                 final loading = genres.isEmpty || genreLoading;
+                final header = _buildSectionHeader(
+                  genre.name,
+                  loading || seriesByGenre[genre.id] == null
+                      ? null
+                      : () => onTapGridSerie(
+                          seriesByGenre[genre.id] ?? [], context),
+                );
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 16),
-                    _buildSectionHeader(
-                      genre.name,
-                      loading || seriesByGenre[genre.id] == null
-                          ? null
-                          : () => onTapGridSerie(
-                              seriesByGenre[genre.id] ?? [], context),
-                    ),
+                    // Skeletonize title until real genre names arrive.
+                    genres.isEmpty ? _skeletonCard(child: header) : header,
                     const SizedBox(height: 12),
                     SizedBox(
                       height: 320,
