@@ -49,6 +49,7 @@ final ValueNotifier<int> profileRefreshNotifier = ValueNotifier<int>(0);
 class _ProfilePageState extends State<ProfilePage> {
   final apiKey = dotenv.env['TMDB_API_KEY'];
   int _lastIndex = -1;
+  late final NavigationProvider _nav;
 
   Map<String, dynamic>? _accountDetails;
 
@@ -87,12 +88,22 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
+    _nav = context.read<NavigationProvider>()..addListener(_onNavChanged);
+    _lastIndex = _nav.currentIndex;
     checkInternetAndFetchData();
     profileRefreshNotifier.addListener(_onProfileRefreshRequest);
   }
 
+  void _onNavChanged() {
+    if (_nav.currentIndex == 4 && _lastIndex != 4) {
+      checkInternetAndFetchData();
+    }
+    _lastIndex = _nav.currentIndex;
+  }
+
   @override
   void dispose() {
+    _nav.removeListener(_onNavChanged);
     profileRefreshNotifier.removeListener(_onProfileRefreshRequest);
     super.dispose();
   }
@@ -1016,16 +1027,6 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
-    final navProvider = Provider.of<NavigationProvider>(context);
-    if (navProvider.currentIndex == 4 && _lastIndex != 4) {
-      _lastIndex = 4;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        checkInternetAndFetchData();
-      });
-    } else if (navProvider.currentIndex != 4) {
-      _lastIndex = navProvider.currentIndex;
-    }
 
     return Scaffold(
       extendBody: true,

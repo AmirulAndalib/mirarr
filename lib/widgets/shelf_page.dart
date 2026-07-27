@@ -34,6 +34,7 @@ class ShelfPage extends StatefulWidget {
 
 class _ShelfPageState extends State<ShelfPage> {
   int _lastIndex = -1;
+  late final NavigationProvider _nav;
 
   Future<void> _navigateToMovie(String title, int id) async {
     await Navigator.push(
@@ -100,11 +101,21 @@ class _ShelfPageState extends State<ShelfPage> {
   @override
   void initState() {
     super.initState();
+    _nav = context.read<NavigationProvider>()..addListener(_onNavChanged);
+    _lastIndex = _nav.currentIndex;
     _loadWatchHistory();
+  }
+
+  void _onNavChanged() {
+    if (_nav.currentIndex == 3 && _lastIndex != 3) {
+      _loadWatchHistory();
+    }
+    _lastIndex = _nav.currentIndex;
   }
 
   @override
   void dispose() {
+    _nav.removeListener(_onNavChanged);
     _movieSearchController.dispose();
     _showSearchController.dispose();
     _diarySearchController.dispose();
@@ -432,16 +443,6 @@ class _ShelfPageState extends State<ShelfPage> {
 
   @override
   Widget build(BuildContext context) {
-    final navProvider = Provider.of<NavigationProvider>(context);
-    if (navProvider.currentIndex == 3 && _lastIndex != 3) {
-      _lastIndex = 3;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _loadWatchHistory();
-      });
-    } else if (navProvider.currentIndex != 3) {
-      _lastIndex = navProvider.currentIndex;
-    }
-
     final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final width = MediaQuery.sizeOf(context).width;
     final bool isLargeScreen = width >= 800;
