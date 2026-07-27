@@ -5,6 +5,7 @@ import 'package:Mirarr/functions/fetchers/fetch_series_by_genre.dart';
 import 'package:Mirarr/functions/regionprovider_class.dart';
 import 'package:Mirarr/seriesPage/function/on_tap_gridview_serie.dart';
 import 'package:Mirarr/seriesPage/function/on_tap_serie.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
 import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
@@ -100,28 +101,70 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
     return await fetchPopularSeries(region);
   }
 
-  Future<({List<Genre> genres, Map<int, List<Serie>> seriesByGenre})> _fetchGenresAndSeries() async {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final fetchedGenres = await fetchGenres(region);
-    final Map<int, List<Serie>> seriesMap = {};
+  Future<void> _loadPrimarySeries() async {
+    try {
+      final primaryResults = await Future.wait([
+        _fetchTrendingSeries(),
+        _fetchPopularSeries(),
+      ]);
 
-    // Process requests in small batches to prevent Web connection exhaustion
-    const batchSize = 4;
-    for (var i = 0; i < fetchedGenres.length; i += batchSize) {
-      final end = (i + batchSize < fetchedGenres.length) ? i + batchSize : fetchedGenres.length;
-      final chunk = fetchedGenres.sublist(i, end);
-      await Future.wait(chunk.map((genre) async {
-        try {
-          final series = await fetchSeriesByGenre(genre.id, region);
-          seriesMap[genre.id] = series;
-        } catch (e) {
-          debugPrint('Failed to fetch series for genre ${genre.name}: $e');
-          seriesMap[genre.id] = [];
-        }
-      }));
+      if (mounted) {
+        setState(() {
+          trendingSeries = primaryResults[0];
+          popularSeries = primaryResults[1];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching primary series data: $e');
+      if (mounted && e is ClientException) {
+        handleNetworkError(e);
+      }
     }
-    return (genres: fetchedGenres, seriesByGenre: seriesMap);
+  }
+
+  Future<void> _loadGenreSeries() async {
+    try {
+      final region =
+          Provider.of<RegionProvider>(context, listen: false).currentRegion;
+      final fetchedGenres = await fetchGenres(region);
+      if (!mounted) return;
+
+      // Show genre headers immediately; rows skeleton until each batch lands.
+      setState(() {
+        genres = fetchedGenres;
+      });
+
+      // Browsers limit ~6 connections/host; keep headroom for images.
+      // Native can safely fan out all genre requests at once.
+      final batchSize = kIsWeb ? 8 : fetchedGenres.length;
+      if (batchSize == 0) return;
+
+      for (var i = 0; i < fetchedGenres.length; i += batchSize) {
+        final end = (i + batchSize < fetchedGenres.length)
+            ? i + batchSize
+            : fetchedGenres.length;
+        final chunk = fetchedGenres.sublist(i, end);
+        final results = await Future.wait(chunk.map((genre) async {
+          try {
+            final series = await fetchSeriesByGenre(genre.id, region);
+            return MapEntry(genre.id, series);
+          } catch (e) {
+            debugPrint('Failed to fetch series for genre ${genre.name}: $e');
+            return MapEntry(genre.id, <Serie>[]);
+          }
+        }));
+
+        if (!mounted) return;
+        setState(() {
+          seriesByGenre = {
+            ...seriesByGenre,
+            for (final entry in results) entry.key: entry.value,
+          };
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching genres: $e');
+    }
   }
 
   void handleNetworkError(ClientException e) {
@@ -255,39 +298,11 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
       });
     }
 
-    // 1. Progressive load of Trending & Popular
-    try {
-      final primaryResults = await Future.wait([
-        _fetchTrendingSeries(),
-        _fetchPopularSeries(),
-      ]);
-
-      if (mounted) {
-        setState(() {
-          trendingSeries = primaryResults[0];
-          popularSeries = primaryResults[1];
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching primary series data: $e');
-      if (mounted && (e is ClientException || e is Exception)) {
-        handleNetworkError(e is ClientException ? e : ClientException(e.toString()));
-        return;
-      }
-    }
-
-    // 2. Progressive load of Genre lists (batched into chunks of 4)
-    try {
-      final genreData = await _fetchGenresAndSeries();
-      if (mounted) {
-        setState(() {
-          genres = genreData.genres;
-          seriesByGenre = genreData.seriesByGenre;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching genres: $e');
-    }
+    // Primary shelves and genre lists load concurrently.
+    await Future.wait([
+      _loadPrimarySeries(),
+      _loadGenreSeries(),
+    ]);
   }
 
   @override
@@ -392,12 +407,16 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
             delegate: SliverChildBuilderDelegate(
               (context, index) {
                 final genre = currentGenres[index];
+                final genreLoading =
+                    genres.isNotEmpty && !seriesByGenre.containsKey(genre.id);
                 final seriesList = genres.isEmpty
                     ? _dummySeriesByGenre[genre.id]
-                    : seriesByGenre[genre.id];
+                    : genreLoading
+                        ? _dummySeries
+                        : seriesByGenre[genre.id];
 
                 return Skeletonizer(
-                  enabled: genres.isEmpty,
+                  enabled: genres.isEmpty || genreLoading,
                   containersColor: Colors.white.withValues(alpha: 0.05),
                   effect: ShimmerEffect(
                     baseColor: Colors.white.withValues(alpha: 0.05),
@@ -409,7 +428,10 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
                       const SizedBox(height: 16),
                       _buildSectionHeader(
                         genre.name,
-                        genres.isEmpty ? null : () => onTapGridSerie(seriesByGenre[genre.id] ?? [], context),
+                        genreLoading || seriesByGenre[genre.id] == null
+                            ? null
+                            : () => onTapGridSerie(
+                                seriesByGenre[genre.id] ?? [], context),
                       ),
                       const SizedBox(height: 12),
                       SizedBox(
@@ -427,7 +449,10 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
                               return Padding(
                                 padding: const EdgeInsets.only(right: 12),
                                 child: TvFocusWrapper(
-                                  onTap: genres.isEmpty ? () {} : () => onTapSerie(serie.name, serie.id, context),
+                                  onTap: genres.isEmpty || genreLoading
+                                      ? () {}
+                                      : () => onTapSerie(
+                                          serie.name, serie.id, context),
                                   child: CustomSeriesWidget(serie: serie),
                                 ),
                               );

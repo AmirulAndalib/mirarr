@@ -9,6 +9,7 @@ import 'package:Mirarr/widgets/tv_focus_wrapper.dart';
 import 'package:Mirarr/widgets/bottom_bar.dart';
 import 'package:Mirarr/utils/expressive_motion.dart';
 import 'package:Mirarr/widgets/expressive_interactive_container.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -127,28 +128,70 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
     return await fetchPopularMovies(region);
   }
 
-  Future<({List<Genre> genres, Map<int, List<Movie>> moviesByGenre})> _fetchGenresAndMovies() async {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
-    final fetchedGenres = await fetchGenres(region);
-    final Map<int, List<Movie>> genreMap = {};
+  Future<void> _loadPrimaryMovies() async {
+    try {
+      final primaryResults = await Future.wait([
+        _fetchTrendingMovies(),
+        _fetchPopularMovies(),
+      ]);
 
-    // Process requests in small batches to prevent Web connection exhaustion
-    const batchSize = 4;
-    for (var i = 0; i < fetchedGenres.length; i += batchSize) {
-      final end = (i + batchSize < fetchedGenres.length) ? i + batchSize : fetchedGenres.length;
-      final chunk = fetchedGenres.sublist(i, end);
-      await Future.wait(chunk.map((genre) async {
-        try {
-          final movies = await fetchMoviesByGenre(genre.id, region);
-          genreMap[genre.id] = movies;
-        } catch (e) {
-          debugPrint('Failed to fetch movies for genre ${genre.name}: $e');
-          genreMap[genre.id] = [];
-        }
-      }));
+      if (mounted) {
+        setState(() {
+          trendingMovies = primaryResults[0];
+          popularMovies = primaryResults[1];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching primary movie data: $e');
+      if (mounted && e is ClientException) {
+        handleNetworkError(e);
+      }
     }
-    return (genres: fetchedGenres, moviesByGenre: genreMap);
+  }
+
+  Future<void> _loadGenreMovies() async {
+    try {
+      final region =
+          Provider.of<RegionProvider>(context, listen: false).currentRegion;
+      final fetchedGenres = await fetchGenres(region);
+      if (!mounted) return;
+
+      // Show genre headers immediately; rows skeleton until each batch lands.
+      setState(() {
+        genres = fetchedGenres;
+      });
+
+      // Browsers limit ~6 connections/host; keep headroom for images.
+      // Native can safely fan out all genre requests at once.
+      final batchSize = kIsWeb ? 8 : fetchedGenres.length;
+      if (batchSize == 0) return;
+
+      for (var i = 0; i < fetchedGenres.length; i += batchSize) {
+        final end = (i + batchSize < fetchedGenres.length)
+            ? i + batchSize
+            : fetchedGenres.length;
+        final chunk = fetchedGenres.sublist(i, end);
+        final results = await Future.wait(chunk.map((genre) async {
+          try {
+            final movies = await fetchMoviesByGenre(genre.id, region);
+            return MapEntry(genre.id, movies);
+          } catch (e) {
+            debugPrint('Failed to fetch movies for genre ${genre.name}: $e');
+            return MapEntry(genre.id, <Movie>[]);
+          }
+        }));
+
+        if (!mounted) return;
+        setState(() {
+          moviesByGenre = {
+            ...moviesByGenre,
+            for (final entry in results) entry.key: entry.value,
+          };
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching genres: $e');
+    }
   }
 
   void handleNetworkError(ClientException e) {
@@ -284,39 +327,11 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
     }
     _loadWatchedMovies();
 
-    // 1. Progressive load of Trending & Popular
-    try {
-      final primaryResults = await Future.wait([
-        _fetchTrendingMovies(),
-        _fetchPopularMovies(),
-      ]);
-
-      if (mounted) {
-        setState(() {
-          trendingMovies = primaryResults[0];
-          popularMovies = primaryResults[1];
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching primary movie data: $e');
-      if (mounted && (e is ClientException || e is Exception)) {
-        handleNetworkError(e is ClientException ? e : ClientException(e.toString()));
-        return;
-      }
-    }
-
-    // 2. Progressive load of Genre lists (batched into chunks of 4)
-    try {
-      final genreData = await _fetchGenresAndMovies();
-      if (mounted) {
-        setState(() {
-          genres = genreData.genres;
-          moviesByGenre = genreData.moviesByGenre;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching genres: $e');
-    }
+    // Primary shelves and genre lists load concurrently.
+    await Future.wait([
+      _loadPrimaryMovies(),
+      _loadGenreMovies(),
+    ]);
   }
 
   @override
@@ -435,12 +450,16 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
             delegate: SliverChildBuilderDelegate(
               (context, index) {
                 final genre = currentGenres[index];
+                final genreLoading =
+                    genres.isNotEmpty && !moviesByGenre.containsKey(genre.id);
                 final moviesList = genres.isEmpty
                     ? _dummyMoviesByGenre[genre.id]
-                    : moviesByGenre[genre.id];
+                    : genreLoading
+                        ? _dummyMovies
+                        : moviesByGenre[genre.id];
 
                 return Skeletonizer(
-                  enabled: genres.isEmpty,
+                  enabled: genres.isEmpty || genreLoading,
                   containersColor: Colors.white.withValues(alpha: 0.05),
                   effect: ShimmerEffect(
                     baseColor: Colors.white.withValues(alpha: 0.05),
@@ -452,7 +471,10 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
                       const SizedBox(height: 16),
                       _buildSectionHeader(
                         genre.name,
-                        genres.isEmpty ? null : () => onTapGridMovie(moviesByGenre[genre.id]!, context),
+                        genreLoading || moviesByGenre[genre.id] == null
+                            ? null
+                            : () => onTapGridMovie(
+                                moviesByGenre[genre.id]!, context),
                       ),
                       const SizedBox(height: 12),
                       SizedBox(
@@ -469,11 +491,14 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
                               return Padding(
                                 padding: const EdgeInsets.only(right: 12),
                                 child: TvFocusWrapper(
-                                  onTap: genres.isEmpty ? () {} : () => _onMovieTapped(movie),
+                                  onTap: genres.isEmpty || genreLoading
+                                      ? () {}
+                                      : () => _onMovieTapped(movie),
                                   child: CustomMovieWidget(
                                     movie: movie,
                                     showAvailability: false,
-                                    isWatched: _watchedMovieIds.contains(movie.id),
+                                    isWatched:
+                                        _watchedMovieIds.contains(movie.id),
                                   ),
                                 ),
                               );
