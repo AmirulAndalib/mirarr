@@ -30,12 +30,11 @@ class ThemeProvider extends ChangeNotifier {
   ThemeData get currentTheme => _currentTheme;
 
   void updateSystemDynamicColorScheme(ColorScheme? darkDynamic) {
-    if (darkDynamic == null) return;
+    if (darkDynamic == null || darkDynamic == _systemDynamicColorScheme) return;
     _systemDynamicColorScheme = darkDynamic;
-    if (_isDynamicTheme) {
-      _currentTheme = AppThemes.buildDynamicTheme(darkDynamic);
-      notifyListeners();
-    }
+    if (!_isDynamicTheme) return;
+    _currentTheme = AppThemes.buildDynamicTheme(darkDynamic);
+    notifyListeners();
   }
 
   void setTheme(ThemeData theme) async {

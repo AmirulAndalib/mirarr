@@ -107,29 +107,31 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(builder: (context, themeProvider, child) {
-      return DynamicColorBuilder(
-        builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-          if (darkDynamic != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              themeProvider.updateSystemDynamicColorScheme(darkDynamic);
-            });
-          }
-          return Listener(
-            onPointerDown: (_) => TvFocusModeManager.onPointerDown(),
-            child: MaterialApp(
-              navigatorKey: navigatorKey,
-              debugShowCheckedModeBanner: false,
-              title: 'Mirarr',
-              theme: themeProvider.currentTheme,
-              home: const Scaffold(
-                body: AppInitWidget(),
+    return DynamicColorBuilder(
+      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+        return Consumer<ThemeProvider>(
+          builder: (context, themeProvider, child) {
+            if (darkDynamic != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                themeProvider.updateSystemDynamicColorScheme(darkDynamic);
+              });
+            }
+            return Listener(
+              onPointerDown: (_) => TvFocusModeManager.onPointerDown(),
+              child: MaterialApp(
+                navigatorKey: navigatorKey,
+                debugShowCheckedModeBanner: false,
+                title: 'Mirarr',
+                theme: themeProvider.currentTheme,
+                home: const Scaffold(
+                  body: AppInitWidget(),
+                ),
               ),
-            ),
-          );
-        },
-      );
-    });
+            );
+          },
+        );
+      },
+    );
   }
 }
 
