@@ -273,7 +273,7 @@ class _TvChartTableState extends State<TvChartTable> {
   Widget build(BuildContext context) {
     final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final imageUrl = widget.imagePath != null && widget.imagePath!.isNotEmpty
-        ? '${getImageBaseUrl(region)}/t/p/w780${widget.imagePath}'
+        ? '${getImageBaseUrl(region)}/t/p/w1280${widget.imagePath}'
         : null;
 
     return Scaffold(
@@ -289,7 +289,7 @@ class _TvChartTableState extends State<TvChartTable> {
                   image: DecorationImage(
                     image: CachedNetworkImageProvider(
                       imageUrl,
-                      maxWidth: 780,
+                      maxWidth: 1280,
                     ),
                     fit: BoxFit.cover,
                     alignment: Alignment.center,
