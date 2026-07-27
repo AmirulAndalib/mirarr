@@ -56,6 +56,7 @@ class _ProfilePageState extends State<ProfilePage> {
   DateTime? _lastSuccessfulFetch;
   static const _profileStaleDuration = Duration(seconds: 60);
   static const _detailConcurrency = 8;
+  static const _pageConcurrency = 4;
 
   Map<String, dynamic>? _accountDetails;
 
@@ -167,37 +168,54 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _fetchRemainingMovieWatchList(int fetchId, int totalPages, String baseUrl, String accountId, String sessionData) async {
-    for (int page = 2; page <= totalPages; page++) {
-      if (fetchId != _movieWatchListFetchId || !mounted) return;
+    final extra = await _fetchRemainingMoviePages(
+      totalPages: totalPages,
+      urlForPage: (page) =>
+          '${baseUrl}account/$accountId/watchlist/movies?api_key=$apiKey&session_id=$sessionData&page=$page',
+      isCurrent: () => fetchId == _movieWatchListFetchId,
+    );
+    if (extra.isEmpty || fetchId != _movieWatchListFetchId || !mounted) return;
+    setState(() {
+      moviesWatchList.addAll(extra);
+    });
+  }
 
-      try {
-        final response = await apiClient.get(
-          Uri.parse(
-            '${baseUrl}account/$accountId/watchlist/movies?api_key=$apiKey&session_id=$sessionData&page=$page',
-          ),
-        );
-
-        if (response.statusCode == 200 && fetchId == _movieWatchListFetchId && mounted) {
-          final List<dynamic> results = json.decode(response.body)['results'] ?? [];
-          final List<Movie> pageMovies = [];
-          for (var result in results) {
-            final movie = Movie(
-                title: result['title'],
-                releaseDate: result['release_date'],
-                posterPath: result['poster_path'] ?? '',
-                overView: result['overview'] ?? '',
-                id: result['id'] ?? '',
-                score: result['vote_average'] ?? '');
-            pageMovies.add(movie);
-          }
-          setState(() {
-            moviesWatchList = [...moviesWatchList, ...pageMovies];
-          });
+  Future<List<Movie>> _fetchRemainingMoviePages({
+    required int totalPages,
+    required String Function(int page) urlForPage,
+    required bool Function() isCurrent,
+  }) async {
+    final extra = <Movie>[];
+    for (var start = 2; start <= totalPages; start += _pageConcurrency) {
+      if (!isCurrent() || !mounted) return extra;
+      final end = start + _pageConcurrency - 1 > totalPages
+          ? totalPages
+          : start + _pageConcurrency - 1;
+      final pages = List.generate(end - start + 1, (i) => start + i);
+      final pageResults = await Future.wait(pages.map((page) async {
+        try {
+          final response = await apiClient.get(Uri.parse(urlForPage(page)));
+          if (response.statusCode != 200) return <Movie>[];
+          final results = json.decode(response.body)['results'] as List<dynamic>? ?? [];
+          return results
+              .map((result) => Movie(
+                    title: result['title'],
+                    releaseDate: result['release_date'],
+                    posterPath: result['poster_path'] ?? '',
+                    overView: result['overview'] ?? '',
+                    id: result['id'] ?? '',
+                    score: result['vote_average'] ?? '',
+                  ))
+              .toList();
+        } catch (_) {
+          return <Movie>[];
         }
-      } catch (e) {
-        // Handle silently
+      }));
+      for (final pageMovies in pageResults) {
+        extra.addAll(pageMovies);
       }
     }
+    return extra;
   }
 
   Future<void> fetchFavoriteMovies(BuildContext context) async {
@@ -247,35 +265,16 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _fetchRemainingFavoriteMovies(int fetchId, int totalPages, String baseUrl, String accountId, String sessionData) async {
-    for (int page = 2; page <= totalPages; page++) {
-      if (fetchId != _movieFavoritesFetchId || !mounted) return;
-      try {
-        final response = await apiClient.get(
-          Uri.parse(
-            '${baseUrl}account/$accountId/favorite/movies?api_key=$apiKey&session_id=$sessionData&page=$page',
-          ),
-        );
-        if (response.statusCode == 200 && fetchId == _movieFavoritesFetchId && mounted) {
-          final List<dynamic> results = json.decode(response.body)['results'] ?? [];
-          final List<Movie> pageMovies = [];
-          for (var result in results) {
-            final movie = Movie(
-                title: result['title'],
-                releaseDate: result['release_date'],
-                posterPath: result['poster_path'] ?? '',
-                overView: result['overview'] ?? '',
-                id: result['id'] ?? '',
-                score: result['vote_average'] ?? '');
-            pageMovies.add(movie);
-          }
-          setState(() {
-            movieFavorites = [...movieFavorites, ...pageMovies];
-          });
-        }
-      } catch (e) {
-        // Handle silently
-      }
-    }
+    final extra = await _fetchRemainingMoviePages(
+      totalPages: totalPages,
+      urlForPage: (page) =>
+          '${baseUrl}account/$accountId/favorite/movies?api_key=$apiKey&session_id=$sessionData&page=$page',
+      isCurrent: () => fetchId == _movieFavoritesFetchId,
+    );
+    if (extra.isEmpty || fetchId != _movieFavoritesFetchId || !mounted) return;
+    setState(() {
+      movieFavorites.addAll(extra);
+    });
   }
 
   Future<void> fetchRatedMovies(BuildContext context) async {
@@ -325,35 +324,16 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _fetchRemainingRatedMovies(int fetchId, int totalPages, String baseUrl, String accountId, String sessionData) async {
-    for (int page = 2; page <= totalPages; page++) {
-      if (fetchId != _movieRatedFetchId || !mounted) return;
-      try {
-        final response = await apiClient.get(
-          Uri.parse(
-            '${baseUrl}account/$accountId/rated/movies?api_key=$apiKey&session_id=$sessionData&page=$page',
-          ),
-        );
-        if (response.statusCode == 200 && fetchId == _movieRatedFetchId && mounted) {
-          final List<dynamic> results = json.decode(response.body)['results'] ?? [];
-          final List<Movie> pageMovies = [];
-          for (var result in results) {
-            final movie = Movie(
-                title: result['title'],
-                releaseDate: result['release_date'],
-                posterPath: result['poster_path'] ?? '',
-                overView: result['overview'] ?? '',
-                id: result['id'] ?? '',
-                score: result['vote_average'] ?? '');
-            pageMovies.add(movie);
-          }
-          setState(() {
-            movieRated = [...movieRated, ...pageMovies];
-          });
-        }
-      } catch (e) {
-        // Handle silently
-      }
-    }
+    final extra = await _fetchRemainingMoviePages(
+      totalPages: totalPages,
+      urlForPage: (page) =>
+          '${baseUrl}account/$accountId/rated/movies?api_key=$apiKey&session_id=$sessionData&page=$page',
+      isCurrent: () => fetchId == _movieRatedFetchId,
+    );
+    if (extra.isEmpty || fetchId != _movieRatedFetchId || !mounted) return;
+    setState(() {
+      movieRated.addAll(extra);
+    });
   }
 
   void handleNetworkError(ClientException e) {
@@ -634,55 +614,71 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void _fetchRemainingTvWatchList(int fetchId, int totalPages, String baseUrl, String accountId, String sessionData, String region) async {
-    final today = DateTime.now();
-    for (int page = 2; page <= totalPages; page++) {
-      if (fetchId != _tvWatchListFetchId || !mounted) return;
-
-      try {
-        final response = await apiClient.get(
-          Uri.parse(
-            '${baseUrl}account/$accountId/watchlist/tv?api_key=$apiKey&session_id=$sessionData&page=$page',
-          ),
-        );
-
-        if (response.statusCode == 200 && fetchId == _tvWatchListFetchId && mounted) {
-          final List<dynamic> results = json.decode(response.body)['results'] ?? [];
-          final List<Serie> pageSeries = [];
-          for (var result in results) {
-            final serie = Serie(
-                name: result['name'],
-                posterPath: result['poster_path'] ?? '',
-                overView: result['overview'] ?? '',
-                id: result['id'],
-                score: result['vote_average'] ?? '');
-            pageSeries.add(serie);
-          }
-
-          setState(() {
-            tvWatchList = [...tvWatchList, ...pageSeries];
-          });
-
-          final allSerieDetails =
-              await _fetchSerieAirDetailsPooled(pageSeries, region);
-
-          if (fetchId != _tvWatchListFetchId || !mounted) return;
-
-          final newRecentEpisodes =
-              _recentEpisodesFromDetails(pageSeries, allSerieDetails, today);
-
-          if (newRecentEpisodes.isNotEmpty) {
-            final List<Serie> updatedRecentEpisodes = [...recentEpisodes, ...newRecentEpisodes];
-            updatedRecentEpisodes.sort((a, b) => DateTime.parse(b.lastAirDate!).compareTo(DateTime.parse(a.lastAirDate!)));
-            setState(() {
-              recentEpisodes = updatedRecentEpisodes;
-            });
-          }
+  Future<List<Serie>> _fetchRemainingSeriePages({
+    required int totalPages,
+    required String Function(int page) urlForPage,
+    required bool Function() isCurrent,
+  }) async {
+    final extra = <Serie>[];
+    for (var start = 2; start <= totalPages; start += _pageConcurrency) {
+      if (!isCurrent() || !mounted) return extra;
+      final end = start + _pageConcurrency - 1 > totalPages
+          ? totalPages
+          : start + _pageConcurrency - 1;
+      final pages = List.generate(end - start + 1, (i) => start + i);
+      final pageResults = await Future.wait(pages.map((page) async {
+        try {
+          final response = await apiClient.get(Uri.parse(urlForPage(page)));
+          if (response.statusCode != 200) return <Serie>[];
+          final results = json.decode(response.body)['results'] as List<dynamic>? ?? [];
+          return results
+              .map((result) => Serie(
+                    name: result['name'],
+                    posterPath: result['poster_path'] ?? '',
+                    overView: result['overview'] ?? '',
+                    id: result['id'],
+                    score: result['vote_average'] ?? '',
+                  ))
+              .toList();
+        } catch (_) {
+          return <Serie>[];
         }
-      } catch (e) {
-        // Handle silently
+      }));
+      for (final pageSeries in pageResults) {
+        extra.addAll(pageSeries);
       }
     }
+    return extra;
+  }
+
+  void _fetchRemainingTvWatchList(int fetchId, int totalPages, String baseUrl, String accountId, String sessionData, String region) async {
+    final today = DateTime.now();
+    final extra = await _fetchRemainingSeriePages(
+      totalPages: totalPages,
+      urlForPage: (page) =>
+          '${baseUrl}account/$accountId/watchlist/tv?api_key=$apiKey&session_id=$sessionData&page=$page',
+      isCurrent: () => fetchId == _tvWatchListFetchId,
+    );
+    if (extra.isEmpty || fetchId != _tvWatchListFetchId || !mounted) return;
+
+    setState(() {
+      tvWatchList.addAll(extra);
+    });
+
+    final allSerieDetails = await _fetchSerieAirDetailsPooled(extra, region);
+    if (fetchId != _tvWatchListFetchId || !mounted) return;
+
+    final newRecentEpisodes =
+        _recentEpisodesFromDetails(extra, allSerieDetails, today);
+    if (newRecentEpisodes.isEmpty) return;
+
+    final updatedRecentEpisodes = List<Serie>.from(recentEpisodes)
+      ..addAll(newRecentEpisodes);
+    updatedRecentEpisodes.sort((a, b) =>
+        DateTime.parse(b.lastAirDate!).compareTo(DateTime.parse(a.lastAirDate!)));
+    setState(() {
+      recentEpisodes = updatedRecentEpisodes;
+    });
   }
 
   Future<void> fetchFavoriteSeries(BuildContext context) async {
@@ -731,34 +727,16 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _fetchRemainingFavoriteSeries(int fetchId, int totalPages, String baseUrl, String accountId, String sessionData) async {
-    for (int page = 2; page <= totalPages; page++) {
-      if (fetchId != _tvFavoritesFetchId || !mounted) return;
-      try {
-        final response = await apiClient.get(
-          Uri.parse(
-            '${baseUrl}account/$accountId/favorite/tv?api_key=$apiKey&session_id=$sessionData&page=$page',
-          ),
-        );
-        if (response.statusCode == 200 && fetchId == _tvFavoritesFetchId && mounted) {
-          final List<dynamic> results = json.decode(response.body)['results'] ?? [];
-          final List<Serie> pageSeries = [];
-          for (var result in results) {
-            final serie = Serie(
-                name: result['name'],
-                posterPath: result['poster_path'] ?? '',
-                overView: result['overview'] ?? '',
-                id: result['id'],
-                score: result['vote_average'] ?? '');
-            pageSeries.add(serie);
-          }
-          setState(() {
-            tvFavorites = [...tvFavorites, ...pageSeries];
-          });
-        }
-      } catch (e) {
-        // Handle silently
-      }
-    }
+    final extra = await _fetchRemainingSeriePages(
+      totalPages: totalPages,
+      urlForPage: (page) =>
+          '${baseUrl}account/$accountId/favorite/tv?api_key=$apiKey&session_id=$sessionData&page=$page',
+      isCurrent: () => fetchId == _tvFavoritesFetchId,
+    );
+    if (extra.isEmpty || fetchId != _tvFavoritesFetchId || !mounted) return;
+    setState(() {
+      tvFavorites.addAll(extra);
+    });
   }
 
   Future<void> fetchRatedTv(BuildContext context) async {
@@ -807,34 +785,16 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _fetchRemainingRatedTv(int fetchId, int totalPages, String baseUrl, String accountId, String sessionData) async {
-    for (int page = 2; page <= totalPages; page++) {
-      if (fetchId != _tvRatedFetchId || !mounted) return;
-      try {
-        final response = await apiClient.get(
-          Uri.parse(
-            '${baseUrl}account/$accountId/rated/tv?api_key=$apiKey&session_id=$sessionData&page=$page',
-          ),
-        );
-        if (response.statusCode == 200 && fetchId == _tvRatedFetchId && mounted) {
-          final List<dynamic> results = json.decode(response.body)['results'] ?? [];
-          final List<Serie> pageSeries = [];
-          for (var result in results) {
-            final serie = Serie(
-                name: result['name'],
-                posterPath: result['poster_path'] ?? '',
-                overView: result['overview'] ?? '',
-                id: result['id'],
-                score: result['vote_average'] ?? '');
-            pageSeries.add(serie);
-          }
-          setState(() {
-            tvRated = [...tvRated, ...pageSeries];
-          });
-        }
-      } catch (e) {
-        // Handle silently
-      }
-    }
+    final extra = await _fetchRemainingSeriePages(
+      totalPages: totalPages,
+      urlForPage: (page) =>
+          '${baseUrl}account/$accountId/rated/tv?api_key=$apiKey&session_id=$sessionData&page=$page',
+      isCurrent: () => fetchId == _tvRatedFetchId,
+    );
+    if (extra.isEmpty || fetchId != _tvRatedFetchId || !mounted) return;
+    setState(() {
+      tvRated.addAll(extra);
+    });
   }
 
 
