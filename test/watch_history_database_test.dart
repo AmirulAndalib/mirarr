@@ -111,6 +111,31 @@ void main() {
     expect(await db.getAllWatchHistory(), hasLength(1));
   });
 
+  test('getAllWatchHistory can be partitioned into the per-type queries',
+      () async {
+    final db = WatchHistoryDatabase();
+    await db.addMovieToHistory(
+        tmdbId: 1, title: 'Dune', watchedAt: DateTime(2024, 1, 3));
+    await db.addShowToHistory(
+      tmdbId: 2,
+      title: 'Severance',
+      seasonNumber: 1,
+      episodeNumber: 1,
+      watchedAt: DateTime(2024, 1, 2),
+    );
+    await db.addMovieToHistory(
+        tmdbId: 3, title: 'Arrival', watchedAt: DateTime(2024, 1, 1));
+
+    // The shelf page reads the history once and splits it by type, so the
+    // split has to match what the dedicated queries return.
+    final all = await db.getAllWatchHistory();
+    expect(all.map((item) => item.title), ['Dune', 'Severance', 'Arrival']);
+    expect(all.where((item) => item.type == 'movie').toList(),
+        await db.getWatchedMovies());
+    expect(all.where((item) => item.type == 'tv').toList(),
+        await db.getWatchedShows());
+  });
+
   test('rolls the whole import back when one item is rejected', () async {
     final db = WatchHistoryDatabase();
     await db.addMovieToHistory(tmdbId: 1, title: 'Dune');

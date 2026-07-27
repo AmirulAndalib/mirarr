@@ -112,40 +112,45 @@ class _ShelfPageState extends State<ShelfPage> {
     super.dispose();
   }
 
+  String _runtimeKey(WatchHistoryItem item) {
+    return item.type == 'movie'
+        ? 'movie_${item.tmdbId}'
+        : 'tv_ep_${item.tmdbId}_${item.seasonNumber}_${item.episodeNumber}';
+  }
+
   Future<void> _loadWatchHistory() async {
-    setState(() {
-      isLoading = true;
-    });
+    // This also runs on every entry into the shelf tab and on every pop back
+    // from a detail page, so the spinner is only for the very first load.
+    if (diaryItems.isEmpty) {
+      setState(() {
+        isLoading = true;
+      });
+    }
 
     try {
-      final movies = await _database.getWatchedMovies();
-      final shows = await _database.getWatchedShows();
       final diary = await _database.getAllWatchHistory();
 
+      final movies = diary.where((item) => item.type == 'movie').toList();
+      final shows = diary.where((item) => item.type == 'tv').toList();
+
       final runtimesBox = await _getBox();
-      
+
       int uncachedCount = 0;
       int movieMins = 0;
       int tvMins = 0;
 
-      for (final m in movies) {
-        final runtimeVal = runtimesBox.get('movie_${m.tmdbId}');
+      for (final item in diary) {
+        final runtimeVal = runtimesBox.get(_runtimeKey(item)) as int?;
         if (runtimeVal == null) {
           uncachedCount++;
+        } else if (item.type == 'movie') {
+          movieMins += runtimeVal;
         } else {
-          movieMins += runtimeVal as int;
+          tvMins += runtimeVal;
         }
       }
 
-      for (final s in shows) {
-        final runtimeVal = runtimesBox.get('tv_ep_${s.tmdbId}_${s.seasonNumber}_${s.episodeNumber}');
-        if (runtimeVal == null) {
-          uncachedCount++;
-        } else {
-          tvMins += runtimeVal as int;
-        }
-      }
-
+      if (!mounted) return;
       setState(() {
         watchedMovies = movies;
         watchedShows = shows;
@@ -158,10 +163,38 @@ class _ShelfPageState extends State<ShelfPage> {
       });
     } catch (e) {
       print('Error loading watch history: $e');
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
     }
+  }
+
+  /// Drops a single entry without re-reading and re-decoding the whole
+  /// history, which is what the delete affordances used to do.
+  Future<void> _deleteHistoryItem(WatchHistoryItem item) async {
+    final id = item.id;
+    if (id == null) return;
+
+    await _database.deleteWatchHistoryItem(id);
+    final runtimesBox = await _getBox();
+    final runtime = runtimesBox.get(_runtimeKey(item)) as int?;
+    if (!mounted) return;
+
+    setState(() {
+      watchedMovies.removeWhere((entry) => entry.id == id);
+      watchedShows.removeWhere((entry) => entry.id == id);
+      diaryItems.removeWhere((entry) => entry.id == id);
+
+      if (runtime == null) {
+        uncachedItemsCount = uncachedItemsCount > 0 ? uncachedItemsCount - 1 : 0;
+        needsCalculation = uncachedItemsCount > 0;
+      } else if (item.type == 'movie') {
+        totalMovieMinutes -= runtime;
+      } else {
+        totalTvMinutes -= runtime;
+      }
+    });
   }
 
   void _debouncedSetState(void Function() fn) {
@@ -195,7 +228,7 @@ class _ShelfPageState extends State<ShelfPage> {
       // 1. Gather all uncached items
       final List<WatchHistoryItem> uncachedMovies = [];
       for (final m in watchedMovies) {
-        if (!runtimesBox.containsKey('movie_${m.tmdbId}')) {
+        if (!runtimesBox.containsKey(_runtimeKey(m))) {
           uncachedMovies.add(m);
         }
       }
@@ -203,7 +236,7 @@ class _ShelfPageState extends State<ShelfPage> {
       // Group TV shows episodes by tvId and season number to request season runtimes
       final Map<String, List<WatchHistoryItem>> uncachedTvGroups = {};
       for (final s in watchedShows) {
-        final key = 'tv_ep_${s.tmdbId}_${s.seasonNumber}_${s.episodeNumber}';
+        final key = _runtimeKey(s);
         if (!runtimesBox.containsKey(key)) {
           final groupKey = '${s.tmdbId}_${s.seasonNumber}';
           uncachedTvGroups.putIfAbsent(groupKey, () => []).add(s);
@@ -1431,9 +1464,8 @@ class _ShelfPageState extends State<ShelfPage> {
                             TvFocusWrapper(
                               onTap: () async {
                                 final confirm = await _showDeleteConfirmation(item);
-                                if (confirm == true && item.id != null) {
-                                  await _database.deleteWatchHistoryItem(item.id!);
-                                  _loadWatchHistory();
+                                if (confirm == true) {
+                                  await _deleteHistoryItem(item);
                                 }
                               },
                               borderRadius: 16.0,
@@ -1506,10 +1538,7 @@ class _ShelfPageState extends State<ShelfPage> {
       ),
       confirmDismiss: (direction) => _showDeleteConfirmation(item),
       onDismissed: (direction) async {
-        if (item.id != null) {
-          await _database.deleteWatchHistoryItem(item.id!);
-          _loadWatchHistory();
-        }
+        await _deleteHistoryItem(item);
       },
       child: TvFocusWrapper(
         onTap: () {
@@ -1610,9 +1639,8 @@ class _ShelfPageState extends State<ShelfPage> {
     return GestureDetector(
       onLongPress: () async {
         final confirm = await _showDeleteConfirmation(item);
-        if (confirm == true && item.id != null) {
-          await _database.deleteWatchHistoryItem(item.id!);
-          _loadWatchHistory();
+        if (confirm == true) {
+          await _deleteHistoryItem(item);
         }
       },
       child: TvFocusWrapper(
@@ -1712,9 +1740,8 @@ class _ShelfPageState extends State<ShelfPage> {
     return GestureDetector(
       onLongPress: () async {
         final confirm = await _showDeleteConfirmation(item);
-        if (confirm == true && item.id != null) {
-          await _database.deleteWatchHistoryItem(item.id!);
-          _loadWatchHistory();
+        if (confirm == true) {
+          await _deleteHistoryItem(item);
         }
       },
       child: TvFocusWrapper(
@@ -1783,10 +1810,7 @@ class _ShelfPageState extends State<ShelfPage> {
       ),
       confirmDismiss: (direction) => _showDeleteConfirmation(item),
       onDismissed: (direction) async {
-        if (item.id != null) {
-          await _database.deleteWatchHistoryItem(item.id!);
-          _loadWatchHistory();
-        }
+        await _deleteHistoryItem(item);
       },
       child: TvFocusWrapper(
         onTap: () {
@@ -2121,10 +2145,7 @@ class _ShelfPageState extends State<ShelfPage> {
                         ),
                         confirmDismiss: (direction) => _showDeleteConfirmation(ep),
                         onDismissed: (direction) async {
-                          if (ep.id != null) {
-                            await _database.deleteWatchHistoryItem(ep.id!);
-                            _loadWatchHistory();
-                          }
+                          await _deleteHistoryItem(ep);
                         },
                         child: ListTile(
                           contentPadding: EdgeInsets.zero,
