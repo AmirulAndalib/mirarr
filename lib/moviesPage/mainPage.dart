@@ -384,6 +384,7 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemExtent: 262,
                       itemCount: trendingMovies.isEmpty
                           ? _dummyMovies.length
                           : trendingMovies.length,
@@ -421,6 +422,7 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemExtent: 262,
                       itemCount: popularMovies.isEmpty
                           ? _dummyMovies.length
                           : popularMovies.length,
@@ -482,6 +484,7 @@ class _MovieSearchScreenState extends State<MovieSearchScreen> {
                           scrollDirection: Axis.horizontal,
                           physics: const BouncingScrollPhysics(),
                           padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemExtent: 262,
                           itemCount: moviesList?.length ?? 0,
                           itemBuilder: (context, itemIndex) {
                             final movie = moviesList![itemIndex];

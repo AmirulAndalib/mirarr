@@ -354,6 +354,7 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemExtent: 262,
                       itemCount: trendingSeries.isEmpty
                           ? _dummySeries.length
                           : trendingSeries.length,
@@ -389,6 +390,7 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemExtent: 262,
                       itemCount: popularSeries.isEmpty
                           ? _dummySeries.length
                           : popularSeries.length,
@@ -448,6 +450,7 @@ class _SerieSearchScreenState extends State<SerieSearchScreen> {
                           scrollDirection: Axis.horizontal,
                           physics: const BouncingScrollPhysics(),
                           padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemExtent: 262,
                           itemCount: seriesList?.length ?? 0,
                           itemBuilder: (context, itemIndex) {
                             final serie = seriesList?[itemIndex];

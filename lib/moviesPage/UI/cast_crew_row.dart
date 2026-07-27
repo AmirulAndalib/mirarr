@@ -227,6 +227,7 @@ Widget buildCastRow(List<Map<String, dynamic>> castList, BuildContext context) {
     child: ListView.builder(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
+      itemExtent: 100,
       itemCount: castList.length,
       itemBuilder: (context, index) {
         return CastCrewCard(
@@ -247,6 +248,7 @@ Widget buildCrewRow(List<Map<String, dynamic>> crewList, BuildContext context) {
     child: ListView.builder(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
+      itemExtent: 100,
       itemCount: crewList.length,
       itemBuilder: (context, index) {
         return CastCrewCard(
@@ -267,6 +269,7 @@ Widget buildCrewRowDesktop(List<Map<String, dynamic>> crewList, BuildContext con
     child: ListView.builder(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
+      itemExtent: 136,
       itemCount: crewList.length,
       itemBuilder: (context, index) {
         return CastCrewCard(
@@ -287,6 +290,7 @@ Widget buildCastRowDesktop(List<Map<String, dynamic>> castList, BuildContext con
     child: ListView.builder(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
+      itemExtent: 136,
       itemCount: castList.length,
       itemBuilder: (context, index) {
         return CastCrewCard(
