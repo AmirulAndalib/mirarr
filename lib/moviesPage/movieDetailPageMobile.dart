@@ -53,7 +53,8 @@ class _MovieDetailPageMobile extends StatelessWidget {
                           },
                           child: Stack(
                             children: [
-                              CachedNetworkImage(
+                              RepaintBoundary(
+                                child: CachedNetworkImage(
                                 imageUrl:
                                     '${getImageBaseUrl(region)}/t/p/w780$backdrops',
                                 memCacheWidth: 780,
@@ -82,6 +83,7 @@ class _MovieDetailPageMobile extends StatelessWidget {
                                     ),
                                   ),
                                 ),
+                              ),
                               ),
                               Container(
                                 height: 320,
