@@ -8,6 +8,7 @@ import 'package:Mirarr/moviesPage/UI/cast_crew_row.dart';
 import 'package:Mirarr/seriesPage/UI/tvchart_table.dart';
 import 'package:Mirarr/seriesPage/checkers/custom_tmdb_ids_effects_series.dart';
 import 'package:Mirarr/seriesPage/function/fetch_episode_cast_crew.dart';
+import 'package:Mirarr/seriesPage/function/seasons_api_cache.dart';
 import 'package:Mirarr/seriesPage/function/torrent_links_series.dart';
 import 'package:Mirarr/seriesPage/function/watch_links_series.dart';
 import 'package:Mirarr/widgets/custom_divider.dart';
@@ -25,23 +26,11 @@ import 'package:Mirarr/models/watch_history_model.dart';
 final apiKey = dotenv.env['TMDB_API_KEY'];
 final apiOmdbKey = dotenv.env['OMDB_API_KEY_FOR_EPISODES'];
 
-
-final _cache = <String, dynamic>{};
-
-Future<T> _cachedApiCall<T>(String url, Future<T> Function() apiCall) async {
-  if (_cache.containsKey(url)) {
-    return _cache[url] as T;
-  }
-  final result = await apiCall();
-  _cache[url] = result;
-  return result;
-}
-
 Future<String?> fetchEpisodeImdbId(
     BuildContext context, int serieId, int seasonNumber, int episodeNumber) async {
-  return _cachedApiCall('episode_imdb_id_${serieId}_${seasonNumber}_$episodeNumber', () async {
+  final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
+  return cachedSeasonsApiCall('episode_imdb_id_${region}_${serieId}_${seasonNumber}_$episodeNumber', () async {
     try {
-      final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
       final baseUrl = getBaseUrl(region);
       final response = await apiClient.get(
         Uri.parse('${baseUrl}tv/$serieId/season/$seasonNumber/episode/$episodeNumber/external_ids?api_key=$apiKey'),
@@ -59,7 +48,7 @@ Future<String?> fetchEpisodeImdbId(
 
 Future<String?> fetchImdbRating(
     BuildContext context, int serieId, String imdbId, int seasonNumber, int episodeNumber) async {
-  return _cachedApiCall('imdb_rating_${serieId}_${seasonNumber}_$episodeNumber',
+  return cachedSeasonsApiCall('imdb_rating_${serieId}_${seasonNumber}_$episodeNumber',
       () async {
     try {
       final response = await apiClient.get(
@@ -101,7 +90,7 @@ Future<String?> fetchImdbRating(
 
 Future<Map<int, String>> fetchSeasonImdbRatings(
     BuildContext context, int serieId, String imdbId, int seasonNumber, List<int> tmdbEpisodeNumbers) async {
-  return _cachedApiCall('season_ratings_${serieId}_$seasonNumber', () async {
+  return cachedSeasonsApiCall('season_ratings_${serieId}_$seasonNumber', () async {
     final Map<int, String> ratingsMap = {};
     final List<Map<String, dynamic>> pending = [];
     final Set<int> episodesFetchedFromOmdb = {};
@@ -192,9 +181,9 @@ Future<Map<int, String>> fetchSeasonImdbRatings(
 
 
 Future<List<dynamic>> fetchSeasons(int serieId, BuildContext context) async {
-  return _cachedApiCall('seasons_$serieId', () async {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
+  final region =
+      Provider.of<RegionProvider>(context, listen: false).currentRegion;
+  return cachedSeasonsApiCall('seasons_${region}_$serieId', () async {
     final baseUrl = getBaseUrl(region);
     final response = await apiClient.get(
       Uri.parse('${baseUrl}tv/$serieId?api_key=$apiKey'),
@@ -445,9 +434,9 @@ void seasonsAndEpisodes(
 
 Future<List<dynamic>> fetchEpisodesGuide(BuildContext context, int seasonNumber,
     int serieId, String serieName, String imdbId) async {
-  return _cachedApiCall('episodes_guide_$serieId$seasonNumber', () async {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
+  final region =
+      Provider.of<RegionProvider>(context, listen: false).currentRegion;
+  return cachedSeasonsApiCall('episodes_guide_${region}_$serieId$seasonNumber', () async {
     final baseUrl = getBaseUrl(region);
     final episodesResponse = await apiClient.get(
       Uri.parse('${baseUrl}tv/$serieId/season/$seasonNumber?api_key=$apiKey'),
@@ -736,10 +725,11 @@ void episodesGuide(int seasonNumber, BuildContext context, int serieId,
 
 Future<Map<String, dynamic>> fetchEpisodesDetails(BuildContext context,
     int seasonNumber, int episodeNumber, int serieId) async {
-  return _cachedApiCall('episode_details_$serieId$seasonNumber$episodeNumber',
+  final region =
+      Provider.of<RegionProvider>(context, listen: false).currentRegion;
+  return cachedSeasonsApiCall(
+      'episode_details_${region}_$serieId$seasonNumber$episodeNumber',
       () async {
-    final region =
-        Provider.of<RegionProvider>(context, listen: false).currentRegion;
     final baseUrl = getBaseUrl(region);
     final response = await apiClient.get(
       Uri.parse(

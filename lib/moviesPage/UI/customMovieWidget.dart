@@ -1,16 +1,12 @@
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:Mirarr/functions/regionprovider_class.dart';
+import 'package:Mirarr/moviesPage/functions/check_availability.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:Mirarr/moviesPage/models/movie.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:Mirarr/services/api_client.dart';
-import 'dart:convert';
 import 'package:provider/provider.dart';
 
-class CustomMovieWidget extends StatelessWidget {
-  static final Map<int, bool> _availabilityCache = {};
-
+class CustomMovieWidget extends StatefulWidget {
   final Movie movie;
   final bool showAvailability;
   final bool isWatched;
@@ -22,25 +18,40 @@ class CustomMovieWidget extends StatelessWidget {
     this.isWatched = false,
   });
 
-  Future<bool> checkAvailability(int movieId, BuildContext context) async {
-    if (movieId < 0) return false;
-    if (_availabilityCache.containsKey(movieId)) {
-      return _availabilityCache[movieId]!;
-    }
-    final baseUrl = getBaseUrl(Provider.of<RegionProvider>(context, listen: false).currentRegion);
-    final apiKey = dotenv.env['TMDB_API_KEY'];
-    final response = await apiClient.get(
-      Uri.parse('${baseUrl}movie/$movieId/watch/providers?api_key=$apiKey'),
-    );
+  @override
+  State<CustomMovieWidget> createState() => _CustomMovieWidgetState();
+}
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> data = json.decode(response.body);
-      final Map<String, dynamic> results = data['results'];
-      _availabilityCache[movieId] = results.isNotEmpty;
-      return results.isNotEmpty;
-    } else {
-      _availabilityCache[movieId] = false;
-      return false;
+class _CustomMovieWidgetState extends State<CustomMovieWidget> {
+  Future<bool>? _availabilityFuture;
+  String? _region;
+
+  void _resolveAvailability(String region) {
+    if (!widget.showAvailability) {
+      _availabilityFuture = null;
+      return;
+    }
+    _availabilityFuture = checkAvailability(widget.movie.id, region);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final region =
+        Provider.of<RegionProvider>(context).currentRegion;
+    if (_region != region) {
+      _region = region;
+      _resolveAvailability(region);
+    }
+  }
+
+  @override
+  void didUpdateWidget(CustomMovieWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.movie.id != widget.movie.id ||
+        oldWidget.showAvailability != widget.showAvailability) {
+      _resolveAvailability(_region ??
+          Provider.of<RegionProvider>(context, listen: false).currentRegion);
     }
   }
 
@@ -48,6 +59,8 @@ class CustomMovieWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final region = _region ??
+        Provider.of<RegionProvider>(context, listen: false).currentRegion;
 
     return Container(
       height: 500,
@@ -67,18 +80,24 @@ class CustomMovieWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         child: Stack(
           children: [
-            if (movie.posterPath.isNotEmpty)
+            if (widget.movie.posterPath.isNotEmpty)
               Positioned.fill(
                 child: CachedNetworkImage(
-                  imageUrl: '${getImageBaseUrl(Provider.of<RegionProvider>(context, listen: false).currentRegion)}/t/p/w342${movie.posterPath}',
+                  imageUrl:
+                      '${getImageBaseUrl(region)}/t/p/w342${widget.movie.posterPath}',
                   memCacheWidth: 350,
                   fit: BoxFit.cover,
-                  color: isWatched ? Colors.black.withValues(alpha: 0.4) : null,
-                  colorBlendMode: isWatched ? BlendMode.darken : null,
-                  placeholder: (context, url) => Container(color: colorScheme.surfaceContainerHigh),
+                  color: widget.isWatched
+                      ? Colors.black.withValues(alpha: 0.4)
+                      : null,
+                  colorBlendMode:
+                      widget.isWatched ? BlendMode.darken : null,
+                  placeholder: (context, url) =>
+                      Container(color: colorScheme.surfaceContainerHigh),
                   errorWidget: (context, url, error) => Container(
                     color: colorScheme.surfaceContainerHigh,
-                    child: Icon(Icons.movie, size: 48, color: colorScheme.onSurfaceVariant),
+                    child: Icon(Icons.movie,
+                        size: 48, color: colorScheme.onSurfaceVariant),
                   ),
                 ),
               ),
@@ -99,26 +118,29 @@ class CustomMovieWidget extends StatelessWidget {
               ),
             ),
             // Rating Badge Pill
-            if (movie.score != null && movie.score! > 0)
+            if (widget.movie.score != null && widget.movie.score! > 0)
               Positioned(
                 top: 12,
                 left: 12,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: colorScheme.surface.withValues(alpha: 0.85),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                      color:
+                          colorScheme.outlineVariant.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.star_rounded, size: 16, color: Colors.amber),
+                      const Icon(Icons.star_rounded,
+                          size: 16, color: Colors.amber),
                       const SizedBox(width: 4),
                       Text(
-                        movie.score!.toStringAsFixed(1),
+                        widget.movie.score!.toStringAsFixed(1),
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -129,12 +151,13 @@ class CustomMovieWidget extends StatelessWidget {
                 ),
               ),
             // Watched Badge
-            if (isWatched)
+            if (widget.isWatched)
               Positioned(
                 top: 12,
-                right: showAvailability ? 54 : 12,
+                right: widget.showAvailability ? 54 : 12,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.green.withValues(alpha: 0.85),
                     borderRadius: BorderRadius.circular(16),
@@ -142,7 +165,8 @@ class CustomMovieWidget extends StatelessWidget {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.check_circle_rounded, color: Colors.white, size: 14),
+                      Icon(Icons.check_circle_rounded,
+                          color: Colors.white, size: 14),
                       SizedBox(width: 4),
                       Text(
                         'WATCHED',
@@ -158,7 +182,7 @@ class CustomMovieWidget extends StatelessWidget {
                 ),
               ),
             // Availability Icon
-            if (showAvailability)
+            if (widget.showAvailability && _availabilityFuture != null)
               Positioned(
                 top: 12,
                 right: 12,
@@ -168,13 +192,15 @@ class CustomMovieWidget extends StatelessWidget {
                     color: colorScheme.surface.withValues(alpha: 0.85),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+                      color:
+                          colorScheme.outlineVariant.withValues(alpha: 0.2),
                     ),
                   ),
                   child: FutureBuilder<bool>(
-                    future: checkAvailability(movie.id, context),
+                    future: _availabilityFuture,
                     builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
+                      if (snapshot.connectionState ==
+                          ConnectionState.waiting) {
                         return const SizedBox(
                           height: 16,
                           width: 16,
@@ -182,9 +208,13 @@ class CustomMovieWidget extends StatelessWidget {
                         );
                       }
                       return Icon(
-                        snapshot.data == true ? Icons.download_rounded : Icons.cloud_off_rounded,
+                        snapshot.data == true
+                            ? Icons.download_rounded
+                            : Icons.cloud_off_rounded,
                         size: 18,
-                        color: snapshot.data == true ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                        color: snapshot.data == true
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant,
                       );
                     },
                   ),
@@ -200,7 +230,7 @@ class CustomMovieWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    movie.title,
+                    widget.movie.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleMedium?.copyWith(
@@ -209,10 +239,10 @@ class CustomMovieWidget extends StatelessWidget {
                       height: 1.2,
                     ),
                   ),
-                  if (movie.releaseDate.isNotEmpty) ...[
+                  if (widget.movie.releaseDate.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
-                      movie.releaseDate,
+                      widget.movie.releaseDate,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: Colors.white70,
                       ),
@@ -227,4 +257,3 @@ class CustomMovieWidget extends StatelessWidget {
     );
   }
 }
-

@@ -1,31 +1,45 @@
 import 'package:Mirarr/functions/get_base_url.dart';
 import 'package:Mirarr/functions/regionprovider_class.dart';
+import 'package:Mirarr/moviesPage/functions/check_availability.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:Mirarr/moviesPage/models/movie.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:Mirarr/services/api_client.dart';
-import 'dart:convert';
 import 'package:provider/provider.dart';
 
-class MovieSearchResult extends StatelessWidget {
+class MovieSearchResult extends StatefulWidget {
   final Movie movie;
 
   const MovieSearchResult({super.key, required this.movie});
 
-  Future<bool> checkAvailability(int movieId, String region) async {
-    final baseUrl = getBaseUrl(region);
-    final apiKey = dotenv.env['TMDB_API_KEY'];
-    final response = await apiClient.get(
-      Uri.parse('${baseUrl}movie/$movieId/watch/providers?api_key=$apiKey'),
-    );
+  @override
+  State<MovieSearchResult> createState() => _MovieSearchResultState();
+}
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> data = json.decode(response.body);
-      final Map<String, dynamic> results = data['results'];
-      return results.isNotEmpty;
-    } else {
-      return false;
+class _MovieSearchResultState extends State<MovieSearchResult> {
+  Future<bool>? _availabilityFuture;
+  String? _region;
+
+  void _resolveAvailability(String region) {
+    _availabilityFuture = checkAvailability(widget.movie.id, region);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final region =
+        Provider.of<RegionProvider>(context).currentRegion;
+    if (_region != region) {
+      _region = region;
+      _resolveAvailability(region);
+    }
+  }
+
+  @override
+  void didUpdateWidget(MovieSearchResult oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.movie.id != widget.movie.id) {
+      _resolveAvailability(_region ??
+          Provider.of<RegionProvider>(context, listen: false).currentRegion);
     }
   }
 
@@ -33,7 +47,8 @@ class MovieSearchResult extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final region = Provider.of<RegionProvider>(context, listen: false).currentRegion;
+    final region = _region ??
+        Provider.of<RegionProvider>(context, listen: false).currentRegion;
 
     return Container(
       decoration: BoxDecoration(
@@ -51,19 +66,24 @@ class MovieSearchResult extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         child: Stack(
           children: [
-            if (movie.backdropPath != null && movie.backdropPath!.isNotEmpty)
+            if (widget.movie.backdropPath != null &&
+                widget.movie.backdropPath!.isNotEmpty)
               Positioned.fill(
                 child: CachedNetworkImage(
-                  imageUrl: '${getImageBaseUrl(region)}/t/p/w780${movie.backdropPath}',
+                  imageUrl:
+                      '${getImageBaseUrl(region)}/t/p/w780${widget.movie.backdropPath}',
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(color: colorScheme.surfaceContainerHigh),
-                  errorWidget: (context, url, err) => Container(color: colorScheme.surfaceContainerHigh),
+                  placeholder: (context, url) =>
+                      Container(color: colorScheme.surfaceContainerHigh),
+                  errorWidget: (context, url, err) =>
+                      Container(color: colorScheme.surfaceContainerHigh),
                 ),
               )
-            else if (movie.posterPath.isNotEmpty)
+            else if (widget.movie.posterPath.isNotEmpty)
               Positioned.fill(
                 child: CachedNetworkImage(
-                  imageUrl: '${getImageBaseUrl(region)}/t/p/w500${movie.posterPath}',
+                  imageUrl:
+                      '${getImageBaseUrl(region)}/t/p/w500${widget.movie.posterPath}',
                   fit: BoxFit.cover,
                 ),
               ),
@@ -88,7 +108,8 @@ class MovieSearchResult extends StatelessWidget {
               top: 10,
               left: 10,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: colorScheme.surface.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(14),
@@ -99,10 +120,13 @@ class MovieSearchResult extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
+                    const Icon(Icons.star_rounded,
+                        color: Colors.amber, size: 14),
                     const SizedBox(width: 3),
                     Text(
-                      movie.score != null ? movie.score!.toStringAsFixed(1) : '0.0',
+                      widget.movie.score != null
+                          ? widget.movie.score!.toStringAsFixed(1)
+                          : '0.0',
                       style: theme.textTheme.labelMedium?.copyWith(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -127,7 +151,7 @@ class MovieSearchResult extends StatelessWidget {
                   ),
                 ),
                 child: FutureBuilder<bool>(
-                  future: checkAvailability(movie.id, region),
+                  future: _availabilityFuture ?? Future.value(false),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const SizedBox(
@@ -137,8 +161,12 @@ class MovieSearchResult extends StatelessWidget {
                       );
                     }
                     return Icon(
-                      snapshot.data == true ? Icons.download_rounded : Icons.cloud_off_rounded,
-                      color: snapshot.data == true ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                      snapshot.data == true
+                          ? Icons.download_rounded
+                          : Icons.cloud_off_rounded,
+                      color: snapshot.data == true
+                          ? colorScheme.primary
+                          : colorScheme.onSurfaceVariant,
                       size: 14,
                     );
                   },
@@ -154,7 +182,7 @@ class MovieSearchResult extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    movie.title,
+                    widget.movie.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleSmall?.copyWith(
@@ -164,11 +192,11 @@ class MovieSearchResult extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  if (movie.releaseDate.isNotEmpty)
+                  if (widget.movie.releaseDate.isNotEmpty)
                     Text(
-                      movie.releaseDate.contains('-')
-                          ? movie.releaseDate.split('-')[0]
-                          : movie.releaseDate,
+                      widget.movie.releaseDate.contains('-')
+                          ? widget.movie.releaseDate.split('-')[0]
+                          : widget.movie.releaseDate,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: Colors.white70,
                       ),
@@ -182,4 +210,3 @@ class MovieSearchResult extends StatelessWidget {
     );
   }
 }
-
