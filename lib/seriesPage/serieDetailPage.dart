@@ -29,6 +29,7 @@ import 'package:Mirarr/widgets/custom_divider.dart';
 import 'package:Mirarr/widgets/m3_expressive_spinner.dart';
 import 'package:provider/provider.dart';
 import 'package:screenshot/screenshot.dart';
+import 'dart:ui';
 
 part 'serieDetailPageMobile.dart';
 part 'serieDetailPageDesktop.dart';
