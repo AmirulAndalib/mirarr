@@ -14,5 +14,15 @@ void main() {
       expect(provider.currentTheme, equals(AppThemes.orangeTheme));
       expect(provider.isOmarchyLinux, isTrue); // True on this host machine
     });
+
+    test('sets Omarchy theme when available', () async {
+      final provider = ThemeProvider(AppThemes.orangeTheme);
+      await provider.loadTheme();
+      if (provider.isOmarchyLinux) {
+        await provider.setOmarchyTheme();
+        expect(provider.omarchyTheme, isNotNull);
+        expect(provider.currentTheme, equals(provider.omarchyTheme));
+      }
+    });
   });
 }

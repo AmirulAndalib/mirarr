@@ -64,23 +64,50 @@ class ThemeProvider extends ChangeNotifier {
   Future<bool> _checkOmarchyLinux() async {
     if (kIsWeb || !io.Platform.isLinux) return false;
     try {
-      final home = io.Platform.environment['HOME'];
-      if (home == null) return false;
-      return await io.File(
-        '$home/.config/omarchy/current/theme/colors.toml',
-      ).exists();
+      final file = _getOmarchyColorsFile();
+      return file != null;
     } catch (_) {
       return false;
     }
   }
 
+  io.File? _getOmarchyColorsFile() {
+    final home = io.Platform.environment['HOME'];
+    if (home == null) return null;
+    final primary =
+        io.File('$home/.local/state/omarchy/current/theme/colors.toml');
+    if (primary.existsSync()) {
+      return primary;
+    }
+    final fallback =
+        io.File('$home/.config/omarchy/current/theme/colors.toml');
+    if (fallback.existsSync()) {
+      return fallback;
+    }
+    return null;
+  }
+
+  io.Directory? _getOmarchyThemeDir() {
+    final home = io.Platform.environment['HOME'];
+    if (home == null) return null;
+    final primaryDir =
+        io.Directory('$home/.local/state/omarchy/current/theme');
+    if (primaryDir.existsSync()) {
+      return primaryDir;
+    }
+    final fallbackDir =
+        io.Directory('$home/.config/omarchy/current/theme');
+    if (fallbackDir.existsSync()) {
+      return fallbackDir;
+    }
+    return null;
+  }
+
   Future<Map<String, Color>> _loadOmarchyColors() async {
     final Map<String, Color> colors = {};
     try {
-      final home = io.Platform.environment['HOME'];
-      if (home == null) return colors;
-      final file = io.File('$home/.config/omarchy/current/theme/colors.toml');
-      if (!await file.exists()) return colors;
+      final file = _getOmarchyColorsFile();
+      if (file == null || !await file.exists()) return colors;
 
       final lines = await file.readAsLines();
       for (var line in lines) {
@@ -174,10 +201,8 @@ class ThemeProvider extends ChangeNotifier {
   void _startWatchingColorsFile() {
     _fileSubscription?.cancel();
     try {
-      final home = io.Platform.environment['HOME'];
-      if (home == null) return;
-      final dir = io.Directory('$home/.config/omarchy/current/theme');
-      if (!dir.existsSync()) return;
+      final dir = _getOmarchyThemeDir();
+      if (dir == null || !dir.existsSync()) return;
 
       _fileSubscription = dir.watch().listen((event) async {
         if (event.path.endsWith('colors.toml')) {
