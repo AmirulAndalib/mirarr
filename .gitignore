@@ -52,3 +52,4 @@ app.*.map.json
 # Local notes
 fix.md
 /.cursor
+project-notes/
